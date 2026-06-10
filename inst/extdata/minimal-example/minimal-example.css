@@ -1,0 +1,75 @@
+/* Minimal Example CSS for docstyle
+ *
+ * This demonstrates the essential styles needed for a Word document.
+ * docstyle maps these CSS selectors to Word style names.
+ */
+
+/* Page layout - CIHR compliant (2cm = 0.79in margins) */
+@page {
+  size: letter;
+  margin: 0.79in;
+}
+
+/* Named page style for landscape sections (wide tables, figures) */
+@page landscape {
+  size: letter landscape;
+  margin: 0.5in;
+}
+
+/* Body text - the default paragraph style */
+body {
+  font-family: "Times New Roman", serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #000000;
+}
+
+/* Headings */
+h1 {
+  font-family: "Arial", sans-serif;
+  font-size: 16pt;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+h2 {
+  font-family: "Arial", sans-serif;
+  font-size: 14pt;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+h3 {
+  font-family: "Arial", sans-serif;
+  font-size: 12pt;
+  font-weight: bold;
+  font-style: italic;
+}
+
+/* Title block styles */
+.title {
+  font-family: "Arial", sans-serif;
+  font-size: 18pt;
+  font-weight: bold;
+  text-align: center;
+}
+
+.author {
+  font-family: "Arial", sans-serif;
+  font-size: 12pt;
+  text-align: center;
+}
+
+.date {
+  font-family: "Arial", sans-serif;
+  font-size: 11pt;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Footer styling */
+.footer {
+  font-family: "Arial", sans-serif;
+  font-size: 9pt;
+  color: #666666;
+}

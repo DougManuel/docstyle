@@ -1,0 +1,258 @@
+---
+title: "Creating Word templates from CSS"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Creating Word templates from CSS}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: true
+  echo: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+devtools::load_all("../")
+```
+
+## Overview
+
+This guide shows how to create a Word `reference.docx` template from your own CSS
+file. This is useful when you have:
+
+- Brand guidelines defined in CSS
+- A web style guide you want to match in Word output
+- Custom styles beyond what Pandoc provides by default
+
+## Writing CSS for Word
+
+Not all CSS properties translate to Word. docstyle supports:
+
+| CSS Property | Word Equivalent | Notes |
+|--------------|-----------------|-------|
+| `font-family` | `w:rFonts` | First font in stack used |
+| `font-size` | `w:sz` | Converted to half-points |
+| `font-weight` | `w:b` | 600+ treated as bold |
+| `font-style` | `w:i` | `italic` → italic |
+| `color` | `w:color` | Hex converted to OOXML |
+| `font` | (shorthand) | Expands to above properties |
+
+### Example CSS
+
+```css
+/* Headings - use your brand font */
+h1 {
+  font-family: "Georgia", serif;
+  font-size: 24pt;
+  font-weight: bold;
+  color: #1a1a2e;
+}
+
+h2 {
+  font-family: "Georgia", serif;
+  font-size: 18pt;
+  font-weight: bold;
+  color: #1a1a2e;
+}
+
+/* Body text */
+p {
+  font-family: "Arial", sans-serif;
+  font-size: 11pt;
+  color: #333333;
+}
+
+/* Custom class for callouts */
+.callout {
+  font-family: "Arial", sans-serif;
+  font-size: 10pt;
+  font-style: italic;
+  color: #666666;
+}
+```
+
+## Creating a minimal CSS file
+
+Let's create a simple CSS file and generate a template from it:
+
+```{r}
+#| label: create-css
+# Create a temp directory for our example
+example_dir <- file.path(tempdir(), "css-example")
+dir.create(example_dir, showWarnings = FALSE)
+
+# Create a minimal CSS file
+css_content <- '
+/* Minimal brand styles */
+h1 {
+  font-family: "Times New Roman", serif;
+  font-size: 18pt;
+  font-weight: bold;
+  color: #000080;
+}
+
+h2 {
+  font-family: "Times New Roman", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  color: #000080;
+}
+
+p {
+  font-family: "Calibri", sans-serif;
+  font-size: 11pt;
+  color: #333333;
+}
+'
+
+css_file <- file.path(example_dir, "my-brand.css")
+writeLines(css_content, css_file)
+cat("Created CSS file:", css_file, "\n")
+```
+
+## Creating a configuration file
+
+docstyle uses a YAML configuration to specify the CSS file. Page settings are configured via `@page` rules in the CSS file itself:
+
+```{r}
+#| label: update-css-with-page
+# Add @page rules to our CSS
+css_with_page <- '
+/* Page layout */
+@page {
+  size: letter;
+  margin: 1in;
+}
+
+/* Minimal brand styles */
+h1 {
+  font-family: "Times New Roman", serif;
+  font-size: 18pt;
+  font-weight: bold;
+  color: #000080;
+}
+
+h2 {
+  font-family: "Times New Roman", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  color: #000080;
+}
+
+p {
+  font-family: "Calibri", sans-serif;
+  font-size: 11pt;
+  color: #333333;
+}
+'
+
+writeLines(css_with_page, css_file)
+```
+
+```{r}
+#| label: create-config
+config_content <- '
+docstyle:
+  css: my-brand.css
+'
+
+config_file <- file.path(example_dir, "_quarto.yml")
+writeLines(config_content, config_file)
+cat("Created config:", config_file, "\n")
+```
+
+## Generating the template
+
+```{r}
+#| label: generate-template
+output_path <- file.path(example_dir, "reference.docx")
+ref_doc <- generate_reference_doc(config_file, output_path = output_path)
+
+cat("Generated:", basename(ref_doc), "\n")
+cat("Size:", file.size(ref_doc), "bytes\n")
+```
+
+## Verifying the output
+
+Let's confirm the styles were correctly injected:
+
+```{r}
+#| label: verify-output
+doc <- officer::read_docx(ref_doc)
+styles_xml <- get_styles_xml(doc)
+ns <- c(w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main")
+
+# Check each heading level
+for (level in 1:2) {
+  style_id <- paste0("Heading", level)
+  node <- xml2::xml_find_first(
+    styles_xml,
+    sprintf("//w:style[@w:styleId='%s']", style_id),
+    ns
+  )
+
+  if (!inherits(node, "xml_missing")) {
+    color <- xml2::xml_attr(xml2::xml_find_first(node, ".//w:color", ns), "val")
+    size <- xml2::xml_attr(xml2::xml_find_first(node, ".//w:sz", ns), "val")
+    cat(sprintf("Heading %d: colour=%s, size=%s half-points\n", level, color, size))
+  }
+}
+```
+
+The colour `000080` is navy blue, and the sizes (36 and 28 half-points) correspond
+to 18pt and 14pt respectively.
+
+## Using shorthand font property
+
+CSS shorthand `font:` is also supported:
+
+```{r}
+#| label: shorthand-demo
+# Parse a font shorthand
+font_str <- '600 16px "Helvetica", "Arial", sans-serif'
+parts <- parse_font_shorthand(font_str)
+print(parts)
+```
+
+This extracts:
+
+- `weight`: 600 (semi-bold)
+- `size`: 16px
+- `family`: "Helvetica", "Arial", sans-serif
+
+## Unit conversion
+
+docstyle handles CSS units and converts them to Word's internal units:
+
+```{r}
+#| label: unit-conversion
+# CSS pixels to Word half-points
+# Word uses half-points for font sizes (1pt = 2 half-points)
+# CSS standard: 1px = 0.75pt
+css_to_half_points("16px")  # 16px → half-points
+css_to_half_points("12pt")  # 12pt → half-points
+
+# CSS inches to Word twips (for margins)
+css_to_twips("1in")         # 1 inch → twips
+```
+
+## CSS selector mapping
+
+Selectors map to Word style IDs:
+
+| CSS Selector | Word Style ID | Word Style Name |
+|--------------|---------------|-----------------|
+| `h1` | Heading1 | Heading 1 |
+| `h2` | Heading2 | Heading 2 |
+| `p` | Normal | Normal |
+| `.custom` | custom | Custom |
+
+Custom classes (`.name`) create new Word styles with that name.
+
+## Next steps
+
+- **[CSS property reference](reference-css-properties.html)**: Complete list of supported CSS properties
+- **[Getting started](tutorial-getting-started.html)**: Full workflow tutorial
+- **[Zotero citations](zotero-citations.html)**: Handle citations in the round-trip
+- **[Architecture](architecture.html)**: Understand the design decisions

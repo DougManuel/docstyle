@@ -1,0 +1,379 @@
+/* POPCORN Base Styles
+ * Core typography and formatting for POPCORN documents
+ *
+ * This is the base layer. Additional layers can override:
+ *   - pop-draft-manuscript.css (12pt body, 1.15 line-height for review)
+ *   - pop-web.css (web-specific adjustments)
+ *
+ * Typography:
+ *   Headings: Libre Baskerville (14pt/13pt/11pt hierarchy)
+ *   Body: Hanken Grotesk (11pt default)
+ */
+
+/* ==========================================================================
+   COLOUR PALETTE (shared with popcorn.css)
+   ========================================================================== */
+
+:root {
+  /* Valhalla - RGB: 38, 44, 58 */
+  --popcorn-valhalla: #262c3a;
+
+  /* Chardonnay - RGB: 253, 200, 130 */
+  --popcorn-chardonnay: #fdc882;
+
+  /* Teal - links */
+  --popcorn-teal: #2ea6cc;
+
+  --popcorn-white: #ffffff;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY - Print/Word optimised
+   ========================================================================== */
+
+/* Headings - Libre Baskerville for formal documents */
+h1 {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  color: #262c3a;
+}
+
+h2 {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 13pt;
+  font-weight: bold;
+  color: #262c3a;
+}
+
+h3 {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 11pt;
+  font-weight: bold;
+  color: #262c3a;
+}
+
+h4 {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 11pt;
+  font-weight: bold;
+  font-style: italic;
+  color: #262c3a;
+}
+
+h5 {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 11pt;
+  font-weight: normal;
+  color: #262c3a;
+}
+
+/* Body text - Hanken Grotesk (consistent across platforms) */
+p, body {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  font-weight: normal;
+  color: #000000;
+}
+
+/* Links */
+a {
+  color: #2ea6cc;
+}
+
+/* ==========================================================================
+   DOCUMENT STRUCTURE (headers, footers, title page metadata)
+   ========================================================================== */
+
+.footer {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 10pt;
+  color: #000000;
+}
+
+.header {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 10pt;
+  color: #262c3a;
+}
+
+/* Author block styles - for title page metadata */
+.author {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 12pt;
+  text-align: center;
+}
+
+.affiliation {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 10pt;
+  font-style: italic;
+  text-align: center;
+  color: #666666;
+}
+
+/* Version block styles - for title page metadata */
+.date {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  text-align: center;
+}
+
+.version {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   SEMANTIC STYLES
+   ========================================================================== */
+
+/* Title style - for document title on cover/first page */
+.title {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 18pt;
+  font-weight: bold;
+  color: #262c3a;
+}
+
+/* Subtitle */
+.subtitle {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 14pt;
+  font-weight: normal;
+  color: #262c3a;
+}
+
+/* Emphasis/callout text */
+.callout {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 10pt;
+  font-style: italic;
+  color: #666666;
+}
+
+/* ==========================================================================
+   UTILITY CLASSES (for manual styling in Quarto divs)
+   ========================================================================== */
+
+.libre-baskerville {
+  font-family: "Libre Baskerville", "Georgia", serif;
+}
+
+.hanken-grotesk {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+}
+
+.valhalla {
+  color: #262c3a;
+}
+
+.chardonnay-bg {
+  background-color: #fdc882;
+}
+
+.center {
+  text-align: center;
+}
+
+/* ==========================================================================
+   TABLE OF CONTENTS STYLES
+   Harvested from POPCORN_StrategicAdvisoryCommitteeTOR_V1.0.0.docx
+   - TOC entries use Hanken Grotesk (body font), not headings font
+   - TOC 1: bold, no indent
+   - TOC 2: Hanken Grotesk Light, indented
+   ========================================================================== */
+
+/* TOC Heading - Libre Baskerville italic (matches document heading style) */
+.toc-heading {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  font-style: italic;
+  color: #252c56;
+}
+
+/* TOC Level 1 - Hanken Grotesk bold, no indent, single line spacing */
+.toc-1 {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  font-weight: bold;
+  color: #000000;
+  line-height: 1;
+  margin-bottom: 0;
+}
+
+/* TOC Level 2 - Hanken Grotesk Light, indented 12pt (~238 twips) */
+.toc-2 {
+  font-family: "Hanken Grotesk Light", "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  font-weight: normal;
+  color: #000000;
+  margin-left: 12pt;
+  line-height: 1;
+  margin-bottom: 0;
+}
+
+/* TOC Level 3 - Hanken Grotesk Light, indented 24pt */
+.toc-3 {
+  font-family: "Hanken Grotesk Light", "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  font-weight: normal;
+  color: #000000;
+  margin-left: 24pt;
+  line-height: 1;
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   FOOTNOTE STYLES
+   Harvested from POPCORN_StrategicAdvisoryCommitteeTOR_V1.0.0.docx
+   - FootnoteText: 10pt Hanken Grotesk, single line spacing, no space after
+   ========================================================================== */
+
+/* Footnote Text - paragraph style for footnote body */
+.footnote-text {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 10pt;
+  font-weight: normal;
+  color: #000000;
+  line-height: 1;
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   LIST STYLES - Architecture
+
+   Standard markdown syntax maps to default list types:
+   - Bullet lists:   `-` syntax in QMD
+   - Numbered lists: `1.` syntax in QMD
+
+   Pandoc handles rendering. For DOCX, post-processing can modify
+   numbering.xml to achieve custom formats (e.g., 1./a./i. hierarchy).
+
+   Custom list classes (e.g., `.my-custom-list`) can be applied via
+   fenced divs in QMD:
+
+       ::: {.my-custom-list}
+       1. First item
+       2. Second item
+       :::
+
+   For HTML: CSS handles custom classes natively.
+   For DOCX: Post-processing required (Pandoc doesn't pass div classes
+             to Word list numbering definitions).
+   ========================================================================== */
+
+/* Default numbered list styling
+   Applied to standard `1.` markdown lists
+   Renders as: 1. 2. 3. (Pandoc default)
+*/
+ol {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+}
+
+/* Default bullet list styling
+   Applied to standard `-` markdown lists
+   Renders as: • ◦ ▪ hierarchy (Pandoc default)
+*/
+ul {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+}
+
+/* ==========================================================================
+   TABLE STYLES
+   Harvested from POPCORN_StrategicAdvisoryCommitteeTOR_V1.0.0.docx
+
+   Usage in QMD:
+       ::: {.table-formal}
+       | Column 1 | Column 2 |
+       |----------|----------|
+       | Data     | Data     |
+       :::
+
+   The Lua filter (table-style.lua) reads these CSS properties and converts
+   them to OpenXML table formatting during Pandoc rendering.
+   ========================================================================== */
+
+/* Formal table style - top/bottom borders, shaded header row
+   Used for structured data tables like Domain/Responsibility mapping
+*/
+.table-formal {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  border-top: 1pt solid #7F7F7F;
+  border-bottom: 1pt solid #7F7F7F;
+  border-left: none;
+  border-right: none;
+}
+
+.table-formal th {
+  background-color: #D9D9D9;
+  font-weight: normal;
+  padding: 6pt;
+}
+
+.table-formal td {
+  padding: 6pt;
+}
+
+/* Grid table style - full borders on all cells
+   Used for version history and similar tabular data
+*/
+.table-grid {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  border: 1pt solid #000000;
+  border-collapse: collapse;
+}
+
+.table-grid th,
+.table-grid td {
+  border: 1pt solid #000000;
+  padding: 6pt;
+}
+
+.table-grid th {
+  font-weight: bold;
+}
+
+/* ==========================================================================
+   REVISION STYLES (Track Changes Preview)
+   Used for visualising Word track changes in HTML preview.
+   The Lua filter (revisions-inject.lua) converts these to OpenXML for Word.
+   ========================================================================== */
+
+/* Deletions - strikethrough with red background
+   QMD syntax: [~~deleted text~~]{.del id="x"}
+*/
+.del {
+  background-color: #ffebe9;  /* Light red background */
+  color: #6a737d;             /* Muted text */
+  text-decoration: line-through;
+}
+
+/* Insertions - underlined with green background
+   QMD syntax: [inserted text]{.ins id="y"}
+*/
+.ins {
+  background-color: #e6ffec;  /* Light green background */
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   COMMENT STYLES (Preview)
+   Used for visualising Word comments in HTML preview.
+   The Lua filter (comment-inject.lua) converts these to OpenXML for Word.
+   ========================================================================== */
+
+/* Comment spans - highlighted text indicating commented content
+   QMD syntax: [commented text]{.comment id="1"}
+*/
+.comment {
+  background-color: #fff3cd;  /* Light yellow/amber background */
+  border-bottom: 2px solid #ffc107;  /* Amber underline */
+}

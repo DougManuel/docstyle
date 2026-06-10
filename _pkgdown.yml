@@ -1,0 +1,73 @@
+url: https://dougmanuel.github.io/docstyle/
+
+template:
+  bootstrap: 5
+
+articles:
+  - title: Tutorial
+    navbar: ~
+    contents:
+      - tutorial-getting-started
+
+  - title: How-to guides
+    contents:
+      - how-to-qmd-formatting
+      - how-to-headers-footers
+      - how-to-roundtrip
+      - css-to-word
+      - word-to-quarto
+      - zotero-citations
+      - comments-revisions
+      - author-plate
+
+  - title: Explanation
+    contents:
+      - architecture
+      - explanation-pipeline
+      - explanation-word-xml
+      - explanation-tables
+
+  - title: Reference
+    contents:
+      - reference-yaml-schema
+      - reference-css-properties
+      - reference-file-conventions
+      - troubleshooting
+      - faq
+
+reference:
+  - title: Project setup
+    desc: Initialize and manage docstyle projects
+    contents:
+      - init
+      - use_docstyle
+      - has_docstyle
+      - docstyle_version
+
+  - title: Template generation
+    desc: Generate Word reference documents from CSS and YAML configuration
+    contents:
+      - generate_reference_doc
+      - read_css
+      - read_quarto_config
+
+  - title: Document conversion
+    desc: Convert between Word and Quarto formats
+    contents:
+      - import_docx
+      - docx_to_qmd
+      - extract_citations
+      - export_bibliography
+      - validate_citations
+
+  - title: Zotero utilities
+    desc: Utilities for Zotero citation handling
+    contents:
+      - is_zotero_running
+      - inject_zotero_citations
+      - validate_zotero
+
+  - title: Word document finalization
+    desc: Post-render assembly of the Word document
+    contents:
+      - finalize_docx

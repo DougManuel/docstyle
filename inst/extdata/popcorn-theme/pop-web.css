@@ -1,0 +1,169 @@
+/* POPCORN Web Layer
+ * Overrides popcorn-base.css for web/HTML output
+ *
+ * Key changes from base:
+ *   - Headings: "Basically A Mono" monospace (vs Libre Baskerville serif)
+ *   - Larger heading scale: 48px/32px/26px (vs 14pt/13pt/11pt)
+ *   - Body: lighter weight (300), 1.32 line-height
+ *   - Web-specific layout utilities
+ *
+ * Usage in _quarto.yml:
+ *   docstyle:
+ *     css:
+ *       - popcorn-base.css
+ *       - pop-web.css
+ */
+
+/* ==========================================================================
+   FONTS - Basically A Mono (web headings)
+   ========================================================================== */
+
+@font-face {
+  font-family: "Basically A Mono";
+  src: url("assets/fonts/BasicallyAMono-Regular.woff2") format("woff2"),
+       url("assets/fonts/BasicallyAMono-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Basically A Mono";
+  src: url("assets/fonts/BasicallyAMono-Light.woff2") format("woff2"),
+       url("assets/fonts/BasicallyAMono-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Basically A Mono";
+  src: url("assets/fonts/BasicallyAMono-Medium.woff2") format("woff2"),
+       url("assets/fonts/BasicallyAMono-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Basically A Mono";
+  src: url("assets/fonts/BasicallyAMono-Bold.woff2") format("woff2"),
+       url("assets/fonts/BasicallyAMono-Bold.ttf") format("truetype");
+  font-weight: bold;
+  font-style: normal;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY - Web-optimised headings
+   ========================================================================== */
+
+h1 {
+  font: 600 48px "Basically A Mono", "Consolas", "Monaco", monospace;
+}
+
+h2 {
+  font: 600 32px "Basically A Mono", "Consolas", "Monaco", monospace;
+}
+
+h3 {
+  font: 600 26px "Basically A Mono", "Consolas", "Monaco", monospace;
+}
+
+h4 {
+  font: 600 21px "Basically A Mono", "Consolas", "Monaco", monospace;
+}
+
+h5 {
+  font: 500 16px "Basically A Mono", "Consolas", "Monaco", monospace;
+}
+
+/* Body text - lighter weight, increased line-height for screen */
+p, body {
+  font-weight: 300;
+  line-height: 1.32;
+}
+
+/* ==========================================================================
+   WEB UTILITY CLASSES
+   ========================================================================== */
+
+/* Basically A Mono font utilities */
+.bam {
+  font-family: "Basically A Mono", "Consolas", monospace;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.bam-bold {
+  font-family: "Basically A Mono", "Consolas", monospace;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.bam-light {
+  font-family: "Basically A Mono", "Consolas", monospace;
+  font-weight: 300;
+  font-style: normal;
+}
+
+/* Size modifier */
+.big {
+  font-size: 1.25em;
+}
+
+/* Highlight with brand colour */
+mark {
+  background-color: #fdc882;
+}
+
+/* ==========================================================================
+   WEB LAYOUT
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+.wrapper {
+  margin: auto;
+  width: 75%;
+  border: solid #fdc882;
+  border-width: 0px 0px 3px 0px;
+  padding: 3rem 0rem 5rem 0rem;
+}
+
+.dark-section-wide {
+  width: 100vw;
+  height: auto;
+  background-color: #262c3a;
+  color: white;
+  display: flex;
+}
+
+.dark-margin {
+  min-height: 100%;
+  min-width: 15%;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 5rem 0rem 5rem 2rem;
+  margin-right: 5rem;
+}
+
+.content-container {
+  padding: 3rem 0rem 0rem 0rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 5rem;
+}
+
+.cover {
+  height: 100vh;
+  background-color: #fdc882;
+  width: 100%;
+}
+
+.break {
+  height: 5vh;
+}
+
+.image-container {
+  width: 50%;
+  align-content: center;
+}

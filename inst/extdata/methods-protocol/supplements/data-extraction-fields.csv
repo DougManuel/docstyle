@@ -1,0 +1,20 @@
+field_name,group,definition,allowed_values,required,notes
+study_id,bibliographic,"Unique identifier — typically last-author-year-letter","string",TRUE,Join key to RoB and outcome tables
+citation,bibliographic,"Full citation in AMA format","string",TRUE,
+year,bibliographic,"Publication year","integer",TRUE,
+country,bibliographic,"First-author country","ISO 3166-1 alpha-3",FALSE,
+study_design,design,"Study design","RCT|cluster-RCT|crossover-RCT|nRCT|cohort|case-control|other",TRUE,
+n_randomised,participants,"Total randomised","integer",FALSE,RCTs only
+n_analysed,participants,"Total analysed","integer",TRUE,
+mean_age_years,participants,"Mean age in years (or median if mean unavailable — note in notes)","numeric",FALSE,
+percent_female,participants,"Percent female participants","numeric (0-100)",FALSE,
+intervention_description,intervention,"Description of the intervention arm","string",TRUE,
+intervention_dose,intervention,"Dose / intensity / duration of intervention","string",FALSE,
+comparator_description,comparator,"Description of the comparator","string",TRUE,
+primary_outcome_value,outcomes,"Effect estimate for the primary outcome","numeric",TRUE,Specify the effect type in primary_outcome_type
+primary_outcome_se,outcomes,"Standard error of the primary outcome estimate","numeric",FALSE,
+primary_outcome_type,outcomes,"Effect-size type","mean-difference|SMD|risk-ratio|odds-ratio|hazard-ratio|other",TRUE,
+risk_of_bias_overall,quality,"Overall RoB rating","low|some-concerns|high|critical",TRUE,Tool depends on study design — see RoB section
+funding_source,bias,"Funding source as reported","string",FALSE,
+conflict_of_interest,bias,"Author-reported conflicts","string",FALSE,
+notes,review,"Reviewer notes / disagreements / assumptions","string",FALSE,

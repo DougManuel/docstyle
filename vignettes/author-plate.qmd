@@ -1,0 +1,364 @@
+---
+title: "Author plates"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Author plates}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+The **author-plate** filter generates formatted author blocks for academic documents. It creates a professional author list with affiliations, superscript numbers, and optional corresponding author markers.
+
+## Basic usage
+
+Add an author-plate div to your document where you want the author block to appear:
+
+```markdown
+---
+title: "My Research Paper"
+docstyle:
+  authors:
+    - name:
+        given: "Jane"
+        family: "Smith"
+      affiliations:
+        - ref: univ
+      corresponding: true
+      email: "jane@university.edu"
+    - name:
+        given: "John"
+        family: "Doe"
+      affiliations:
+        - ref: hospital
+  affiliations:
+    - id: univ
+      name: "University of Example"
+      city: "Boston"
+      region: "MA"
+      country: "USA"
+    - id: hospital
+      name: "General Hospital"
+      city: "Boston"
+      region: "MA"
+      country: "USA"
+---
+
+::: author-plate
+:::
+
+## Introduction
+
+Your content here...
+```
+
+This produces:
+
+> **Jane Smith**^1,\*^, **John Doe**^2^
+>
+> ^1^ University of Example, Boston, MA, USA
+> ^2^ General Hospital, Boston, MA, USA
+>
+> \*Corresponding author: jane@university.edu
+
+### Placing the abstract below the plate
+
+For an academic preprint, the abstract usually sits just below the author block. Add an `abstract:` front-matter key and a `::: docstyle-abstract :::` placeholder right after the plate:
+
+```markdown
+::: author-plate
+:::
+
+::: docstyle-abstract
+:::
+```
+
+In `docstyle-docx` this relocates the abstract from the top of the document (where Pandoc places it by default) to the placeholder position. It is docx-only — Typst and JATS render `abstract:` natively above/within their title areas — and opt-in: without the placeholder the abstract stays at the top. See the [YAML schema reference](reference-yaml-schema.html#abstract) for details. (Not to be confused with the `.abstract` CSS class, which only *styles* abstract text.)
+
+## Presets
+
+Different journals and conferences have different author block formats. Use presets to quickly match common styles:
+
+```yaml
+docstyle:
+  author-plate:
+    preset: smdm-abstract
+```
+
+### Available presets
+
+| Preset | Alignment | Email shown | ORCID shown | Use case |
+|--------|-----------|-------------|-------------|----------|
+| `manuscript` | center | yes | no | Standard journal manuscripts |
+| `smdm-abstract` | left | no | no | SMDM conference abstracts |
+| `plos` | left | yes | yes | PLOS journals |
+
+### Preset details
+
+**`manuscript`** (default behaviour)
+- Center-aligned author and affiliation lines
+- Shows corresponding author email
+- Standard academic manuscript format
+
+**`smdm-abstract`**
+- Left-aligned for conference abstract formatting
+- Hides email (not needed in abstracts)
+- Compact presentation
+
+**`plos`**
+- Left-aligned per PLOS style guide
+- Shows both email and ORCID identifiers
+- Full attribution format
+
+## Configuration options
+
+You can customize the author plate beyond presets:
+
+```yaml
+docstyle:
+  author-plate:
+    preset: smdm-abstract       # Start from a preset
+    align: left                 # Override: left, center, right
+    show-email: false           # Override: hide email
+    show-orcid: true            # Override: show ORCID
+    corresponding-marker: "*"   # Symbol for corresponding author
+    equal-marker: "†"           # Symbol for equal contributors
+```
+
+Explicit options override preset defaults.
+
+## Author metadata
+
+### Required fields
+
+```yaml
+authors:
+  - name:
+      given: "First"
+      family: "Last"
+    affiliations:
+      - ref: inst1    # Reference to affiliation id
+```
+
+### Optional fields
+
+```yaml
+authors:
+  - name:
+      given: "First"
+      family: "Last"
+    affiliations:
+      - ref: inst1
+      - ref: inst2    # Multiple affiliations
+    corresponding: true
+    email: "author@example.com"
+    orcid: "0000-0000-0000-0000"
+    equal-contributor: true
+```
+
+### Affiliation format
+
+```yaml
+affiliations:
+  - id: inst1                 # Unique identifier for ref:
+    name: "Institution Name"  # Required
+    department: "Department"  # Optional
+    city: "City"              # Optional
+    region: "State/Province"  # Optional
+    country: "Country"        # Optional
+```
+
+The display string is built as: `Department, Name, City, Region, Country` (omitting missing parts).
+
+## Important: Configuration location
+
+**Author-plate configuration must be in the QMD front matter**, not in `_quarto.yml`.
+
+This is because Quarto processes extension configuration before passing it to Lua filters, and nested `docstyle.*` keys in `_quarto.yml` are not passed through.
+
+**Correct (in .qmd file):**
+
+```yaml
+---
+title: "My Document"
+docstyle:
+  author-plate:
+    preset: smdm-abstract
+  authors:
+    - name: ...
+  affiliations:
+    - id: ...
+---
+```
+
+**Incorrect (in _quarto.yml):**
+
+```yaml
+# This won't work - config is stripped before reaching Lua filter
+docstyle:
+  author-plate:
+    preset: smdm-abstract
+```
+
+## CSS styling
+
+The author plate uses two Word styles that you can customize in CSS:
+
+```css
+/* Author names line */
+.author {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  font-weight: bold;
+}
+
+/* Affiliation lines */
+.affiliation {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  font-weight: normal;
+  font-style: normal;  /* or italic for some journals */
+}
+```
+
+These styles control typography. The preset controls layout (alignment, what to show).
+
+## Debug mode
+
+To see what the filter is doing:
+
+```bash
+DOCSTYLE_DEBUG=1 quarto render document.qmd
+```
+
+Output includes:
+```
+[author-plate] Found 4 authors (from by-author)
+[author-plate] Found 3 affiliations (from by-affiliation)
+[author-plate] Loading preset: smdm-abstract
+[author-plate] Generating author plate with 4 authors
+```
+
+## Examples
+
+### Conference abstract (SMDM style)
+
+```yaml
+---
+title: "Study Results"
+author:
+  - name:
+      given: "Jane"
+      family: "Smith"
+    affiliations:
+      - ref: ohri
+    corresponding: true
+    email: "jane@ohri.ca"
+affiliations:
+  - id: ohri
+    name: "Ottawa Hospital Research Institute"
+    city: "Ottawa"
+    region: "ON"
+    country: "Canada"
+docstyle:
+  author-plate:
+    preset: smdm-abstract
+---
+```
+
+### Journal manuscript (centered, with email)
+
+```yaml
+---
+title: "Research Findings"
+author:
+  - name:
+      given: "John"
+      family: "Doe"
+    affiliations:
+      - ref: univ
+      - ref: hospital
+    corresponding: true
+    email: "john.doe@university.edu"
+  - name:
+      given: "Jane"
+      family: "Smith"
+    affiliations:
+      - ref: univ
+    equal-contributor: true
+affiliations:
+  - id: univ
+    name: "University Medical School"
+    department: "Department of Medicine"
+    city: "Boston"
+    region: "MA"
+    country: "USA"
+  - id: hospital
+    name: "Teaching Hospital"
+    city: "Boston"
+    region: "MA"
+    country: "USA"
+docstyle:
+  author-plate:
+    align: center
+    show-email: true
+---
+```
+
+## Creating custom presets
+
+If you frequently need a format not covered by built-in presets, you can:
+
+1. Use explicit options to override a similar preset
+2. Request a new preset be added via GitHub issue
+
+Custom presets can be added to the Lua filter at `_extensions/docstyle/author-plate.lua` in the `presets` table.
+
+## Multi-format projects (docx + PDF)
+
+When a project renders to multiple formats (e.g. `docstyle-docx` and `preprint-typst`), define authors and affiliations **once** at the top level of `_quarto.yml`. Quarto normalizes these into `by-author` and `by-affiliation`, which `author-plate.lua` reads for the Word output and which `preprint-typst` uses for the PDF.
+
+```yaml
+# _quarto.yml — single definition, works for all output formats
+format:
+  docstyle-docx:
+    toc: false
+  preprint-typst:
+    running-head: "My Paper"
+    bibliography: references.bib
+    csl: https://www.zotero.org/styles/vancouver
+
+authors:
+  - name:
+      given: Jane
+      family: Smith
+    orcid: 0000-0000-0000-0001
+    affiliations:
+      - ref: inst1
+    corresponding: true
+    email: jsmith@example.com
+    roles:                       # CRediT taxonomy — passed through for future use
+      - conceptualization
+      - writing – original draft
+
+affiliations:
+  - id: inst1
+    name: University of Ottawa
+    department: School of Epidemiology and Public Health
+    city: Ottawa
+    region: Ontario
+    country: Canada
+
+docstyle:
+  author-plate:
+    corresponding-marker: '*'
+    show-email: true
+  # other docstyle options...
+```
+
+The `roles:` field (CRediT taxonomy) is stored as a passthrough custom field in `by-author`. It is not rendered in the current release but will be used for CRediT statement generation in a future version.
+
+### Migrating from `docstyle.authors`
+
+If your project currently uses `docstyle.authors:` and `docstyle.affiliations:`, remove those blocks and move the content to top-level `authors:` and `affiliations:`. Add any `roles:` entries directly to each author. The deprecation warning `[author-plate] Warning: docstyle.authors is deprecated` indicates the old pattern is still in use.

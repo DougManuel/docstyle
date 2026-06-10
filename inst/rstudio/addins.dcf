@@ -1,0 +1,4 @@
+Name: Insert Zotero Citation
+Description: Open the Zotero picker and insert a Pandoc-formatted citation at the cursor.
+Binding: insert_citation
+Interactive: true

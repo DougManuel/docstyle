@@ -1,0 +1,364 @@
+/* docstyle Default Styles
+ * CIHR-compliant formatting for Canadian health research documents
+ *
+ * Based on CIHR Application Formatting Requirements:
+ * https://cihr-irsc.gc.ca/e/29300.html
+ *
+ * Requirements:
+ *   - Font: minimum 12pt Times New Roman, black (can be larger)
+ *   - Margins: 2cm (0.79in) minimum, strictly enforced
+ *   - Line spacing: single minimum
+ *   - Page size: letter (8.5" x 11")
+ *
+ * Metadata styles (abstract, captions, footnotes) intentionally use
+ * smaller fonts than the 12pt body minimum, per academic convention.
+ */
+
+/* ==========================================================================
+   TYPOGRAPHY - CIHR Compliant
+   ========================================================================== */
+
+/* Body text - 12pt Times New Roman, single spaced */
+p, body {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #000000;
+  line-height: 1;
+}
+
+/* Headings - Times New Roman, bold, same size hierarchy */
+h1 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #000000;
+}
+
+h2 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #000000;
+}
+
+h3 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: bold;
+  font-style: italic;
+  color: #000000;
+}
+
+h4 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: normal;
+  font-style: italic;
+  color: #000000;
+}
+
+h5 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: normal;
+  text-decoration: underline;
+  color: #000000;
+}
+
+/* Links - blue for visibility */
+a {
+  color: #0000EE;
+}
+
+/* ==========================================================================
+   DOCUMENT STRUCTURE
+   ========================================================================== */
+
+/* Title - bold, slightly larger */
+.title {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  color: #000000;
+}
+
+/* Subtitle */
+.subtitle {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #000000;
+}
+
+/* Author and affiliation blocks */
+.author {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  text-align: center;
+}
+
+.affiliation {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 10pt;
+  font-style: italic;
+  text-align: center;
+  color: #000000;
+}
+
+/* Abstract — italic + 0.5in indent so it reads as metadata, not body.
+ * Academic convention; portable across Word renderers.
+ * (Big-Life-Lab/popcorn-review#101 item 3) */
+.abstract {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 11pt;
+  font-style: italic;
+  line-height: 1;
+  margin-left: 0.5in;
+  margin-right: 0.5in;
+}
+
+/* Abstract title — bold so the "Abstract" label reads as a heading,
+ * matched to body 12pt to stay within the cohesive title block. */
+.abstract-title {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: bold;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+}
+
+/* Date and version display */
+.date {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  text-align: center;
+}
+
+.version {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  text-align: center;
+}
+
+/* Header and footer */
+.header {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 10pt;
+  color: #000000;
+}
+
+.footer {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 10pt;
+  color: #000000;
+}
+
+/* ==========================================================================
+   TABLE OF CONTENTS
+   ========================================================================== */
+
+.toc-heading {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #000000;
+}
+
+.toc-1 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #000000;
+  line-height: 1;
+}
+
+.toc-2 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #000000;
+  margin-left: 12pt;
+  line-height: 1;
+}
+
+.toc-3 {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #000000;
+  margin-left: 24pt;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   BODY TEXT VARIANTS
+   Pandoc assigns content to BodyText/FirstParagraph/Compact — not Normal.
+   These styles inherit from Normal via basedOn chains in reference.docx.
+   Use these selectors only when you need to override the inherited values.
+   ========================================================================== */
+
+/* .body-text — inherits from Normal; override only if body paragraphs
+   need different formatting than headings or other Normal-based styles */
+/* .body-text { } */
+
+/* .first-paragraph — first paragraph after a heading (basedOn BodyText) */
+/* .first-paragraph { } */
+
+/* .compact — tight list paragraphs (basedOn BodyText) */
+/* .compact { margin-bottom: 0; } */
+
+/* blockquote — block quotations (basedOn BodyText) */
+/* blockquote { margin-left: 0.5in; margin-right: 0.5in; } */
+
+/* ==========================================================================
+   CAPTIONS AND FIGURES
+   ========================================================================== */
+
+caption, .caption {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 10pt;
+  color: #000000;
+}
+
+.table-caption {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 10pt;
+  font-weight: bold;
+  color: #000000;
+}
+
+.image-caption {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 10pt;
+  font-style: italic;
+  color: #000000;
+}
+
+/* .figure — image container paragraph */
+/* .figure { text-align: center; } */
+
+/* .captioned-figure — image with caption, keeps image and caption together */
+/* .captioned-figure { text-align: center; } */
+
+/* ==========================================================================
+   BIBLIOGRAPHY
+   ========================================================================== */
+
+.bibliography {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  color: #000000;
+  text-indent: -0.5in;
+  padding-left: 0.5in;
+}
+
+/* ==========================================================================
+   DEFINITION LISTS
+   ========================================================================== */
+
+dt {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #000000;
+}
+
+dd {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  color: #000000;
+  margin-left: 0.25in;
+}
+
+/* ==========================================================================
+   FOOTNOTES
+   ========================================================================== */
+
+.footnote-text {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 10pt;
+  font-weight: normal;
+  color: #000000;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   LISTS
+   ========================================================================== */
+
+ol {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+}
+
+ul {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+}
+
+/* ==========================================================================
+   TABLES
+   ========================================================================== */
+
+/* Formal table - top/bottom borders, shaded header */
+.table-formal {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  border-top: 1pt solid #000000;
+  border-bottom: 1pt solid #000000;
+  border-left: none;
+  border-right: none;
+}
+
+.table-formal th {
+  background-color: #D9D9D9;
+  font-weight: bold;
+  padding: 4pt;
+}
+
+.table-formal td {
+  padding: 4pt;
+}
+
+/* Grid table - all borders */
+.table-grid {
+  font-family: "Times New Roman", "Times", serif;
+  font-size: 12pt;
+  border: 1pt solid #000000;
+  border-collapse: collapse;
+}
+
+.table-grid th,
+.table-grid td {
+  border: 1pt solid #000000;
+  padding: 4pt;
+}
+
+.table-grid th {
+  font-weight: bold;
+}
+
+/* ==========================================================================
+   REVISION STYLES (Track Changes Preview)
+   ========================================================================== */
+
+.del {
+  background-color: #ffebe9;
+  color: #6a737d;
+  text-decoration: line-through;
+}
+
+.ins {
+  background-color: #e6ffec;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   COMMENT STYLES (Preview)
+   ========================================================================== */
+
+.comment {
+  background-color: #fff3cd;
+  border-bottom: 2px solid #ffc107;
+}

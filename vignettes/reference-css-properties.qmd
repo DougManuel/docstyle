@@ -1,0 +1,615 @@
+---
+title: "CSS property reference"
+format: html
+vignette: >
+  %\VignetteIndexEntry{CSS property reference}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+This reference documents every CSS property that docstyle maps to Word/OOXML formatting. For a tutorial on creating Word templates from CSS, see [Creating Word templates from CSS](css-to-word.html). For YAML configuration options, see [YAML configuration reference](reference-yaml-schema.html).
+
+## Quick reference
+
+| CSS Property | OOXML Element | Unit | Applies to |
+|---|---|---|---|
+| `font-family` | `w:rFonts` | — | All selectors |
+| `font-size` | `w:sz` | Half-points | All selectors |
+| `font-weight` | `w:b` | Boolean | All selectors |
+| `font-style` | `w:i` | Boolean | All selectors |
+| `color` | `w:color` | Hex (no `#`) | All selectors |
+| `text-decoration` | `w:u`, `w:strike` | — | All selectors |
+| `text-align` | `w:jc` | — | Paragraph selectors |
+| `line-height` | `w:spacing` (line) | 240ths of line | Paragraph selectors |
+| `margin-top` | `w:spacing` (before) | Twips | Paragraph selectors |
+| `margin-bottom` | `w:spacing` (after) | Twips | Paragraph selectors |
+| `margin-left` | `w:ind` (left) | Twips | Paragraph selectors |
+| `padding-left` | `w:ind` (left) | Twips | Paragraph selectors |
+| `text-indent` | `w:ind` (firstLine/hanging) | Twips | Paragraph selectors |
+| `border-*` | `w:tblBorders`, `w:tcBorders` | Eighth-points | Table selectors |
+| `background-color` | `w:shd` | Hex | Table `th`/`td` selectors |
+| `size` | `w:pgSz` | Twips | `@page` rules |
+| `margin` | `w:pgMar` | Twips | `@page` rules |
+
+## Text properties
+
+These CSS properties map to Word run properties (`w:rPr`) and apply to any selector.
+
+### `font-family`
+
+Sets the font for the Word style. Only the first non-generic font in the stack is used; generic families (`serif`, `sans-serif`, `monospace`) are skipped.
+
+```css
+p { font-family: "Times New Roman", serif; }
+h1 { font-family: "Arial", "Helvetica", sans-serif; }
+```
+
+**OOXML output:**
+
+```xml
+<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+```
+
+The font must be installed on the system where the document is rendered.
+
+### `font-size`
+
+Sets the font size. Converted to half-points for Word (12pt = 24 half-points).
+
+```css
+body { font-size: 12pt; }
+.footnote-text { font-size: 10pt; }
+```
+
+**Supported units:** `pt`, `px` (1px = 0.75pt), `in`, `cm`, `mm`, `pc`, `em`, `rem`, `%`.
+
+**OOXML output:**
+
+```xml
+<w:sz w:val="24"/>   <!-- 12pt -->
+<w:szCs w:val="24"/> <!-- complex script mirror -->
+```
+
+### `font-weight`
+
+Controls bold formatting. Numeric values 600 and above are treated as bold; values below 600 are normal.
+
+```css
+h1 { font-weight: bold; }    /* or 700 */
+p { font-weight: normal; }   /* or 400 */
+```
+
+**OOXML output:**
+
+```xml
+<w:b/>         <!-- bold on -->
+<w:b w:val="0"/>  <!-- bold explicitly off -->
+```
+
+### `font-style`
+
+Controls italic formatting.
+
+```css
+blockquote { font-style: italic; }
+p { font-style: normal; }
+```
+
+**OOXML output:**
+
+```xml
+<w:i/>         <!-- italic on -->
+<w:i w:val="0"/>  <!-- italic explicitly off -->
+```
+
+### `color`
+
+Sets text colour. Accepts hex values, named colours, and `rgb()` notation.
+
+```css
+h1 { color: #1a1a2e; }
+.abstract { color: #666666; }
+```
+
+**Supported formats:**
+
+| Format | Example | Result |
+|---|---|---|
+| 6-digit hex | `#1a1a2e` | `1A1A2E` |
+| 3-digit hex | `#333` | `333333` |
+| Named colour | `red` | `FF0000` |
+| RGB function | `rgb(26, 26, 46)` | `1A1A2E` |
+| `transparent` | `transparent` | `auto` |
+
+**OOXML output:**
+
+```xml
+<w:color w:val="1A1A2E"/>
+```
+
+### `text-decoration`
+
+Controls underline and strikethrough. Multiple values can be combined.
+
+```css
+.emphasis { text-decoration: underline; }
+.deleted { text-decoration: line-through; }
+.both { text-decoration: underline line-through; }
+```
+
+**OOXML output:**
+
+```xml
+<w:u w:val="single"/>  <!-- underline -->
+<w:strike/>             <!-- strikethrough -->
+```
+
+### `font` (shorthand)
+
+The CSS `font` shorthand is expanded to individual properties.
+
+```css
+h1 { font: bold 16px "Helvetica", "Arial", sans-serif; }
+```
+
+Extracts `font-weight: bold`, `font-size: 16px`, `font-family: "Helvetica"`.
+
+## Paragraph properties
+
+These CSS properties map to Word paragraph properties (`w:pPr`) and apply to paragraph-level selectors (headings, body text, etc.).
+
+### `text-align`
+
+Sets paragraph alignment.
+
+```css
+p { text-align: left; }
+.title { text-align: center; }
+blockquote { text-align: justify; }
+```
+
+| CSS value | OOXML value |
+|---|---|
+| `left` | `left` |
+| `right` | `right` |
+| `center` | `center` |
+| `justify` | `both` |
+
+### `line-height`
+
+Sets line spacing. Only numeric multipliers are supported (not unit-based values like `18pt`).
+
+```css
+body { line-height: 1.5; }   /* 1.5× spacing */
+p { line-height: 2.0; }      /* double spacing */
+```
+
+**Conversion:** multiplier × 240 (Word uses 240ths of a line).
+
+| CSS value | OOXML `w:line` | Spacing |
+|---|---|---|
+| `1.0` | `240` | Single |
+| `1.15` | `276` | Default Word |
+| `1.5` | `360` | 1.5 lines |
+| `2.0` | `480` | Double |
+
+**OOXML output:**
+
+```xml
+<w:spacing w:line="360" w:lineRule="auto"/>
+```
+
+### `margin-top` and `margin-bottom`
+
+Set paragraph spacing before and after. Converted to twips (1in = 1440 twips, 1pt = 20 twips).
+
+```css
+h1 { margin-top: 24pt; margin-bottom: 6pt; }
+p { margin-bottom: 12pt; }
+```
+
+**OOXML output:**
+
+```xml
+<w:spacing w:before="480" w:after="120"/>  <!-- 24pt, 6pt -->
+```
+
+### `margin-left` and `padding-left`
+
+Set paragraph left indentation. Both properties map to the same OOXML attribute.
+
+```css
+blockquote { margin-left: 0.5in; }
+.bibliography { padding-left: 0.5in; }
+```
+
+**OOXML output:**
+
+```xml
+<w:ind w:left="720"/>  <!-- 0.5in = 720 twips -->
+```
+
+### `text-indent`
+
+Sets first-line or hanging indentation. Positive values indent the first line; negative values create a hanging indent.
+
+```css
+.first-paragraph { text-indent: 0.5in; }
+.bibliography { text-indent: -0.5in; padding-left: 0.5in; }  /* hanging indent */
+```
+
+**OOXML output:**
+
+```xml
+<!-- First-line indent -->
+<w:ind w:firstLine="720"/>
+
+<!-- Hanging indent (negative text-indent) -->
+<w:ind w:hanging="720" w:left="720"/>
+```
+
+## Page layout (`@page` rules)
+
+Page layout is configured via CSS `@page` rules, following the CSS Paged Media specification. These properties are read during pre-render and written to the reference.docx template.
+
+### `size`
+
+Sets page dimensions and orientation.
+
+```css
+@page { size: letter; }
+@page landscape { size: letter landscape; }
+@page { size: a4 portrait; }
+```
+
+| Value | Dimensions |
+|---|---|
+| `letter` | 8.5 × 11 in |
+| `a4` | 210 × 297 mm |
+| `legal` | 8.5 × 14 in |
+
+Append `landscape` or `portrait` for orientation.
+
+### `margin`
+
+Sets page margins. Supports CSS shorthand (1–4 values).
+
+```css
+/* All sides */
+@page { margin: 1in; }
+
+/* Top/bottom and left/right */
+@page { margin: 1in 1.25in; }
+
+/* Top, left/right, bottom */
+@page { margin: 1in 1.25in 0.75in; }
+
+/* Top, right, bottom, left */
+@page { margin: 1in 1.25in 0.75in 1.5in; }
+
+/* Individual sides */
+@page { margin-top: 1in; margin-bottom: 0.75in; }
+```
+
+Individual margins (`margin-top`, `margin-right`, `margin-bottom`, `margin-left`) override the shorthand.
+
+### Named page rules
+
+Define different page settings for sections of the document. The rule name matches the section div class (minus the `section-` prefix).
+
+```css
+/* Default page settings */
+@page { size: letter; margin: 1in; }
+
+/* Landscape section for wide tables */
+@page landscape { size: letter landscape; margin: 0.5in; }
+
+/* Body section with line numbers */
+@page body { size: letter; margin: 1in; }
+```
+
+**Usage in QMD:**
+
+```markdown
+::: {.section-landscape}
+Wide table here...
+:::
+
+::: {.section-default}
+:::
+```
+
+### `--docstyle-line-numbers`
+
+Enables line numbering in a page section.
+
+```css
+@page body {
+  --docstyle-line-numbers: every 1;           /* every N | none */
+  --docstyle-line-numbers-restart: continuous; /* continuous | page | section */
+  --docstyle-line-numbers-distance: 0.25in;   /* distance from text edge */
+}
+```
+
+| Property | Values | Default |
+|---|---|---|
+| `--docstyle-line-numbers` | `every N`, `none` | `none` |
+| `--docstyle-line-numbers-restart` | `page`, `section`, `continuous` | `page` |
+| `--docstyle-line-numbers-distance` | CSS length | `0.25in` |
+
+### `--docstyle-suppress-top-spacing`
+
+Suppresses the before-spacing on the first content paragraph after a section break. This compensates for Word not honouring `suppressSpBfAfterPgBrk` after section breaks.
+
+```css
+@page { --docstyle-suppress-top-spacing: true; }  /* global default */
+@page body { --docstyle-suppress-top-spacing: true; }  /* per-section */
+```
+
+Can be overridden per section div:
+
+```markdown
+::: {.section-body suppress-top-spacing="true"}
+## Introduction
+Content here — no top gap on the heading.
+:::
+```
+
+**Resolution precedence:** div attribute > named `@page` > global `@page`.
+
+## Table properties
+
+Tables use CSS-driven styling via `::: {.table-*}` div fences. Define table classes in CSS, then apply them in QMD.
+
+### Border properties
+
+```css
+/* Top and bottom borders only (formal style) */
+.table-formal {
+  border-top: 1pt solid #000000;
+  border-bottom: 1pt solid #000000;
+}
+
+/* All borders (grid style) */
+.table-grid {
+  border: 1pt solid #000000;
+}
+
+/* Cell-level borders */
+.table-grid th, .table-grid td {
+  border: 1pt solid #000000;
+}
+```
+
+**Border format:** `width style color`
+
+| CSS style | OOXML style |
+|---|---|
+| `solid` | `single` |
+| `dashed` | `dashed` |
+| `dotted` | `dotted` |
+| `double` | `double` |
+| `none` | (no border) |
+
+**Unit:** Eighth-points (1pt = 8 eighth-points).
+
+### Header styling
+
+```css
+.table-formal th {
+  background-color: #D9D9D9;
+  font-weight: bold;
+}
+```
+
+**OOXML output:**
+
+```xml
+<w:shd w:val="clear" w:color="auto" w:fill="D9D9D9"/>
+<w:b/>
+```
+
+### Font size
+
+```css
+.table-formal { font-size: 9pt; }
+```
+
+Sets the font size for all text in the table.
+
+### Div attribute overrides
+
+Div attributes override CSS defaults for individual tables:
+
+```markdown
+::: {.table-formal widths="30,70" font-size="9" width="80"}
+| Narrow | Wide column |
+|--------|-------------|
+| Data   | More data   |
+:::
+```
+
+| Attribute | Effect | Example |
+|---|---|---|
+| `widths` | Column width percentages (comma-separated) | `widths="25,50,25"` |
+| `font-size` | Font size in points | `font-size="9"` |
+| `width` | Table width as % of page | `width="80"` |
+| `header-bold` | Override header bold | `header-bold="false"` |
+| `header-shading` | Override header background colour | `header-shading="#E8E8E8"` |
+
+## CSS selectors
+
+### Selector-to-style mapping
+
+CSS selectors map to Word style IDs. Multiple selectors can target the same style.
+
+**Headings:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `h1` | Heading 1 |
+| `h2` | Heading 2 |
+| `h3` | Heading 3 |
+| `h4` | Heading 4 |
+| `h5` | Heading 5 |
+| `h6` | Heading 6 |
+| `h7`–`h9` | Heading 7–9 |
+
+**Body text:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `p`, `body` | Normal |
+| `.body-text` | Body Text |
+| `.first-paragraph` | First Paragraph |
+| `.compact` | Compact |
+| `blockquote`, `.blockquote` | Block Text |
+| `code`, `.code` | Source Code |
+
+**Title page:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `.title` | Title |
+| `.subtitle` | Subtitle |
+| `.author` | Author |
+| `.affiliation` | Affiliation |
+| `.date` | Date |
+| `.version` | Version |
+| `.abstract` | Abstract |
+| `.abstract-title` | Abstract Title |
+
+**Captions and figures:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `caption`, `.caption` | Caption |
+| `.table-caption` | Table Caption |
+| `.image-caption` | Image Caption |
+| `.figure` | Figure |
+| `.captioned-figure` | Captioned Figure |
+
+**Definitions:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `dt`, `.definition-term` | Definition Term |
+| `dd`, `.definition` | Definition |
+
+**References:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `.bibliography`, `.references` | Bibliography |
+| `.footnote-text` | Footnote Text |
+
+**Table of contents:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `.toc-heading` | TOC Heading |
+| `.toc-1` through `.toc-5` | TOC 1–5 |
+
+**Headers and footers:**
+
+| CSS Selector | Word Style |
+|---|---|
+| `.header` | Header |
+| `.footer` | Footer |
+
+**Custom classes:** Any `.name` selector not in the list above creates a new Word paragraph style with that name.
+
+```css
+.callout { font-style: italic; color: #666666; }
+```
+
+### Style cascade
+
+CSS on `p`/`body` (mapped to Word's Normal style) cascades to child styles automatically. You only need explicit rules when overriding the parent.
+
+```
+Normal
+├── Body Text
+│   ├── First Paragraph
+│   ├── Compact
+│   └── Block Text
+├── Heading 1–9
+├── Title
+│   └── Subtitle
+├── Footnote Text
+├── Bibliography
+├── Definition Term / Definition
+└── Caption
+    ├── Table Caption
+    └── Image Caption
+```
+
+**Example:** Setting `p { font-size: 12pt; }` applies 12pt to Normal, which cascades to Body Text, First Paragraph, Compact, headings, and all other child styles — unless they have their own CSS rule.
+
+This cascade prevents Pandoc from overwriting child styles with its hardcoded defaults.
+
+## Unit conversions
+
+docstyle converts CSS units to Word's internal units during pre-render.
+
+### Supported units
+
+| CSS Unit | Base Conversion | Example |
+|---|---|---|
+| `pt` | 1pt (base) | `12pt` |
+| `px` | 1px = 0.75pt | `16px` = 12pt |
+| `in` | 1in = 72pt | `1in` = 72pt |
+| `cm` | 1cm = 28.35pt | `2.54cm` = 72pt |
+| `mm` | 1mm = 2.835pt | `25.4mm` = 72pt |
+| `pc` | 1pc = 12pt | `1pc` = 12pt |
+| `em` | 1em = base font size | `1.5em` = 18pt (at 12pt base) |
+| `rem` | Same as `em` | `1.5rem` = 18pt (at 12pt base) |
+| `%` | Percentage of base | `150%` = 18pt (at 12pt base) |
+
+Default base font size for `em`/`rem`/`%`: 12pt.
+
+### OOXML unit systems
+
+| OOXML Context | Unit Name | Conversion |
+|---|---|---|
+| Font sizes (`w:sz`) | Half-points | points × 2 |
+| Margins, spacing, indentation | Twips | points × 20 |
+| Borders (`w:sz` on borders) | Eighth-points | points × 8 |
+| Page dimensions (`w:pgSz`) | Twips | points × 20 |
+
+**Common conversions:**
+
+| CSS | Twips | Half-points | Eighth-points |
+|---|---|---|---|
+| `1in` | 1440 | — | — |
+| `1cm` | 567 | — | — |
+| `12pt` | 240 | 24 | 96 |
+| `1pt` | 20 | 2 | 8 |
+| `0.5pt` | 10 | 1 | 4 |
+
+## Unsupported properties
+
+The following CSS properties have no Word equivalent and are silently ignored:
+
+- `background-image`, `background-position`, `background-repeat`
+- `box-shadow`, `text-shadow`
+- `display`, `position`, `float`, `flex`, `grid`
+- `width`, `height`, `max-width`, `min-height` (on non-table elements)
+- `border-radius`
+- `opacity`
+- `transition`, `animation`
+- `@media` queries
+- `::before`, `::after` pseudo-elements
+- `:hover`, `:focus` pseudo-classes
+
+**Partial support:**
+
+- `line-height`: Only numeric multipliers (e.g., `1.5`). Unit-based values (e.g., `18pt`) produce a warning and are ignored.
+- `border-collapse`: Parsed but not used — table layout is always fixed.
+
+## See also
+
+- [YAML configuration reference](reference-yaml-schema.html): All `docstyle:` configuration options
+- [File conventions](reference-file-conventions.html): Sidecar files and directory structure
+- [Creating Word templates from CSS](css-to-word.html): Tutorial on CSS-to-Word workflow
+- [Architecture](architecture.html): How docstyle processes CSS through the pipeline

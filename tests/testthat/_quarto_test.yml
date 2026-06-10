@@ -1,0 +1,9 @@
+project:
+  title: "Test Project"
+
+docstyle:
+  assets:
+    logo: "logo.png"
+  page_layout:
+    margins:
+      top: "1in"

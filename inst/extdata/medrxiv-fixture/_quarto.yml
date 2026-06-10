@@ -1,0 +1,8 @@
+# medRxiv-flag test fixture (see tests/testthat/test-medrxiv-flag.R)
+
+project:
+  type: default
+
+format:
+  docstyle-typst:
+    medrxiv: true

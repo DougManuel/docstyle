@@ -1,0 +1,122 @@
+---
+title: "Frequently asked questions"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Frequently asked questions}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Installation
+
+### Do I need both the R package and the Quarto extension?
+
+**Yes.** The R package (`remotes::install_github("DougManuel/docstyle")`) provides the CSS parsing and reference document generation. The Quarto extension (`quarto add DougManuel/docstyle`) provides the format and Lua filters. Both are required for the full workflow.
+
+### Why does my subdirectory project fail with "Unknown format: docstyle-docx"?
+
+Quarto looks for `_extensions/` relative to the QMD file being rendered. If your QMD is in a subdirectory, you need to either:
+
+1. **Symlink** the extension: `ln -s ../../_extensions/docstyle _extensions/docstyle`
+2. **Install** the extension in the subdirectory: `quarto add DougManuel/docstyle`
+
+See [Troubleshooting](troubleshooting.html) for detailed instructions.
+
+## Configuration
+
+### Why isn't my author-plate preset working?
+
+Lua filter configuration (including `author-plate:`) must be in the **QMD front matter**, not in `_quarto.yml`. Quarto strips nested `docstyle.*` keys before passing them to Lua filters.
+
+**Correct (in .qmd file):**
+
+```yaml
+---
+title: "My Document"
+docstyle:
+  author-plate:
+    preset: smdm-abstract
+  authors:
+    - name:
+        given: "Jane"
+        family: "Smith"
+---
+```
+
+**Incorrect (in _quarto.yml):**
+
+```yaml
+# This won't work
+docstyle:
+  author-plate:
+    preset: smdm-abstract
+```
+
+### What goes in `_quarto.yml` vs the QMD front matter?
+
+| Configuration | Location | Why |
+|--------------|----------|-----|
+| `css:` | `_quarto.yml` | Used by pre-render R script |
+| `footer:`, `header:` | `_quarto.yml` | Used by pre-render R script |
+| `author-plate:` | QMD front matter | Used by Lua filter |
+| `authors:`, `affiliations:` | QMD front matter | Used by Lua filter |
+
+## Rendering
+
+### How do I force regeneration of reference.docx?
+
+Delete the hash file:
+
+```bash
+rm _docstyle/reference.docx.hash
+quarto render document.qmd
+```
+
+Or delete the entire sidecar folder:
+
+```bash
+rm -rf _docstyle
+quarto render document.qmd
+```
+
+### How do I debug filter issues?
+
+Enable debug output:
+
+```bash
+DOCSTYLE_DEBUG=1 quarto render document.qmd
+```
+
+This prints messages from Lua filters showing what metadata they found and what actions they took.
+
+## Styling
+
+### Why doesn't my font appear in the output?
+
+1. **Check font name spelling** — Use the exact name as Word knows it (e.g., "Times New Roman" not "TimesNewRoman")
+2. **Verify font is installed** — The font must be available on the system rendering the document
+
+### Can I use different page orientations in one document?
+
+Yes. Define a named page style in CSS:
+
+```css
+@page landscape {
+  size: letter landscape;
+  margin: 0.5in;
+}
+```
+
+Then use it in your document:
+
+```markdown
+::: {.section-landscape}
+Wide table content here
+:::
+```
+
+## Still stuck?
+
+1. Check [Troubleshooting](troubleshooting.html) for detailed solutions
+2. Search [GitHub issues](https://github.com/DougManuel/docstyle/issues)
+3. Open a new issue with a minimal reproducible example

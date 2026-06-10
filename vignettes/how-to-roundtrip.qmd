@@ -1,0 +1,367 @@
+---
+title: "Round-trip workflow: Word ↔ Quarto"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Round-trip workflow: Word ↔ Quarto}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: true
+  echo: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+devtools::load_all("../")
+```
+
+## Overview
+
+This is an **advanced workflow** for collaborating with colleagues who work in Microsoft Word while you work in Quarto. It preserves:
+
+- **Live Zotero citations** that remain editable in Word
+- **Comments** with author, date, and content metadata
+- **Track changes** (insertions and deletions) with revision history
+
+If you just want to render QMD to Word, see the [getting started tutorial](tutorial-getting-started.html) instead.
+
+## When to use this workflow
+
+Use the round-trip workflow when:
+
+- A colleague sends you a Word document with Zotero citations
+- You need to edit in Quarto (version control, collaboration, etc.)
+- The colleague expects to receive Word back with working Zotero "Refresh" button
+
+If your collaborators don't use Zotero, the simpler QMD → Word workflow is sufficient.
+
+## The workflow
+
+```
+┌─────────────────┐     import_docx()     ┌─────────────────┐
+│   Word (.docx)  │ ───────────────────▶  │   Quarto (.qmd) │
+│   from colleague│                       │   + JSON files  │
+└─────────────────┘                       └─────────────────┘
+                                                  │
+                                                  │ edit in Quarto
+                                                  ▼
+┌─────────────────┐     quarto render     ┌─────────────────┐
+│   Word (.docx)  │ ◀───────────────────  │   Quarto (.qmd) │
+│   back to colleague                     │   edited version│
+└─────────────────┘                       └─────────────────┘
+```
+
+## Step 1: Import from Word
+
+When a colleague sends you a Word document with Zotero citations, use `import_docx()` to extract both the content and citation metadata:
+
+```{r}
+#| label: import-example
+#| eval: false
+# Import a Word document from a colleague
+result <- import_docx("colleague-draft.docx", output_dir = "project/")
+
+# What you get:
+result$qmd_path         # "project/colleague-draft.qmd"
+result$references_json  # "project/references.json" (CSL-JSON for rendering)
+result$field_codes_json # "project/field-codes.json" (Zotero metadata)
+result$n_citations      # Number of citations found
+```
+
+The function creates:
+
+- **QMD file**: Document content converted to Quarto markdown
+- **references.json**: Citation data in CSL-JSON format (used for rendering)
+- **field-codes.json**: Zotero field code metadata (used to inject live citations back into Word)
+
+**No `.bib` file is created.** This is intentional—keeping citations in JSON format avoids conflicts when multiple authors work on the same document.
+
+## Step 2: Edit in Quarto
+
+Your QMD file contains standard Pandoc citation syntax:
+
+```markdown
+Evidence suggests this approach is effective [@smith2023].
+
+Multiple sources support this conclusion [@jones2022; @chen2024].
+```
+
+You can:
+
+- Edit text freely
+- Reorganise sections
+- Add new citations (more on this below)
+- Use version control (git) to track changes
+
+## Step 3: Render back to Word
+
+When ready to send the document back to your colleague:
+
+```bash
+quarto render project/colleague-draft.qmd
+```
+
+With the docstyle extension configured, this:
+
+1. Generates a `reference.docx` from your CSS + YAML configuration
+2. Renders the QMD using Quarto/Pandoc
+3. Injects Zotero field codes so citations remain editable in Word
+
+**Result:** Your colleague receives a Word document where they can click "Refresh" in Zotero to update the bibliography.
+
+## Live example
+
+Let's walk through the workflow using the minimal example included with docstyle:
+
+```{r}
+#| label: show-files
+# Find the minimal example
+example_dir <- system.file("extdata/minimal-example", package = "docstyle")
+list.files(example_dir)
+```
+
+### The configuration
+
+The `_quarto.yml` defines both Quarto settings and docstyle configuration:
+
+```{r}
+#| label: show-config
+config <- read_quarto_config(file.path(example_dir, "_quarto.yml"))
+
+# docstyle configuration
+ds_config <- get_docstyle_config(config)
+names(ds_config)
+```
+
+### The JSON files
+
+Citation metadata is stored in two JSON files:
+
+```{r}
+#| label: show-references
+# references.json contains CSL-JSON citation data
+refs <- jsonlite::read_json(file.path(example_dir, "references.json"))
+cat("References:", length(refs), "\n")
+cat("Citation keys:", paste(sapply(refs, `[[`, "id"), collapse = ", "))
+```
+
+```{r}
+#| label: show-field-codes
+# field-codes.json contains Zotero metadata for round-trip
+fc <- jsonlite::read_json(file.path(example_dir, "field-codes.json"))
+cat("Field codes for:", paste(names(fc$citations), collapse = ", "))
+```
+
+### Rendering
+
+```{r}
+#| label: render-minimal
+#| results: hide
+# Generate a reference doc and render
+output_path <- file.path(tempdir(), "minimal-example.docx")
+ref_doc <- file.path(tempdir(), "reference.docx")
+
+# Generate reference doc
+generate_reference_doc(
+  file.path(example_dir, "_quarto.yml"),
+  output_path = ref_doc
+)
+
+# In practice, you'd run: quarto render minimal-example.qmd
+# The extension handles reference doc generation automatically
+file.exists(ref_doc)
+```
+
+```{r}
+#| label: show-output
+cat("Reference doc size:", file.size(ref_doc), "bytes\n")
+```
+
+## Adding new citations
+
+When you add a new citation that wasn't in the original Word document:
+
+### Option 1: Live Zotero lookup (recommended)
+
+If you have Zotero with Better BibTeX running, the extension can query your library for any citations not found in `field-codes.json`.
+
+### Option 2: Manual JSON update
+
+Add the new citation to `references.json` and `field-codes.json` manually. The JSON format matches Zotero's CSL-JSON export.
+
+## Figures
+
+When a Word document contains images, docstyle harvests them as `.figure` divs with stable IDs derived from Word's internal drawing identifier (`wp:docPr/@id`):
+
+```markdown
+::: {#docstyle-fig-FIXME-42 .figure}
+![](images/rId5.png)
+
+**Figure 1.** Caption text harvested from the ImageCaption paragraph.
+:::
+```
+
+The `FIXME` in the ID signals that you should rename it before rendering:
+
+```markdown
+::: {#consort-flow .figure width="80%" align="center"}
+![](images/flow.png)
+
+**Figure 1.** CONSORT flow diagram.
+:::
+```
+
+### Important: figure ID prefix
+
+Quarto reserves the `fig-` prefix for its own cross-reference system. Any div with a `#fig-*` ID is intercepted and converted before docstyle's Lua filter runs. **Do not use `#fig-` as the ID prefix for `.figure` divs**—use descriptive IDs without that prefix (e.g., `#consort-flow`, `#study-map`).
+
+If you need Quarto cross-references (e.g., `@consort-flow`), use Quarto's native `#| label: fig-consort-flow` chunk option for code-generated figures. The `.figure` div class is for round-trip fidelity with images embedded in Word.
+
+### Supported div attributes
+
+| Attribute | Example | Effect |
+|-----------|---------|--------|
+| `width` | `width="80%"` | Image width (stored in sidecar; Phase 2) |
+| `align` | `align="center"` | Horizontal alignment (stored in sidecar; Phase 2) |
+
+### Figure sidecar: `_docstyle/figures.json`
+
+Harvest writes figure metadata to `_docstyle/figures.json`, keyed by `wp:docPr/@id`:
+
+```json
+{
+  "42": {
+    "docpr_id": 42,
+    "qmd_id": "consort-flow",
+    "caption": "**Figure 1.** Caption text.",
+    "alt": "",
+    "width": null,
+    "align": null
+  }
+}
+```
+
+This file persists the mapping between Word's internal ID and your QMD ID across render cycles.
+
+## Project structure
+
+docstyle supports a clean project structure:
+
+```
+project/
+├── index.qmd                # Your document
+├── _quarto.yml              # Docstyle configuration
+├── _docstyle/               # Sidecar files (JSON metadata)
+│   ├── field-codes.json     # Zotero citation metadata
+│   ├── references.json      # CSL-JSON citation data
+│   ├── comments.json        # Comment metadata (optional)
+│   └── figures.json         # Figure ID mapping (optional)
+├── source/                  # Original source documents
+│   └── original.docx        # The Word document you imported
+└── output/                  # Rendered files (gitignored)
+    └── document.docx        # Rendered output
+```
+
+### Configuration
+
+The `_quarto.yml` file defines where files live:
+
+```yaml
+format:
+  docstyle-docx:
+    docstyle:
+      css: styles.css
+      output-name: "My_Document"      # Output filename (without .docx)
+      output-dir: output              # Where rendered files go
+      sidecar-dir: _docstyle          # Where JSON metadata lives
+      source-docx: "source/original.docx"  # Original import source
+```
+
+### Re-harvesting from Word
+
+When a colleague returns an edited Word document, you can re-import while preserving your curated YAML header:
+
+```{r}
+#| label: reharvest
+#| eval: false
+# Re-import from Word, preserving your metadata
+docx_to_qmd(
+  docx_path = "source/edited-by-colleague.docx",
+  output_path = "index.qmd",
+  preserve_header = TRUE  # default
+)
+```
+
+This will:
+
+1. Detect the existing `index.qmd`
+2. Extract its YAML header (authors, affiliations, version info)
+3. Create `index_old.qmd` as a backup
+4. Generate new `index.qmd` with preserved header + fresh body content
+
+## Workflow variants
+
+### Standard rendering (no Zotero)
+
+If you don't need live Zotero citations, just use Quarto normally:
+
+```bash
+quarto render paper.qmd
+```
+
+This produces a Word document with static citations (formatted text, not editable in Zotero).
+
+### Extract citations only
+
+To extract citations without converting content:
+
+```{r}
+#| label: extract-only
+#| eval: false
+extraction <- extract_citations("document.docx", output_dir = "project/")
+```
+
+### Convert content only
+
+To convert content without extracting citations:
+
+```{r}
+#| label: convert-only
+#| eval: false
+docx_to_qmd("document.docx", output_path = "document.qmd")
+```
+
+## Best practices
+
+1. **Use version control**: Track your QMD files in git to see what changed between rounds
+
+2. **Keep JSON files together**: The `references.json` and `field-codes.json` should stay alongside your QMD
+
+3. **Don't edit JSON manually**: Let docstyle manage the JSON files; edit citations in the QMD using standard `[@key]` syntax
+
+4. **Validate before sending**: Check that your rendered Word document looks correct before sending to colleagues
+
+5. **Communicate the workflow**: Let collaborators know they can edit freely in Word—the citations will survive the round-trip
+
+## Troubleshooting
+
+### "No field-codes.json found"
+
+If citations aren't rendering as live Zotero fields, ensure you ran `import_docx()` or `extract_citations()` first. Without `field-codes.json`, citations render as static text.
+
+### Citations not matching
+
+If citation keys in the QMD don't match the JSON files, use `validate_citations()` to check:
+
+```{r}
+#| label: validate
+#| eval: false
+validate_citations("document.docx", bib_path = "library.bib")
+```
+
+## Next steps
+
+- **[Getting started](tutorial-getting-started.html)**: The simpler QMD → Word workflow
+- **[CSS to Word](css-to-word.html)**: Customise document styling with CSS
+- **[Zotero citations](zotero-citations.html)**: Deep dive into citation handling

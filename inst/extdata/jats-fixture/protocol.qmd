@@ -1,0 +1,56 @@
+---
+title: "JATS fixups test fixture"
+abstract: |
+  **Background:** State the problem.
+
+  **Methods:** Describe the approach.
+
+  **Findings:** Summarise results.
+
+  **Conclusions:** State the contribution.
+
+keywords:
+  - one
+  - two
+
+author:
+  - name:
+      given: First
+      family: Author
+    orcid: 0000-0000-0000-0001
+    affiliations:
+      - ref: aff1
+    corresponding: true
+    email: first@example.org
+    roles:
+      - conceptualization
+      - methodology
+      - "writing - original draft"
+
+affiliations:
+  - id: aff1
+    name: Test Institution
+    city: City
+    country: Country
+
+bibliography: refs.bib
+csl: https://www.zotero.org/styles/vancouver
+---
+
+# Background
+
+This is body text with a citation [@example2024].
+
+# Methods
+
+A table:
+
+| Variable | Definition |
+|----------|------------|
+| age | Years |
+| sex | Factor |
+
+# References
+
+::: {#refs}
+:::

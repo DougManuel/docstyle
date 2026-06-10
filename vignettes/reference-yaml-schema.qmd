@@ -1,0 +1,594 @@
+---
+title: "YAML configuration reference"
+format: html
+vignette: >
+  %\VignetteIndexEntry{YAML configuration reference}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+This reference documents all configuration options available in the `docstyle:` section of `_quarto.yml`. For tutorials on using these options, see [Getting started](tutorial-getting-started.html) and [Round-trip workflow](how-to-roundtrip.html).
+
+## Quick reference
+
+```yaml
+docstyle:
+  # Styling (includes page layout via @page rules)
+  css: styles.css                    # Single file or array of files
+
+  # Round-trip metadata
+  source-docx: "source/original.docx"
+  imported: "2025-12-20"
+  sidecar-dir: _docstyle
+
+  # Output
+  output-name: "MyDocument"          # Filename without extension
+  output-dir: output
+
+  # Header/footer
+  header: { enabled: false }
+  footer: { enabled: true, left: "Title", right: "Page {page} of {pages}" }
+
+  # Document elements
+  toc: { title: "Contents", levels: "1-2" }
+  version-history: { title: "Version history", widths: "15,70,15" }
+  author-plate: { show-email: true }
+
+  # Post-render validators (opt-in; error | warn | false)
+  validators:
+    docx: { no-docstyle-cite-markers: error }
+    jats: { well-formed: error, abstract-present: error }
+    pdf:  { tagged: error }
+
+  # Author metadata
+  authors: [...]
+  affiliations: [...]
+```
+
+(The abstract uses the standard top-level `abstract:` front-matter key, not a `docstyle:` sub-key — see [Abstract](#abstract).)
+
+## Styling options
+
+### `css`
+
+Path to CSS file(s) defining typography and colours. Later files override earlier ones (layered styles).
+
+```yaml
+# Single file
+docstyle:
+  css: styles.css
+
+# Multiple files (layered)
+docstyle:
+  css:
+    - base-styles.css
+    - draft-overrides.css     # Overrides base-styles.css
+```
+
+Paths are relative to `_quarto.yml`. CSS selectors map to Word styles:
+
+| CSS Selector | Word Style |
+|--------------|------------|
+| `h1` | Heading 1 |
+| `h2` | Heading 2 |
+| `p` | Body Text |
+| `.abstract` | Abstract (custom) |
+| `.footer` | Footer |
+
+CSS files can also include `@page` rules for page layout configuration. See [Page layout](#page-layout) below.
+
+## Round-trip metadata
+
+These options track document provenance for Word ↔ Quarto workflows.
+
+### `source-docx`
+
+Path to the original Word document this QMD was imported from.
+
+```yaml
+docstyle:
+  source-docx: "source/ORIGINAL_V1.0.docx"
+```
+
+### `imported`
+
+Date when the document was imported (ISO format).
+
+```yaml
+docstyle:
+  imported: "2025-12-20"
+```
+
+### `sidecar-dir`
+
+Directory for metadata files (comments.json, revisions.json, field-codes.json, reference.docx).
+
+```yaml
+docstyle:
+  sidecar-dir: _docstyle    # Default
+```
+
+This directory typically contains:
+
+| File | Purpose |
+|------|---------|
+| `comments.json` | Comment metadata (author, date, content) |
+| `revisions.json` | Track changes metadata |
+| `field-codes.json` | Zotero field codes for citations |
+| `references.json` | CSL-JSON bibliography |
+| `reference.docx` | Generated style template |
+| `reference.docx.hash` | Hash for cache invalidation |
+
+## Output options
+
+### `output-name`
+
+Filename for rendered document (without extension).
+
+```yaml
+docstyle:
+  output-name: "POPCORN_Protocol_V1.0"
+```
+
+If omitted, uses the QMD filename.
+
+### `output-dir`
+
+Directory for rendered output. Usually set at project level:
+
+```yaml
+project:
+  output-dir: output
+```
+
+## Page layout
+
+Page layout is configured via CSS `@page` rules in your stylesheet, not YAML. This follows the CSS Paged Media specification.
+
+```css
+/* In styles.css */
+@page {
+  size: letter;              /* letter | a4 | legal */
+  margin: 1in;               /* or individual margins */
+
+  /* Optional: line numbers for manuscript review */
+  --docstyle-line-numbers: every 1;        /* every N | none */
+  --docstyle-line-numbers-restart: page;   /* page | section | continuous */
+  --docstyle-line-numbers-distance: 0.25in;
+}
+
+/* Optional: different settings for first page */
+@page :first {
+  --docstyle-line-numbers: none;
+}
+```
+
+### Supported `@page` properties
+
+| Property | Values | Notes |
+|----------|--------|-------|
+| `size` | `letter`, `a4`, `legal` | Optionally add `landscape` or `portrait` |
+| `margin` | CSS length | Shorthand (1-4 values) or individual margins |
+| `margin-top`, `margin-right`, etc. | CSS length | Individual margins |
+| `--docstyle-line-numbers` | `every N`, `none` | Line numbering |
+| `--docstyle-line-numbers-restart` | `page`, `section`, `continuous` | When to restart numbering |
+| `--docstyle-line-numbers-distance` | CSS length | Distance from text |
+| `--docstyle-suppress-top-spacing` | `true`, `false` | Suppress before-spacing on first paragraph after section break |
+
+**Supported units:** `in`, `cm`, `mm`, `pt`
+
+### Named page styles (section breaks)
+
+For content that needs different page settings mid-document (e.g., landscape tables), define named `@page` rules:
+
+```css
+/* Default page */
+@page {
+  size: letter;
+  margin: 1in;
+}
+
+/* Landscape section for wide tables */
+@page landscape {
+  size: letter landscape;
+  margin: 0.5in;
+}
+
+/* Narrow margins for appendices */
+@page compact {
+  size: letter;
+  margin: 0.5in;
+}
+```
+
+**Usage in QMD:**
+
+```markdown
+Normal portrait content here.
+
+{{< pagebreak >}}
+
+::: {.section-landscape}
+### Wide table
+
+| Col A | Col B | Col C | Col D | Col E | Col F |
+|-------|-------|-------|-------|-------|-------|
+| data  | data  | data  | data  | data  | data  |
+:::
+
+{{< pagebreak >}}
+
+::: {.section-default}
+:::
+
+Back to portrait orientation.
+```
+
+The `.section-{name}` class maps to the `@page {name}` CSS rule. The section marker inserts a section break that ends the previous section. Use `{{< pagebreak >}}` before the marker if you want a page break at that point.
+
+## Header and footer
+
+### `header`
+
+Page header configuration.
+
+```yaml
+docstyle:
+  header:
+    enabled: true
+    content: "{title}"        # Can include {title}, {date}, {version}
+    align: right              # left | center | right
+    first-page: false         # Suppress on first page
+    style: header             # CSS class for styling
+```
+
+### `footer`
+
+Page footer configuration. Supports positional content (left/center/right) or single content.
+
+```yaml
+# Positional footer
+docstyle:
+  footer:
+    enabled: true
+    first-page: false         # No footer on title page
+    style: footer
+    left: "Document Title"
+    center: ""
+    right: "Page {page} of {pages}"
+
+# Simple centered footer
+docstyle:
+  footer:
+    enabled: true
+    content: "Page {page}"
+    align: center
+```
+
+**Available placeholders:**
+
+| Placeholder | Field code | Description |
+|-------------|------------|-------------|
+| `{page}` | `PAGE` | Current page number |
+| `{pages}` | `NUMPAGES` | Total page count (entire document) |
+| `{section-pages}` | `SECTIONPAGES` | Page count for the current section only |
+| `{title}` | — | Document title (static text) |
+| `{date}` | — | Current date (static text) |
+
+Use `{section-pages}` with `page-start` when you want the denominator to count only the pages in one section (e.g., "Page 1 of 2" in an appendix) rather than the entire document.
+
+**Per-section overrides:** Footer content can be overridden per section using div attributes. See [Headers and footers](how-to-headers-footers.html) for recipes and examples.
+
+```markdown
+::: {.section-appendix footer-left="Appendix" footer-right="Page {page}"}
+Content with a section-specific footer.
+:::
+```
+
+**Per-section line numbers:** Line numbering can also be customised per section:
+
+```markdown
+::: {.section-body line-numbers="page" line-numbers-count-by="5"
+     line-numbers-start="1" line-numbers-distance="0.5in"}
+Body content with line numbers every 5 lines.
+:::
+
+::: {.section-appendix line-numbers="none" footer="false"}
+Appendix without line numbers or footer.
+:::
+```
+
+| Attribute | Values | Description |
+|-----------|--------|-------------|
+| `line-numbers` | `continuous`, `page`, `section`, `none` | Restart mode |
+| `line-numbers-count-by` | Integer (default: 1) | Show number every N lines |
+| `line-numbers-start` | Integer | Starting line number |
+| `line-numbers-distance` | CSS length (default: 0.25in) | Distance from text edge |
+| `suppress-top-spacing` | `true`, `false` | Suppress top margin on first paragraph after section break (overrides CSS `@page` setting) |
+
+Setting `footer="false"` on a section div suppresses the footer for that section (writes an empty footer file rather than inheriting from the previous section).
+
+Setting `suppress-top-spacing="true"` removes the before-spacing from the first content paragraph after the section break, eliminating the gap that heading styles with `margin-top` create at the top of a page.
+
+## Table of contents
+
+### `toc`
+
+Configures the TOC field inserted by `toc-field.lua` filter.
+
+```yaml
+docstyle:
+  toc:
+    title: "Table of contents"
+    title-level: 1            # Heading level for title (1 = Heading1)
+    levels: "1-2"             # Include Heading1 and Heading2
+    page-numbers: true
+    hyperlinks: true
+    tab-leader: none          # none | dots | underline
+```
+
+**Usage in QMD:**
+
+```markdown
+::: toc
+:::
+```
+
+The `toc-field.lua` filter replaces this placeholder with a Word TOC field code.
+
+## Version history
+
+### `version-history`
+
+Configures the version history table inserted by `version-history.lua` filter.
+
+```yaml
+docstyle:
+  version-history:
+    title: "Version history"
+    title-level: 1
+    widths: "15,70,15"        # Column percentages: Version, Description, Date
+    style: "table-grid"       # table-grid | table-formal
+```
+
+**Usage in QMD front matter:**
+
+```yaml
+version-history:
+  - version: "1.0.0"
+    date: "2025-12-20"
+    description: "Final release"
+  - version: "0.9.0"
+    date: "2025-12-01"
+    description: "Initial draft for review"
+```
+
+**Usage in QMD body:**
+
+```markdown
+::: version-history
+:::
+```
+
+**Table styles:**
+
+| Style | Description |
+|-------|-------------|
+| `table-grid` | All borders visible |
+| `table-formal` | Top and bottom borders only |
+
+## Author plate
+
+### `author-plate`
+
+Configures the author list inserted by `author-plate.lua` filter.
+
+```yaml
+docstyle:
+  author-plate:
+    corresponding-marker: "*"
+    equal-marker: "†"
+    show-orcid: false
+    show-email: true
+```
+
+**Usage in QMD:**
+
+```markdown
+::: author-plate
+:::
+```
+
+## Abstract
+
+The abstract content comes from the standard top-level `abstract:` front-matter key (the same key Quarto uses) — there is no `docstyle:` sub-key for it. The docstyle-specific part is an optional placeholder div that controls **where** the abstract renders in `docstyle-docx` output.
+
+```yaml
+---
+title: "My Document"
+abstract: |
+  Background, methods, and findings in brief.
+---
+```
+
+**Usage in QMD body:**
+
+```markdown
+::: docstyle-abstract
+:::
+```
+
+Place the `::: docstyle-abstract :::` div where you want the abstract to appear — typically just below `::: author-plate :::`, matching the order the Typst/PDF output already produces. Pandoc's Word writer otherwise hoists the abstract to the very top of the document, above the formatted author plate; the placeholder relocates it.
+
+- **docx only.** The placeholder is a no-op in Typst and JATS, which render `abstract:` natively in their own title areas. The abstract therefore stays in front-matter metadata and serves every format from one source.
+- **Opt-in.** Without the div, the abstract renders at the document top (unchanged behaviour). A plain `## Abstract` heading with body prose is also left untouched.
+- **Round-trips.** On harvest (`docx_to_qmd()`), the relocated abstract is restored to the `abstract:` front-matter key and an empty `::: docstyle-abstract :::` placeholder is re-emitted at its position.
+
+## Authors and affiliations
+
+### `authors`
+
+Author metadata following Quarto's scholarly metadata schema.
+
+```yaml
+docstyle:
+  authors:
+    - name:
+        given: "Jane"
+        family: "Smith"
+      orcid: "0000-0001-2345-6789"
+      email: "jane@example.org"
+      corresponding: true
+      equal-contributor: true
+      affiliations:
+        - ref: inst1
+        - ref: inst2
+      roles:
+        - conceptualization
+        - "writing – original draft"
+```
+
+### `affiliations`
+
+Institution definitions referenced by authors.
+
+```yaml
+docstyle:
+  affiliations:
+    - id: inst1
+      name: "University of Example"
+      department: "Department of Research"
+      city: "Ottawa"
+      region: "Ontario"
+      country: "Canada"
+    - id: inst2
+      name: "Research Institute"
+      city: "Toronto"
+      country: "Canada"
+```
+
+## Complete example
+
+**CSS file** (`styles.css`):
+
+```css
+/* Page layout */
+@page {
+  size: letter;
+  margin: 1in;
+}
+
+/* Typography */
+body {
+  font-family: "Arial", sans-serif;
+  font-size: 11pt;
+}
+
+h1 {
+  font-size: 14pt;
+  font-weight: bold;
+}
+```
+
+**YAML configuration** (`_quarto.yml`):
+
+```yaml
+project:
+  type: default
+  output-dir: output
+  pre-render: _docstyle/pre-render.R
+  post-render: _docstyle/post-render.R
+
+format:
+  docstyle-docx:
+    toc: false
+    number-sections: false
+
+execute:
+  echo: false
+  warning: false
+
+docstyle:
+  css:
+    - base-styles.css
+    - manuscript-draft.css
+
+  source-docx: "source/original.docx"
+  imported: "2025-12-20"
+  sidecar-dir: _docstyle
+
+  header:
+    enabled: false
+
+  footer:
+    enabled: true
+    first-page: false
+    style: footer
+    left: "My Document"
+    right: "Page {page} of {pages}"
+
+  toc:
+    title: "Table of contents"
+    title-level: 1
+    levels: "1-2"
+    page-numbers: true
+    hyperlinks: true
+    tab-leader: none
+
+  version-history:
+    title: "Version history"
+    title-level: 1
+    widths: "15,70,15"
+    style: "table-grid"
+
+  author-plate:
+    corresponding-marker: "*"
+    show-email: true
+
+  authors:
+    - name:
+        given: "Jane"
+        family: "Smith"
+      email: "jane@example.org"
+      corresponding: true
+      affiliations:
+        - ref: inst1
+
+  affiliations:
+    - id: inst1
+      name: "Research University"
+      city: "Ottawa"
+      country: "Canada"
+```
+
+## Validators
+
+Opt-in post-render checks that inspect rendered outputs and fail the render on silent failures. Configure under `docstyle.validators.<format>`; each validator is `error` (fail the render), `warn` (print to stderr, continue), or `false`/off.
+
+```yaml
+docstyle:
+  validators:
+    docx:
+      no-docstyle-cite-markers: error   # unreplaced DOCSTYLE_CITE:: markers in the docx
+    jats:
+      well-formed: error                # JATS XML parses
+      abstract-present: error           # an <abstract> element exists
+    pdf:
+      tagged: error                     # PDF carries a structure tree (Tagged: yes)
+```
+
+| Validator | Format | Catches |
+|-----------|--------|---------|
+| `no-docstyle-cite-markers` | docx | `DOCSTYLE_CITE::` markers left in `word/document.xml` — the post-render Zotero injection silently skipped (often renv shadowing). |
+| `well-formed` | jats | Rendered JATS XML does not parse. |
+| `abstract-present` | jats | No `<abstract>` element — e.g. a `# Abstract` body heading landed as a `<sec>` in `<body>` instead of `<front>`, which PMC drops. |
+| `tagged` | pdf | PDF has no structure tree. Bare-minimum PDF/UA precondition (not full UA-1 conformance, which needs veraPDF). |
+
+The registry is plugin-style (`R/validate_output.R`); a new validator is a `function(path) -> list(pass, message)` plus one registry entry. Run ad-hoc with `validate_docstyle_output()`.
+
+## See also
+
+- [CSS property reference](reference-css-properties.html): Every supported CSS property and its Word equivalent
+- [File conventions](reference-file-conventions.html): Sidecar files and directory structure
+- [Architecture](architecture.html): How docstyle processes configuration
+- [CSS to Word](css-to-word.html): Tutorial on creating Word templates from CSS

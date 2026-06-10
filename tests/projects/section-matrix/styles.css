@@ -1,0 +1,23 @@
+/* Section matrix test: minimal CSS */
+
+body {
+  font-family: "Calibri", sans-serif;
+  font-size: 11pt;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 6pt;
+  line-height: 1.15;
+}
+
+h1 { font-size: 16pt; font-weight: bold; }
+h2 { font-size: 13pt; font-weight: bold; }
+
+@page {
+  size: letter portrait;
+  margin-top: 1in;
+  margin-bottom: 1in;
+  margin-left: 1.25in;
+  margin-right: 1.25in;
+}

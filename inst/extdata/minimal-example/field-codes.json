@@ -1,0 +1,157 @@
+{
+  "docstyle_version": "0.5.0",
+  "references_hash": "f0d6891fdcfcd38f910d06dc2db4d252d68505db018081a3642018b725e2e2e1",
+  "extracted_from": "minimal-example-zotero-ref.docx",
+  "extracted_at": "2025-12-04T05:18:16Z",
+  "zotero_pref": null,
+  "zotero_bibl": null,
+  "citations": {
+    "knuth1984": {
+      "itemData": {
+        "id": 80420,
+        "type": "article-journal",
+        "container-title": "The Computer Journal",
+        "DOI": "10.1093/comjnl/27.2.97",
+        "ISSN": "0010-4620, 1460-2067",
+        "issue": "2",
+        "journalAbbreviation": "Comput. J.",
+        "language": "en",
+        "page": "97-111",
+        "source": "DOI.org (Crossref)",
+        "title": "Literate programming",
+        "URL": "https://academic.oup.com/comjnl/article-lookup/doi/10.1093/comjnl/27.2.97",
+        "volume": "27",
+        "author": [
+          {
+            "family": "Knuth",
+            "given": "D. E."
+          }
+        ],
+        "accessed": {
+          "date-parts": [
+            [
+              "2025",
+              12,
+              4
+            ]
+          ]
+        },
+        "issued": {
+          "date-parts": [
+            [
+              "1984",
+              2,
+              1
+            ]
+          ]
+        },
+        "citation-key": "[@Knuth_CJ_1984]"
+      },
+      "uris": [
+        "http://zotero.org/groups/6333496/items/9KHPSE8E"
+      ]
+    },
+    "tufte2018": {
+      "itemData": {
+        "id": 80421,
+        "type": "book",
+        "edition": "2 edition, 10 printing, April 2018",
+        "event-place": "Cheshire, Conn",
+        "ISBN": "978-0-9613921-4-7",
+        "language": "en",
+        "number-of-pages": "197",
+        "publisher": "Graphics Press",
+        "publisher-place": "Cheshire, Conn",
+        "source": "K10plus ISBN",
+        "title": "The visual display of quantitative information",
+        "author": [
+          {
+            "family": "Tufte",
+            "given": "Edward R."
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              "2018"
+            ]
+          ]
+        },
+        "citation-key": "[@Tufte_VisualDisplayQuantitative_2018]"
+      },
+      "uris": [
+        "http://zotero.org/groups/6333496/items/PBL8EV7C"
+      ]
+    },
+    "bertin2011": {
+      "itemData": {
+        "id": 80415,
+        "type": "book",
+        "edition": "1. ed",
+        "event-place": "Redlands, Calif",
+        "ISBN": "978-1-58948-261-6",
+        "language": "eng",
+        "number-of-pages": "438",
+        "publisher": "ESRI Press",
+        "publisher-place": "Redlands, Calif",
+        "source": "K10plus ISBN",
+        "title": "Semiology of graphics: diagrams, networks, maps",
+        "title-short": "Semiology of graphics",
+        "author": [
+          {
+            "family": "Bertin",
+            "given": "Jacques"
+          },
+          {
+            "family": "Berg",
+            "given": "William J."
+          },
+          {
+            "family": "Bertin",
+            "given": "Jacques"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              "2011"
+            ]
+          ]
+        },
+        "citation-key": "[@Bertin_SemiologyGraphicsDiagrams_2011]"
+      },
+      "uris": [
+        "http://zotero.org/groups/6333496/items/UMIXTUAY"
+      ]
+    }
+  },
+  "citationGroups": {
+    "grp_k4y16OXJ": {
+      "citationID": "k4y16OXJ",
+      "instrText": "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationID\":\"k4y16OXJ\",\"properties\":{\"formattedCitation\":\"(Knuth, 1984)\",\"plainCitation\":\"(Knuth, 1984)\",\"noteIndex\":0},\"citationItems\":[{\"id\":80420,\"uris\":[\"http://zotero.org/groups/6333496/items/9KHPSE8E\"],\"itemData\":{\"id\":80420,\"type\":\"article-journal\",\"container-title\":\"The Computer Journal\",\"DOI\":\"10.1093/comjnl/27.2.97\",\"ISSN\":\"0010-4620, 1460-2067\",\"issue\":\"2\",\"journalAbbreviation\":\"Comput. J.\",\"language\":\"en\",\"page\":\"97-111\",\"source\":\"DOI.org (Crossref)\",\"title\":\"Literate programming\",\"URL\":\"https://academic.oup.com/comjnl/article-lookup/doi/10.1093/comjnl/27.2.97\",\"volume\":\"27\",\"author\":[{\"family\":\"Knuth\",\"given\":\"D. E.\"}],\"accessed\":{\"date-parts\":[[\"2025\",12,4]]},\"issued\":{\"date-parts\":[[\"1984\",2,1]]},\"citation-key\":\"[@Knuth_CJ_1984]\"}}],\"schema\":\"https://github.com/citation-style-language/schema/raw/master/csl-citation.json\"}",
+      "properties": {
+        "formattedCitation": "(Knuth, 1984)",
+        "plainCitation": "(Knuth, 1984)"
+      },
+      "citekeys": ["knuth1984"]
+    },
+    "grp_rwiwS1DZ": {
+      "citationID": "rwiwS1DZ",
+      "instrText": "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationID\":\"rwiwS1DZ\",\"properties\":{\"formattedCitation\":\"(Tufte, 2018)\",\"plainCitation\":\"(Tufte, 2018)\",\"noteIndex\":0},\"citationItems\":[{\"id\":80421,\"uris\":[\"http://zotero.org/groups/6333496/items/PBL8EV7C\"],\"itemData\":{\"id\":80421,\"type\":\"book\",\"edition\":\"2 edition, 10 printing, April 2018\",\"event-place\":\"Cheshire, Conn\",\"ISBN\":\"978-0-9613921-4-7\",\"language\":\"en\",\"number-of-pages\":\"197\",\"publisher\":\"Graphics Press\",\"publisher-place\":\"Cheshire, Conn\",\"source\":\"K10plus ISBN\",\"title\":\"The visual display of quantitative information\",\"author\":[{\"family\":\"Tufte\",\"given\":\"Edward R.\"}],\"issued\":{\"date-parts\":[[\"2018\"]]},\"citation-key\":\"[@Tufte_VisualDisplayQuantitative_2018]\"}}],\"schema\":\"https://github.com/citation-style-language/schema/raw/master/csl-citation.json\"}",
+      "properties": {
+        "formattedCitation": "(Tufte, 2018)",
+        "plainCitation": "(Tufte, 2018)"
+      },
+      "citekeys": ["tufte2018"]
+    },
+    "grp_DRLAVR8d": {
+      "citationID": "DRLAVR8d",
+      "instrText": "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationID\":\"DRLAVR8d\",\"properties\":{\"formattedCitation\":\"(Bertin, Berg, & Bertin, 2011)\",\"plainCitation\":\"(Bertin, Berg, & Bertin, 2011)\",\"noteIndex\":0},\"citationItems\":[{\"id\":80415,\"uris\":[\"http://zotero.org/groups/6333496/items/UMIXTUAY\"],\"itemData\":{\"id\":80415,\"type\":\"book\",\"edition\":\"1. ed\",\"event-place\":\"Redlands, Calif\",\"ISBN\":\"978-1-58948-261-6\",\"language\":\"eng\",\"number-of-pages\":\"438\",\"publisher\":\"ESRI Press\",\"publisher-place\":\"Redlands, Calif\",\"source\":\"K10plus ISBN\",\"title\":\"Semiology of graphics: diagrams, networks, maps\",\"title-short\":\"Semiology of graphics\",\"author\":[{\"family\":\"Bertin\",\"given\":\"Jacques\"},{\"family\":\"Berg\",\"given\":\"William J.\"},{\"family\":\"Bertin\",\"given\":\"Jacques\"}],\"issued\":{\"date-parts\":[[\"2011\"]]},\"citation-key\":\"[@Bertin_SemiologyGraphicsDiagrams_2011]\"}}],\"schema\":\"https://github.com/citation-style-language/schema/raw/master/csl-citation.json\"}",
+      "properties": {
+        "formattedCitation": "(Bertin, Berg, & Bertin, 2011)",
+        "plainCitation": "(Bertin, Berg, & Bertin, 2011)"
+      },
+      "citekeys": ["bertin2011"]
+    }
+  }
+}

@@ -1,0 +1,313 @@
+---
+title: "Getting started with docstyle"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Getting started with docstyle}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: true
+  echo: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+devtools::load_all("../")
+```
+
+## Overview
+
+**docstyle** is a Quarto extension that generates styled Word documents from CSS + YAML configuration. Define your styles once in CSS, configure page layout in YAML, and let docstyle generate the `reference.docx` automatically.
+
+This tutorial walks through the core workflow: **QMD → Word**.
+
+## The problem
+
+Microsoft Word's `reference.docx` templates are:
+
+-   **Fragile**: Small edits can break styles in unexpected ways
+-   **Opaque**: Hard to diff, review, or version control
+-   **Manual**: Every style change requires editing the Word file
+
+## The solution
+
+docstyle uses CSS + YAML as the single source of truth:
+
+```
+styles.css + _quarto.yml → reference.docx → Quarto → Final .docx
+```
+
+The extension generates `reference.docx` automatically before each render.
+
+## Installation
+
+docstyle requires **both** the Quarto extension and the R package.
+
+### Step 1: Install the R package
+
+```r
+remotes::install_github("DougManuel/docstyle")
+```
+
+The R package provides the CSS parsing and reference document generation that runs before each render.
+
+### Step 2: Install the Quarto extension
+
+**Option A: From R (recommended)**
+
+```r
+docstyle::use_docstyle()
+```
+
+This installs the extension from the package, ensuring version consistency.
+
+**Option B: From GitHub**
+
+```bash
+quarto add DougManuel/docstyle
+```
+
+Both methods create `_extensions/docstyle/` in your project.
+
+### Verify installation
+
+After installation, you should have:
+
+- `_extensions/docstyle/` directory with Lua filters and R scripts
+- The `docstyle` R package available (`library(docstyle)` should work)
+
+### Subdirectory projects
+
+If your QMD files are in subdirectories (e.g., `reports/annual-report/`), Quarto looks for `_extensions/` relative to the QMD file. You need to make the extension accessible:
+
+**Option A: Symlink (recommended)**
+
+```bash
+cd reports/annual-report
+mkdir -p _extensions
+ln -s ../../_extensions/docstyle _extensions/docstyle
+```
+
+**Option B: Install in subdirectory**
+
+```bash
+cd reports/annual-report
+quarto add DougManuel/docstyle
+```
+
+The bootstrap scripts in `_docstyle/` handle extension auto-restore, so subdirectory projects work without path adjustments.
+
+See the [Troubleshooting guide](troubleshooting.html) for detailed subdirectory setup instructions.
+
+## Quick start
+
+### Step 1: Create a CSS file
+
+Create `styles.css` with page layout and typography:
+
+```css
+/* Page layout */
+@page {
+  size: letter;
+  margin: 1in;
+}
+
+/* Named page style for landscape sections */
+@page landscape {
+  size: letter landscape;
+  margin: 0.5in;
+}
+
+/* Headings */
+h1 {
+  font: 600 36px "Arial";
+  color: #262C3A;
+}
+
+h2 {
+  font: 600 24px "Arial";
+  color: #262C3A;
+}
+
+/* Body text */
+p {
+  font: 400 11px "Arial";
+  line-height: 1.5;
+  color: #333333;
+}
+```
+
+### Step 2: Configure `_quarto.yml`
+
+```yaml
+project:
+  type: default
+
+format:
+  docstyle-docx:
+    docstyle:
+      css: styles.css
+      footer:
+        enabled: true
+        right: "Page {page} of {pages}"
+```
+
+### Step 3: Write your document
+
+Create `document.qmd`:
+
+```markdown
+---
+title: "My Document"
+---
+
+# Introduction
+
+This is body text styled by CSS.
+
+## Methods
+
+Another section with consistent styling.
+```
+
+### Step 4: Render
+
+```bash
+quarto render document.qmd
+```
+
+The extension:
+
+1. Reads your CSS and YAML configuration
+2. Generates a `reference.docx` with those styles
+3. Renders your QMD using that reference document
+
+## Live example
+
+Let's see docstyle in action using the bundled POPCORN study styles.
+
+### The CSS
+
+```{r}
+#| label: read-css
+css_path <- system.file("extdata/popcorn/popcorn.css", package = "docstyle")
+styles <- read_css(css_path)
+```
+
+**h1 style:**
+
+```{r}
+#| label: show-h1
+styles[["h1"]]
+```
+
+**p (body) style:**
+
+```{r}
+#| label: show-p
+styles[["p"]]
+```
+
+### Generate a reference document
+
+```{r}
+#| label: generate-reference
+#| results: hide
+# Create a config
+config <- list(
+  docstyle = list(
+    css = css_path,
+    page = list(
+      size = "letter",
+      margins = list(top = "1in", bottom = "1in", left = "1in", right = "1in")
+    ),
+    footer = list(
+      enabled = TRUE,
+      right = "Page {page} of {pages}"
+    )
+  )
+)
+
+output_path <- file.path(tempdir(), "reference.docx")
+ref_doc <- generate_reference_doc(config, output_path = output_path)
+
+cat("Generated:", ref_doc, "\n")
+cat("File size:", file.size(ref_doc), "bytes\n")
+```
+
+### Verify the styles
+
+```{r}
+#| label: verify-styles
+doc <- officer::read_docx(ref_doc)
+styles_xml <- get_styles_xml(doc)
+ns <- c(w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main")
+
+# Check Heading 1
+h1_node <- xml2::xml_find_first(styles_xml, "//w:style[@w:styleId='Heading1']", ns)
+h1_color <- xml2::xml_find_first(h1_node, ".//w:color", ns)
+h1_sz <- xml2::xml_find_first(h1_node, ".//w:sz", ns)
+
+cat("Heading 1 colour:", xml2::xml_attr(h1_color, "val"), "\n")
+cat("Heading 1 size (half-points):", xml2::xml_attr(h1_sz, "val"), "\n")
+```
+
+The colour `262C3A` is POPCORN's dark blue, and 72 half-points = 36pt (matching the CSS).
+
+## Configuration reference
+
+Page layout is configured in CSS via `@page` rules:
+
+```css
+@page {
+  size: letter;            /* letter | a4 | legal */
+  margin: 1in;             /* shorthand or individual margins */
+
+  /* Optional: line numbers */
+  --docstyle-line-numbers: every 1;
+  --docstyle-line-numbers-restart: page;
+}
+```
+
+The `docstyle:` section in YAML handles headers, footers, and metadata:
+
+```yaml
+docstyle:
+  css: styles.css           # Path to CSS file (includes @page rules)
+
+  # Footer
+  footer:
+    enabled: true
+    content: "Page {page}"  # Single-position format
+    align: center
+    # Or multi-position format:
+    left: "Document Title"
+    center: ""
+    right: "Page {page} of {pages}"
+    style: footer           # CSS class for styling
+    first-page: false       # Different first page
+```
+
+## Configuration tips
+
+### Where to put configuration
+
+docstyle configuration is split between two locations:
+
+| Configuration | Location | Used by |
+|--------------|----------|---------|
+| `css:`, `footer:`, `header:` | `_quarto.yml` | Pre-render R script |
+| `author-plate:`, `authors:`, `affiliations:` | QMD front matter | Lua filters at render time |
+
+Lua filter configuration (like `author-plate:`) must be in the QMD front matter because Quarto strips nested `docstyle.*` keys from `_quarto.yml` before passing to filters.
+
+See the [Author plates guide](author-plate.html) for detailed configuration.
+
+## Next steps
+
+- **[Troubleshooting](troubleshooting.html)**: Common issues and solutions
+- **[CSS to Word](css-to-word.html)**: Detailed guide on CSS property mapping
+- **[Author plates](author-plate.html)**: Generate formatted author blocks for manuscripts
+- **[Round-trip workflow](how-to-roundtrip.html)**: Collaborate with Word users (advanced)
+- **[Zotero citations](zotero-citations.html)**: Handle citations in Word ↔ QMD workflows

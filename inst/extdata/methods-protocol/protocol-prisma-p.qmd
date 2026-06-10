@@ -1,0 +1,245 @@
+---
+title: "{{TITLE}}"
+subtitle: "Systematic review protocol"
+keywords:
+  - systematic review
+  - protocol
+  - PRISMA-P
+abstract: |
+  **Background:** State the rationale for the review and the gap in
+  current knowledge it addresses.
+
+  **Methods:** Eligibility criteria framed using PICO (Population,
+  Intervention, Comparator, Outcomes), information sources, search
+  strategy, study selection, data extraction, risk of bias assessment,
+  and synthesis approach.
+
+  **Discussion:** Anticipated contribution and limitations.
+
+  **Registration:** PROSPERO registration: <PROSPERO ID>
+
+  **Keywords:** systematic review; protocol; PRISMA-P; (replace with
+  topic-specific terms)
+
+version-history:
+  - version: "0.1.0"
+    date: "{{DATE}}"
+    description: "Initial draft"
+---
+
+::: version-history
+:::
+
+::: author-plate
+:::
+
+::: toc
+:::
+
+# Article summary
+
+## Strengths and limitations
+
+- Strength: PRISMA-P-aligned protocol pre-registered on PROSPERO before
+  screening begins.
+- Strength: a-priori-defined PICO, eligibility criteria, search
+  strategy, and risk-of-bias assessment plan.
+- Limitation: (review-specific — e.g. heterogeneity expected, language
+  restrictions, study-design limitations)
+- Limitation: (add as needed)
+
+# 1. Introduction
+
+## 1.1 Rationale
+
+Describe the rationale for the review in the context of what is already
+known. Reference key prior systematic reviews and their findings,
+limitations, or contradictions.
+
+## 1.2 Objectives
+
+The primary objective is to (verb) the (outcome) of (intervention) for
+(population) in (context).
+
+### 1.2.1 PICO
+
+- **Population:** (who)
+- **Intervention:** (what is being evaluated)
+- **Comparator:** (against what; or "any" / "none")
+- **Outcomes:** (primary and secondary outcomes, with measurement
+  definitions)
+
+# 2. Methods
+
+## 2.1 Eligibility criteria
+
+### 2.1.1 Study designs
+
+- (Specify designs to include: RCTs only, RCTs + cohort, etc.)
+- (Specify designs to exclude)
+
+### 2.1.2 Participants
+
+- (Population characteristics, age range, condition, severity, etc.)
+
+### 2.1.3 Interventions
+
+- (Intervention specification: dose, duration, delivery context)
+
+### 2.1.4 Comparators
+
+- (Comparator specification, if any)
+
+### 2.1.5 Outcomes
+
+**Primary outcomes:**
+
+- (Primary outcome 1 with measurement definition)
+
+**Secondary outcomes:**
+
+- (Secondary outcomes with measurement definitions)
+
+### 2.1.6 Other criteria
+
+- Language: (specify)
+- Publication date: (specify range)
+- Study setting: (specify if applicable)
+
+## 2.2 Information sources
+
+Databases to be searched:
+
+- MEDLINE (Ovid)
+- Embase (Ovid)
+- Cochrane Central Register of Controlled Trials (CENTRAL)
+- (Add or remove as appropriate)
+
+Trial registries:
+
+- ClinicalTrials.gov
+- WHO ICTRP
+- (Add as appropriate)
+
+Grey literature: (specify sources)
+
+Reference lists of included studies and relevant systematic reviews
+will be screened for additional eligible studies.
+
+## 2.3 Search strategy
+
+The search strategy was developed with an information specialist and
+peer-reviewed using the PRESS checklist [@mcgowan2016]. The full
+strategy is in `supplements/search-strategy.json`.
+
+## 2.4 Study records
+
+### 2.4.1 Data management
+
+Records will be deduplicated using (Zotero / EndNote / Covidence) and
+managed in (Covidence / Rayyan / DistillerSR).
+
+### 2.4.2 Selection process
+
+Two reviewers will independently screen titles and abstracts against
+the eligibility criteria. Disagreements will be resolved by discussion
+or by a third reviewer. Studies appearing potentially eligible will be
+retrieved in full and assessed independently by two reviewers.
+
+A PRISMA flow diagram will report the number of records at each stage.
+
+### 2.4.3 Data collection process
+
+A standardised data extraction form will be piloted on a calibration
+sample (5 studies) before full extraction. Two reviewers will extract
+data independently; disagreements will be resolved by discussion or by
+a third reviewer.
+
+## 2.5 Data items
+
+The data extraction form (`supplements/data-extraction-fields.csv`)
+will capture, at minimum:
+
+- Bibliographic data (citation, year, country)
+- Study design and setting
+- Participant characteristics (age, sex, condition severity)
+- Intervention details (dose, duration, delivery)
+- Comparator details
+- Outcome data (estimates, measures of variability, sample sizes)
+- Funding source and conflicts of interest
+
+## 2.6 Outcomes and prioritisation
+
+Outcomes are listed in section 2.1.5 above. The primary outcome will
+drive the main synthesis; secondary outcomes will be reported but
+interpreted with appropriate caution given multiple-comparison concerns.
+
+## 2.7 Risk of bias assessment
+
+Risk of bias will be assessed using:
+
+- (Specify tool: Cochrane RoB 2 for RCTs; ROBINS-I for non-randomised
+  studies; QUADAS-2 for diagnostic accuracy; etc.)
+
+Two reviewers will assess risk of bias independently; disagreements
+will be resolved by discussion or by a third reviewer.
+
+## 2.8 Data synthesis
+
+(Specify: meta-analysis if appropriate, narrative synthesis otherwise.
+If meta-analysis: specify model — fixed/random effects — and
+heterogeneity assessment using I² and τ². If subgroup analyses or
+sensitivity analyses are planned, specify them now.)
+
+If quantitative synthesis is not feasible, results will be reported
+narratively, structured by outcome.
+
+## 2.9 Meta-bias assessment
+
+Publication bias will be assessed using funnel plots and Egger's test
+if at least 10 studies report the primary outcome. Selective outcome
+reporting will be assessed by comparing reported outcomes against trial
+registration entries.
+
+## 2.10 Confidence in cumulative evidence
+
+The certainty of evidence for each outcome will be rated using GRADE
+[@guyatt2008].
+
+# 3. Discussion
+
+(Anticipated contribution and limitations of the review approach.)
+
+# 4. Ethics
+
+This review uses only published secondary literature. Ethics committee
+approval is not required.
+
+# 5. Registration
+
+The protocol is registered on PROSPERO: <PROSPERO ID>.
+
+# 6. Funding
+
+(Funding statement. If none, state "This work received no specific
+funding.")
+
+# 7. Competing interests
+
+(Competing interests statement.)
+
+# 8. Author contributions
+
+Author contributions follow the CRediT taxonomy (see `_quarto.yml`).
+
+# 9. Data availability
+
+The protocol, search strategy, and data extraction form are deposited
+on OSF at <OSF URL>. The full review data, R/Stata code, and
+risk-of-bias assessments will be made available alongside the final
+manuscript.
+
+# References
+
+::: bibliography
+:::

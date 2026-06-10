@@ -1,0 +1,49 @@
+# R package build artifacts
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Ruserdata
+*.tar.gz
+*.Rcheck/
+
+# renv
+renv/library/
+renv/staging/
+renv/cache/
+
+# IDE
+.Rproj.user/
+.DS_Store
+
+# Documentation build
+docs/
+Meta/
+
+# Quarto build artifacts
+.quarto/
+*_files/
+
+# Output directories
+output/
+
+# Development notes
+dev/
+
+# Temporary working files
+tmp/
+
+# Test artifacts
+tests/testthat/_snaps/
+tests/testthat/images/
+
+/.luarc.json
+
+.claude/settings.json
+
+*.html
+
+# Git worktrees
+.worktrees/
+
+# Local-only dev project (POPCORN content, not for public repo)
+tests/projects/popcorn-scope/

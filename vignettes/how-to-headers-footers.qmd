@@ -1,0 +1,230 @@
+---
+title: "Headers and footers"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Headers and footers}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+This guide shows common recipes for configuring headers and footers in docstyle documents. Each recipe shows the YAML or QMD markup and explains what it produces.
+
+For the full list of configuration options, see the [YAML reference](reference-yaml-schema.html).
+
+## Simple footer
+
+Add a footer with text on the left and a page number on the right:
+
+```yaml
+# _quarto.yml
+docstyle:
+  footer:
+    enabled: true
+    left: "My Document"
+    right: "Page {page}"
+```
+
+This produces a three-position footer with "My Document" on the left and "Page 1", "Page 2", etc. on the right. The centre position is empty.
+
+You can also place content in any combination of positions:
+
+```yaml
+docstyle:
+  footer:
+    enabled: true
+    center: "Draft — Not for distribution"
+```
+
+### Single-position shorthand
+
+For a single-position footer, use the `content` and `align` keys:
+
+```yaml
+docstyle:
+  footer:
+    enabled: true
+    content: "Page {page}"
+    align: center
+```
+
+This is equivalent to setting `center: "Page {page}"` and leaving `left` and `right` empty.
+
+## Suppress footer on title page
+
+Set `first-page: false` to hide the footer on the document's first page:
+
+```yaml
+docstyle:
+  footer:
+    enabled: true
+    first-page: false
+    left: "My Document"
+    right: "Page {page} of {pages}"
+```
+
+The first page shows no footer. All subsequent pages show the configured footer. This uses Word's `w:titlePg` mechanism — the first page of the first section is treated as a title page.
+
+## Page X of Y
+
+Use `{page}` for the current page number and `{pages}` for the total document page count:
+
+```yaml
+docstyle:
+  footer:
+    enabled: true
+    right: "Page {page} of {pages}"
+```
+
+This renders as "Page 1 of 5", "Page 2 of 5", etc. The values are Word field codes (`PAGE` and `NUMPAGES`) that update automatically when the document is opened.
+
+### Available placeholders
+
+| Placeholder | Field code | Description |
+|-------------|------------|-------------|
+| `{page}` | `PAGE` | Current page number |
+| `{pages}` | `NUMPAGES` | Total pages in the document |
+| `{section-pages}` | `SECTIONPAGES` | Total pages in the current section |
+| `{title}` | — | Document title (static text) |
+| `{date}` | — | Current date (static text) |
+
+## Per-section footer overrides
+
+Section divs can override footer content for specific sections of the document. Attributes on the div override the YAML defaults; unspecified positions inherit from the previous section.
+
+```markdown
+::: {.section-body}
+Body content inherits the YAML footer defaults.
+:::
+
+::: {.section-appendix footer-left="Appendix" footer-right="Page {page}"}
+Appendix content with a different footer.
+:::
+```
+
+In this example, the body section uses whatever footer is configured in `_quarto.yml`. The appendix section overrides the left position to say "Appendix" and the right position to show just the page number. The centre position inherits from the previous section.
+
+### Cascade rules
+
+Footer positions follow a "same as previous" cascade:
+
+1. The first section inherits from the YAML defaults in `_quarto.yml`
+2. Each subsequent section inherits from the previous section
+3. Explicit div attributes (`footer-left`, `footer-right`, `footer-center`) override specific positions
+4. Unspecified positions carry forward from the previous section
+
+This mirrors Word's built-in "same as previous" behaviour for headers and footers.
+
+## Page number restart
+
+To restart page numbering in a section (e.g., an appendix starting at page 1), use `page-start` with `page-break="true"`:
+
+```markdown
+::: {.section-appendix page-break="true" page-start="1"
+    footer-left="Appendix" footer-right="Page {page} of {section-pages}"}
+Appendix content starts on a new page with page numbering at 1.
+:::
+```
+
+**Important:** `page-start` requires `page-break="true"`. Page number restart does not work with continuous section breaks because Word cannot reset page numbering without a page break boundary.
+
+### Section page counts with `{section-pages}`
+
+When you restart page numbering, `{pages}` (NUMPAGES) still counts the entire document. Use `{section-pages}` (SECTIONPAGES) to count only the pages in the current section:
+
+| Scenario | Use | Result on a 2-page appendix in a 5-page doc |
+|----------|-----|----------------------------------------------|
+| Total document pages | `{pages}` | "of 5" on every page |
+| Pages in this section | `{section-pages}` | "of 2" on appendix pages |
+
+A typical pattern:
+
+- Body: `Page {page} of {pages}` — "Page 2 of 5"
+- Appendix with `page-start="1"`: `Page {page} of {section-pages}` — "Page 1 of 2"
+
+## Suppress footer in a section
+
+To remove the footer from a specific section, set `footer="false"` on the div:
+```markdown
+::: {.section-references footer="false"}
+References with no footer.
+:::
+```
+
+This creates an empty footer for that section. Subsequent sections inherit the empty footer unless they specify their own.
+
+## Headers
+
+Headers use the same configuration pattern as footers. Replace `footer` with `header` in both YAML and div attributes:
+
+```yaml
+# _quarto.yml
+docstyle:
+  header:
+    enabled: true
+    first-page: false
+    left: "My Document"
+    right: "Draft"
+```
+
+Per-section overrides use `header-left`, `header-center`, and `header-right`:
+
+```markdown
+::: {.section-appendix header-left="Appendix" header-right=""}
+Appendix with a different header.
+:::
+```
+
+To suppress the header in a section, use `header="false"`:
+
+```markdown
+::: {.section-appendix header="false"}
+Appendix with no header.
+:::
+```
+
+Headers and footers are independent — you can configure one without the other, and per-section overrides for headers do not affect footers.
+
+## Complete example
+
+This example combines several recipes into a realistic document structure. A working version is available in `tests/projects/footer-mvp/`.
+
+```yaml
+# _quarto.yml
+docstyle:
+  footer:
+    enabled: true
+    first-page: false
+    left: "My Report"
+    right: "Page {page} of {pages}"
+```
+
+```markdown
+---
+title: "Annual Report"
+---
+
+Title page content (no footer due to first-page: false).
+
+::: {.section-body}
+## Introduction
+
+Body content with default footer:
+"My Report" on the left, "Page 2 of 5" on the right.
+:::
+
+::: {.section-appendix page-break="true" page-start="1"
+    footer-left="Appendix" footer-right="Page {page} of {section-pages}"}
+## Appendix A
+
+Appendix with restarted numbering:
+"Appendix" on the left, "Page 1 of 2" on the right.
+:::
+```
+
+## Constraints and limitations
+
+- **Tab stop positions** are currently hardcoded for US Letter with 1-inch margins (centre at 4680 twips, right at 9360 twips). Custom page sizes may produce misaligned footers.
+- **`page-start` requires `page-break="true"`** — Word cannot restart page numbering within a continuous section.
+- **`{section-pages}` requires `page-break="true"`** — SECTIONPAGES counts pages between page breaks. Without a page break, it counts the entire span of continuous sections.
+- **Field code updates** — docstyle injects `<w:updateFields>` into settings.xml to force Word to recalculate field values on open. If page numbers appear stale, press Ctrl+A then F9 to manually refresh.
+- **Pandoc strips footer references** from the reference.docx template during rendering. The docstyle finisher re-injects them in post-render, which is why footers require the docstyle pipeline (not plain `format: docx`).

@@ -1,0 +1,44 @@
+# docstyle preset: formal
+# Professional documents: reports, proposals, charters
+
+project:
+  type: default
+  pre-render: _docstyle/pre-render.R
+  post-render: _docstyle/post-render.R
+
+format:
+  docstyle-docx:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+
+execute:
+  echo: false
+  warning: false
+
+docstyle:
+  css: styles.css
+
+  toc:
+    title: "Table of Contents"
+    title-level: 1
+    levels: "1-3"
+    page-numbers: true
+    tab-leader: dots
+
+  header:
+    enabled: true
+    first-page: false
+    style: header
+
+  footer:
+    enabled: true
+    right: "Page {page}"
+    first-page: false
+    style: footer
+
+  version-history:
+    title: "Version History"
+    title-level: 1
+    widths: "15,70,15"
+    style: "table-grid"

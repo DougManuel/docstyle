@@ -1,0 +1,98 @@
+# Methods-protocol template (docstyle, v0.12.0+)
+# Configured for both editing (Word + Zotero) and preprint (medRxiv-ready PDF)
+# Render Word: quarto render protocol.qmd --to docstyle-docx
+# Render PDF:  quarto render protocol.qmd --to docstyle-typst
+
+project:
+  type: default
+  output-dir: output
+  pre-render: _extensions/docstyle/generate-reference.R
+  post-render: _extensions/docstyle/update-field-codes.R
+
+format:
+  docstyle-docx:
+    toc: false
+    number-sections: false
+
+  docstyle-typst:
+    medrxiv: true
+    running-head: "{{TITLE}}"
+    bibliography: references.bib
+    csl: https://www.zotero.org/styles/vancouver
+    citeproc: true
+    linkcolor: blue
+
+  # JATS XML alongside the PDF — open-science infrastructure (PMC,
+  # ar5iv, scholarly knowledge graphs ingest JATS). Constitution
+  # principle 2 ("Open science as infrastructure"). Renders to
+  # protocol.xml. Remove this block if you don't want the JATS
+  # output for a particular project.
+  docstyle-jats:
+    bibliography: references.bib
+    csl: https://www.zotero.org/styles/vancouver
+
+execute:
+  echo: false
+  warning: false
+
+# Author and affiliation block — single source for both formats.
+# Quarto normalises into by-author/by-affiliation; docstyle reads from there.
+# `roles:` (CRediT taxonomy) passes through to by-author as a custom field.
+authors:
+  - name:
+      given: First
+      family: Author
+    orcid: 0000-0000-0000-0000
+    affiliations:
+      - ref: institution
+    corresponding: true
+    email: first.author@example.org
+    roles:
+      - conceptualization
+      - methodology
+      - writing – original draft
+
+affiliations:
+  - id: institution
+    name: Affiliation Name
+    department: Department or School
+    city: City
+    region: Region or Province
+    country: Country
+
+docstyle:
+  # CSS files are optional. Without them, docstyle-docx uses a sensible default.
+  # css:
+  #   - styles.css
+
+  sidecar-dir: _docstyle
+
+  header:
+    enabled: false
+
+  footer:
+    enabled: true
+    first-page: false
+    style: footer
+    left: "{{TITLE}}"
+    right: "Page {page} of {pages}"
+
+  toc:
+    title: "Table of contents"
+    title-level: 1
+    levels: "1-2"
+    page-numbers: true
+    hyperlinks: true
+    tab-leader: none
+
+  author-plate:
+    corresponding-marker: "*"
+    equal-marker: "†"
+    show-orcid: false
+    show-email: true
+
+  version-history:
+    title: "Version history"
+    title-level: 1
+    widths: "15,65,20"
+    style: "table-grid"

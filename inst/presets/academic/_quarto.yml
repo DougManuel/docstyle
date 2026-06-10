@@ -1,0 +1,28 @@
+# docstyle preset: academic
+# Double-spaced manuscript format for journal submission/review
+
+project:
+  type: default
+  pre-render: _docstyle/pre-render.R
+  post-render: _docstyle/post-render.R
+
+format:
+  docstyle-docx:
+    toc: false
+    number-sections: false
+
+execute:
+  echo: false
+  warning: false
+
+docstyle:
+  css: styles.css
+
+  header:
+    enabled: true
+    right: "{page}"
+    first-page: false
+    style: header
+
+  footer:
+    enabled: false

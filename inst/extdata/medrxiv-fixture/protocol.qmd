@@ -1,0 +1,50 @@
+---
+title: "Test methods protocol — medRxiv flag fixture"
+author:
+  - name: Test Author
+    affiliations:
+      - id: ohri
+        name: "Ottawa Hospital Research Institute"
+abstract: |
+  **Background:** Wastewater surveillance has emerged as a useful
+  public health tool. This protocol describes a scoping review.
+
+  **Methods:** PRISMA-ScR-guided scoping review with LLM-assisted
+  title and abstract screening. PCC framework, multi-database search.
+
+  **Findings:** Will be summarised on completion.
+
+  **Conclusions:** This protocol pre-registers the methodology before
+  screening begins.
+---
+
+# Background
+
+This is a synthetic test fixture for the medRxiv flag on the
+docstyle-typst format. It exercises the line-number, single-column,
+1-inch-margin, and PDF/UA-1 defaults applied when the flag is on.
+
+The body text exists so the rendered PDF has enough content for
+text extraction tools to pull and verify in tests.
+
+# Methods
+
+The protocol follows PRISMA-ScR guidance. Population, Concept, and
+Context (PCC) elements are defined. The search strategy uses MeSH and
+free-text terms across PubMed, Embase, and Web of Science.
+
+LLM-assisted screening uses a staged architecture: open-weights models
+for clear cases, escalation to stronger models for ambiguous ones.
+
+# Competing interests
+
+None.
+
+# Funding
+
+This is a test fixture; no funding statement is real.
+
+# Data availability
+
+This fixture lives at inst/extdata/medrxiv-fixture/ in the docstyle
+package source.

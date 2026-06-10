@@ -1,0 +1,183 @@
+/* docstyle preset: academic
+ * Double-spaced manuscript format for journal submission/review
+ */
+
+/* ==============================================
+   PAGE LAYOUT
+   ============================================== */
+
+@page {
+  size: letter;
+  margin: 1in;
+}
+
+/* ==============================================
+   TYPOGRAPHY
+   ============================================== */
+
+body {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 2.0;  /* Double-spaced */
+}
+
+h1 {
+  font-size: 14pt;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 24pt;
+  margin-bottom: 12pt;
+}
+
+h2 {
+  font-size: 12pt;
+  font-weight: bold;
+  margin-top: 24pt;
+  margin-bottom: 12pt;
+}
+
+h3 {
+  font-size: 12pt;
+  font-weight: bold;
+  font-style: italic;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 0;
+  text-indent: 0.5in;
+}
+
+/* First paragraph after heading: no indent */
+h1 + p, h2 + p, h3 + p {
+  text-indent: 0;
+}
+
+/* ==============================================
+   HEADER AND FOOTER
+   ============================================== */
+
+.header {
+  font-size: 12pt;
+}
+
+.footer {
+  font-size: 12pt;
+}
+
+/* ==============================================
+   TABLES
+   ============================================== */
+
+table {
+  font-size: 10pt;
+  border-collapse: collapse;
+  width: 100%;
+  line-height: 1.5;  /* Tables single-spaced */
+}
+
+th, td {
+  padding: 4pt 6pt;
+  border-bottom: 0.5pt solid #000;
+}
+
+th {
+  font-weight: bold;
+  text-align: left;
+  border-top: 1pt solid #000;
+  border-bottom: 1pt solid #000;
+}
+
+/* ==============================================
+   LISTS
+   ============================================== */
+
+ul, ol {
+  margin-top: 12pt;
+  margin-bottom: 12pt;
+  padding-left: 24pt;
+}
+
+li {
+  margin-bottom: 6pt;
+}
+
+/* ==============================================
+   BODY TEXT VARIANTS
+   ============================================== */
+
+/* .body-text { } */
+
+.first-paragraph {
+  text-indent: 0;
+}
+
+/* .compact { margin-bottom: 0; } */
+
+blockquote {
+  margin-left: 0.5in;
+  margin-right: 0.5in;
+}
+
+/* ==============================================
+   CAPTIONS
+   ============================================== */
+
+caption, .caption {
+  font-size: 10pt;
+}
+
+.table-caption {
+  font-size: 10pt;
+  font-weight: bold;
+}
+
+.image-caption {
+  font-size: 10pt;
+  font-style: italic;
+}
+
+/* ==============================================
+   BIBLIOGRAPHY / REFERENCES
+   ============================================== */
+
+.bibliography, .references {
+  text-indent: -0.5in;
+  padding-left: 0.5in;
+}
+
+/* ==============================================
+   DEFINITION LISTS
+   ============================================== */
+
+dt {
+  font-weight: bold;
+}
+
+dd {
+  margin-left: 0.25in;
+}
+
+/* ==============================================
+   ABSTRACT
+   ============================================== */
+
+.abstract-title {
+  font-weight: bold;
+  text-align: center;
+}
+
+.abstract {
+  margin-left: 0.5in;
+  margin-right: 0.5in;
+}
+
+/* ==============================================
+   FOOTNOTES
+   ============================================== */
+
+.footnote-text {
+  font-size: 10pt;
+}

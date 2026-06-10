@@ -1,0 +1,59 @@
+{
+  "rev_7": {
+    "id": "rev_7",
+    "type": "insertion",
+    "author": "Unknown",
+    "date": "2025-01-01T00:00:00Z",
+    "content": "this text was added",
+    "initials": "U"
+  },
+
+  "rev_13": {
+    "id": "rev_13",
+    "type": "insertion",
+    "author": "Unknown",
+    "date": "2025-01-01T00:00:00Z",
+    "content": "updated",
+    "initials": "U"
+  },
+  "rev_15": {
+    "id": "rev_15",
+    "type": "insertion",
+    "author": "Unknown",
+    "date": "2025-01-01T00:00:00Z",
+    "content": "within the next quarter",
+    "initials": "U"
+  },
+  "rev_17": {
+    "id": "rev_17",
+    "type": "insertion",
+    "author": "Doug Manuel",
+    "date": "2025-12-10T16:54:00Z",
+    "content": "This is a test of adding new changes.",
+    "initials": "DM"
+  },
+  "rev_0": {
+    "id": "rev_0",
+    "type": "deletion",
+    "author": "Doug Manuel",
+    "date": "2025-12-10T16:55:00Z",
+    "content": "Author",
+    "initials": "DM"
+  },
+  "rev_8": {
+    "id": "rev_8",
+    "type": "deletion",
+    "author": "Unknown",
+    "date": "2025-01-01T00:00:00Z",
+    "content": "this text was removed",
+    "initials": "U"
+  },
+  "rev_14": {
+    "id": "rev_14",
+    "type": "deletion",
+    "author": "Unknown",
+    "date": "2025-01-01T00:00:00Z",
+    "content": "immediately",
+    "initials": "U"
+  }
+}

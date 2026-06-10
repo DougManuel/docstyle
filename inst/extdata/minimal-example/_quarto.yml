@@ -1,0 +1,58 @@
+# Minimal Quarto configuration for docstyle
+#
+# This demonstrates the "style-as-code" approach where document styling
+# is defined in CSS and YAML rather than a manually-edited reference.docx.
+
+# Project metadata
+project:
+  type: default
+  pre-render: _extensions/docstyle/generate-reference.R
+  post-render: _extensions/docstyle/update-field-codes.R
+
+# Bibliography - Vancouver style (numbered citations, CIHR standard)
+csl: https://www.zotero.org/styles/vancouver
+
+# Standard Quarto format settings
+format:
+  docstyle-docx:
+    # Note: reference-doc is NOT specified here.
+    # The docstyle extension generates reference.docx from the CSS + docstyle section below.
+
+    # Table of contents (optional)
+    toc: false
+
+    # Number sections (optional)
+    number-sections: false
+
+# Note: No bibliography field here.
+# docstyle uses JSON-based citation management (references.json + field-codes.json)
+# similar to how Zotero works in Word.
+
+# Execution settings for R/Python chunks
+execute:
+  echo: false
+  warning: false
+
+# =============================================================================
+# docstyle configuration
+# =============================================================================
+# This section defines document layout and parameters that CSS cannot express.
+# Typography and colours are defined in minimal-example.css
+
+docstyle:
+  # Visual styles - page layout is defined via @page rules in CSS
+  css: minimal-example.css
+
+  # Document header (top of each page) - CIHR style: "LastName - Short Title"
+  header:
+    enabled: true
+    left: "LastName - Short Title"    # Replace with your PI name and short title
+    first-page: false                  # No header on first/title page
+    style: header                      # References .header class in CSS
+
+  # Document footer (bottom of each page) - page number right
+  footer:
+    enabled: true
+    right: "Page {page}"
+    first-page: false                  # No footer on first/title page
+    style: footer                      # References .footer class in CSS

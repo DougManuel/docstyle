@@ -1,0 +1,175 @@
+---
+title: "Implementation patterns for contributors"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Implementation patterns for contributors}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+This document explains the design patterns behind docstyle's implementation — not just what the code does, but why it does it that way. It is written for contributors and for anyone curious about how the pieces fit together.
+
+## Three-phase pipeline
+
+The pipeline has three phases, each running in a different runtime and producing outputs consumed by the next.
+
+```         
+Phase 1: Pre-render (R)          Phase 2: Lua filters (Pandoc)       Phase 3: Post-render (R)
+generate-reference.R              _extension.yml filter chain          update-field-codes.R
+├─ Parse CSS                       ├─ page-section.lua                  ├─ Inject Zotero citations
+├─ Generate reference.docx         ├─ toc-field.lua                     ├─ Assemble section breaks
+├─ Export page-config.json         ├─ table-style.lua                   ├─ Inject per-section footers
+└─ Hash-based caching              ├─ version-history.lua               └─ Prune and validate output
+                                   ├─ author-plate.lua
+                                   └─ zotero-inject.lua (markers only)
+```
+
+Phases communicate through JSON files in `_docstyle/`. The `reference.docx` produced in Phase 1 carries Word style definitions. The JSON files carry citations, page configuration, comments, and track changes. No single phase is responsible for the complete document — each does what it does best.
+
+## Pattern 1: CSS-first pipeline
+
+**The problem**: OOXML styling values (half-points, twips, eighth-points, hex colours) should not be hardcoded anywhere in Lua filters. Hardcoding breaks reuse and makes the CSS file a partial truth.
+
+**The solution**: CSS is the single source of truth. Every styling value flows through a pipeline:
+
+```         
+CSS file
+  → R reads via read_css() (Phase 1)
+  → R transforms to OOXML-ready values (css_to_twips, css_to_half_points, etc.)
+  → Values written to _docstyle/page-config.json
+  → Lua loads at runtime via load_page_config()
+  → Div attributes override CSS defaults per-element
+```
+
+Lua filters keep built-in fallback defaults so rendering works without a CSS file, but those defaults are only a safety net. Any new feature that involves styling should read from `page-config.json` and emit from CSS — never embed OOXML values in Lua.
+
+This pattern is used consistently across page layout (margins, orientation), section configuration (line numbers, page numbering), and table styles (borders, shading, font size).
+
+## Pattern 2: R-first assembly
+
+**The problem**: OOXML `<w:sectPr>` elements (section properties — page size, margins, line numbers, footers) must be attached to specific paragraphs. Pandoc wraps `RawBlock` content in empty paragraphs, creating a gap between where you emit XML and where it lands in the document. This breaks `sectPr` placement.
+
+**The solution**: Lua filters emit **text markers** (plain strings), not OOXML. R reads the final DOCX after Pandoc has run, finds the markers by text content, and attaches the correct OOXML to the right paragraph.
+
+```         
+Lua emits:   DOCSTYLE_SECTION::{class}::{page-break}::{line-numbers}
+R reads:     scans w:t elements for this prefix
+R builds:    <w:sectPr> with correct attributes
+R attaches:  sectPr to the immediately preceding paragraph
+```
+
+This is the only reliable way to control `sectPr` placement. The text markers are invisible in the rendered document because R clears them after processing (while preserving the surrounding field code for harvest round-trip fidelity).
+
+The same pattern is used for Zotero citations:
+
+```         
+Lua emits:   DOCSTYLE_CITE::key1;key2
+R replaces:  with full ZOTERO_ITEM field code XML from field-codes.json
+```
+
+## Pattern 3: Backward-looking sectPr
+
+**The problem**: OOXML's section model is counterintuitive. A `<w:sectPr>` does not define where a new section begins — it defines where the current section **ends**. Properties on a `<w:sectPr>` apply to the section that concludes there, not the one that follows.
+
+```         
+┌─────────────────────────────────────────┐
+│ Section 1 content                       │
+│ Last paragraph of section 1             │
+│   └─ <w:sectPr>  ← Defines section 1   │
+├─────────────────────────────────────────┤
+│ Section 2 content                       │
+│ Last paragraph of section 2             │
+│   └─ <w:sectPr>  ← Defines section 2   │
+├─────────────────────────────────────────┤
+│ Final section content                   │
+└─────────────────────────────────────────┘
+<w:body>
+  <w:sectPr/>  ← Body sectPr defines final section
+```
+
+**Implication for docstyle**: When the user writes a wrapping section div, the opening marker's `sectPr` closes the **previous** section (so it ends cleanly). The closing marker's `sectPr` closes **this** section (carrying `page-start`, footer overrides, etc.). Attributes that describe a section go on the closing marker's `sectPr`, not the opening one.
+
+### Payload shift
+
+Lua embeds section attributes in the **opening** marker's field code payload, because that is where the user writes them in the QMD source. R must **shift** those attributes forward by one position to apply them to the correct `sectPr` (the closing marker's or the body `sectPr`).
+
+This shift happens in `finalize_docx.R`:
+
+```         
+Opening marker payload  → applied to the closing marker's sectPr
+Closing marker payload  → applied to the next section's opening sectPr
+...
+Last marker's payload   → applied to body sectPr (final section)
+```
+
+The first `sectPr` receives YAML defaults (from `_quarto.yml`) since there is no prior marker payload.
+
+## Pattern 4: Harvest round-trip
+
+**The problem**: Word documents get edited by collaborators who cannot use Quarto. Those edits — text, Zotero citations, comments, track changes — need to come back into the QMD source faithfully, without overwriting machine-generated content like author plates and version history tables.
+
+**The solution**: The render pipeline embeds recovery metadata into the Word document using `ADDIN DOCSTYLE` field codes. These are invisible to human readers but survive editing. Each generated content block is wrapped in a field code carrying a JSON payload describing the original QMD source.
+
+On re-harvest, `detect_docstyle_field_codes()` reads these payloads and:
+
+-   Skips converting the field code range's content to Markdown (it was machine-generated)
+-   Restores the original QMD div placeholder (`::: version-history :::`, etc.)
+-   Restores inline shortcodes verbatim (`[{{< meta version-summary.date >}}]{.date}`)
+-   Parses version history tables back to YAML `version-history:` entries
+
+Without this, every harvest would replace structured YAML with a literal Markdown table, losing the machine-readable metadata.
+
+**Fallback chain**:
+
+| Document vintage       | Recovery mechanism                           |
+|------------------------|----------------------------------------------|
+| Rendered with v0.4.0+  | `ADDIN DOCSTYLE` field codes — full fidelity |
+| Rendered with v0.3.1   | `_docstyle_*` bookmarks — partial fidelity   |
+| Pre-v0.3.1 or unlinked | Literal markdown — no recovery               |
+
+## Key design constraints
+
+These constraints exist for good reasons. Violating them creates subtle, hard-to-debug failures.
+
+### Never hardcode OOXML values in Lua
+
+All styling values flow through the CSS-first pipeline. Lua keeps built-in fallbacks only for when no CSS file is provided. Any value you hardcode in Lua will silently diverge from the CSS when someone changes the stylesheet.
+
+### Never add `bibliography:` or `csl:` to the QMD
+
+Zotero citations are handled by field codes, not by Pandoc's bibliography processor. If `bibliography:` appears in the QMD front matter, Pandoc resolves citations at render time and the post-render hook then injects the Zotero field codes again, duplicating every citation.
+
+### Never add `format: docx` to the QMD
+
+The format is set in `_quarto.yml` as `docstyle-docx`. If the QMD overrides it with `format: docx`, Quarto uses Pandoc's built-in docx format and none of the Lua filters run.
+
+### Reference.docx is generated, not committed
+
+`_docstyle/reference.docx` is generated by Phase 1 from the CSS file and YAML configuration. Committing it creates a stale artifact that can silently override CSS changes. It is in `.gitignore`.
+
+## Module reference
+
+| Module | Phase | Role |
+|------------------------|------------------------|------------------------|
+| `generate-reference.R` | 1 | Parse CSS, generate reference.docx, write page-config.json |
+| `css_reader.R`, `css_parser.R` | 1 | CSS parsing and unit conversion |
+| `css_injection.R` | 1 | Cascade CSS values into Word styles |
+| `page_layout.R` | 1 | Build and populate reference.docx using officer |
+| `page-section.lua` | 2 | Emit section markers and field code wrappers |
+| `table-style.lua` | 2 | Apply CSS table styles via page-config.json |
+| `zotero-inject.lua` | 2 | Emit `DOCSTYLE_CITE::` text markers |
+| `version-history.lua`, `author-plate.lua` | 2 | Emit generated content with ADDIN DOCSTYLE wrappers |
+| `finalize_docx.R` | 3 | Orchestrate post-render |
+| `section_assembly.R` | 3 | Three-pass section break assembly (collect → attach → finalize) |
+| `section_headers.R` | 3 | Per-section footer/header XML file generation |
+| `section_cleanup.R` | 3 | Deduplication, spacing fixes, field update dirty flag |
+| `inject_zotero.R` | 3 | Replace DOCSTYLE_CITE:: markers with Zotero field code XML |
+| `docx_to_qmd.R` | Harvest | Entry point for Word → QMD conversion |
+| `generated_content.R` | Harvest | Detect and restore ADDIN DOCSTYLE field codes |
+| `footer.R` | Harvest | Extract footer content from five OOXML patterns |
+
+## Further reading
+
+-   [Understanding Word's format](explanation-word-xml.html): How DOCX files work internally
+-   [Architecture and design philosophy](architecture.html): User-facing design rationale (CSS as lingua franca, style-as-code)
+-   `CLAUDE.md` (project root): Full architecture diagram, sidecar data flow, common mistakes

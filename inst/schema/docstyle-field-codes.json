@@ -1,0 +1,94 @@
+{
+  "schema_version": 3,
+  "description": "Shared schema for ADDIN DOCSTYLE field codes. Used by both Lua (render) and R (harvest). v3: Anchor positioning.",
+
+  "char_classes": {
+    "date": {
+      "word_style": "Date",
+      "source_template": "[{{< meta version-summary.date >}}]{.date}",
+      "harvests_to": "version_summary.date"
+    },
+    "version": {
+      "word_style": "Version",
+      "source_template": "[{{< meta version-summary.version >}}]{.version}",
+      "harvests_to": "version_summary.version"
+    },
+    "sc": {
+      "word_style": "SmallCaps"
+    },
+    "author": {
+      "word_style": "Author"
+    },
+    "affiliation": {
+      "word_style": "Affiliation"
+    }
+  },
+
+  "div_types": {
+    "toc": {
+      "div_open": "::: toc",
+      "div_close": ":::"
+    },
+    "version-history": {
+      "div_open": "::: version-history",
+      "div_close": ":::"
+    },
+    "author-plate": {
+      "div_open": "::: author-plate",
+      "div_close": ":::"
+    },
+    "abstract": {
+      "div_open": "::: docstyle-abstract",
+      "div_close": ":::"
+    }
+  },
+
+  "list_classes": {
+    "list-alpha": {
+      "div_open": "::: {.list-alpha}",
+      "div_close": ":::"
+    },
+    "list-roman": {
+      "div_open": "::: {.list-roman}",
+      "div_close": ":::"
+    }
+  },
+
+  "table_classes": {
+    "table-formal": {
+      "div_open": "::: {.table-formal}",
+      "div_close": ":::"
+    },
+    "table-grid": {
+      "div_open": "::: {.table-grid}",
+      "div_close": ":::"
+    }
+  },
+
+  "anchor_payload_fields": {
+    "class":             "CSS class name; determines positioning via anchor_styles in page-config.json",
+    "content_hint":      "Advisory content type: table | image | text | mixed",
+    "vertical_anchor":   "Vertical anchor: text | margin | page | section",
+    "horizontal_anchor": "Horizontal anchor: text | margin | page",
+    "position_y":        "Vertical offset from anchor (CSS length or dxa)",
+    "position_x":        "Horizontal offset from anchor (CSS length or dxa)",
+    "float_width":       "Width of anchored element (CSS length or dxa)",
+    "wrap_style":        "Wrap type: none | square | tight | top-and-bottom",
+    "wrap_side":         "Wrap side: both | left | right | largest",
+    "wrap_distance":     "Wrap spacing: 1-4 value CSS shorthand (top right bottom left)",
+    "z_layer":           "Layer: front | behind (maps to behindDoc on wp:anchor)",
+    "adjacent":          "Anchor target element ID (deferred, #117)",
+    "content_mode":      "Assembly mechanism: auto | textbox (default auto)",
+    "caption_y":         "Vertical offset of caption within group coordinate space (DXA)",
+    "image_height":      "Height of image member within group (DXA)"
+  },
+
+  "figure_payload_fields": {
+    "id":            "QMD figure ID (e.g. fig-consort-flow); author-assigned",
+    "docpr_id":      "Word wp:docPr/@id integer; stable identity anchor",
+    "width":         "CSS width (e.g. '80%'); optional",
+    "align":         "Alignment: left | center | right; optional",
+    "wrap":          "Text wrap: none | left | right; optional",
+    "original_path": "Source image path at render time; restored on re-harvest"
+  }
+}

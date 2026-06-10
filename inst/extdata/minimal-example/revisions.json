@@ -1,0 +1,51 @@
+{
+  "rev_101": {
+    "id": "rev_101",
+    "type": "insertion",
+    "author": "Reviewer 2",
+    "date": "2025-01-18T11:00:00Z",
+    "initials": "R2"
+  },
+  "rev_102": {
+    "id": "rev_102",
+    "type": "deletion",
+    "author": "Editor",
+    "date": "2025-01-18T11:30:00Z",
+    "initials": "ED"
+  },
+  "rev_103": {
+    "id": "rev_103",
+    "type": "insertion",
+    "author": "Reviewer 2",
+    "date": "2025-01-19T09:00:00Z",
+    "initials": "R2"
+  },
+  "rev_104": {
+    "id": "rev_104",
+    "type": "deletion",
+    "author": "Reviewer 2",
+    "date": "2025-01-19T09:05:00Z",
+    "initials": "R2"
+  },
+  "rev_105": {
+    "id": "rev_105",
+    "type": "insertion",
+    "author": "Committee Chair",
+    "date": "2025-01-20T14:00:00Z",
+    "initials": "CC"
+  },
+  "rev_106": {
+    "id": "rev_106",
+    "type": "deletion",
+    "author": "Committee Chair",
+    "date": "2025-01-20T14:05:00Z",
+    "initials": "CC"
+  },
+  "rev_107": {
+    "id": "rev_107",
+    "type": "insertion",
+    "author": "Committee Chair",
+    "date": "2025-01-20T14:10:00Z",
+    "initials": "CC"
+  }
+}

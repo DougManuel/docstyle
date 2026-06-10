@@ -1,0 +1,31 @@
+/* POPCORN Draft Manuscript Layer
+ * Overrides popcorn-base.css for draft/review documents
+ *
+ * Changes from base:
+ *   - 12pt body text (vs 11pt) for easier reading
+ *   - 1.15 line spacing (vs single) for annotation room
+ *
+ * Usage in _quarto.yml:
+ *   docstyle:
+ *     css:
+ *       - popcorn-base.css
+ *       - pop-draft-manuscript.css
+ */
+
+/* Override body text for draft review */
+p, body {
+  font-size: 12pt;
+  line-height: 1.15;
+}
+
+/* Lists should match body text */
+ol, ul {
+  font-size: 12pt;
+  line-height: 1.15;
+}
+
+/* Tables can stay at 11pt for density, but bump line height */
+.table-formal,
+.table-grid {
+  line-height: 1.15;
+}

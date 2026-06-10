@@ -1,0 +1,269 @@
+---
+title: "Troubleshooting"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Troubleshooting}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Common issues and solutions
+
+This guide addresses frequently encountered problems when setting up and using docstyle.
+
+## Extension not found
+
+### Symptom
+
+```
+ERROR: Unknown format: docstyle-docx
+```
+
+### Cause
+
+The Quarto extension is not installed in your project, or you're rendering from a subdirectory that can't find the extension.
+
+### Solutions
+
+**For root-level projects:**
+
+```bash
+quarto add DougManuel/docstyle
+```
+
+This creates `_extensions/docstyle/` in your project root.
+
+**For subdirectory projects** (e.g., QMD files in `reports/` or `docs/`):
+
+Quarto looks for `_extensions/` relative to the QMD file being rendered. If your QMD is in a subdirectory, you have two options:
+
+**Option A: Symlink the extension (recommended)**
+
+```bash
+# From your subdirectory (e.g., reports/my-report/)
+mkdir -p _extensions
+ln -s ../../../_extensions/docstyle _extensions/docstyle
+```
+
+The symlink path depends on your directory depth. For `reports/my-report/`:
+- `../../_extensions/docstyle` if extension is at project root
+
+**Option B: Install extension in each subdirectory**
+
+```bash
+cd reports/my-report
+quarto add DougManuel/docstyle
+```
+
+This duplicates the extension but avoids symlinks.
+
+## Reference document generation fails
+
+### Symptom
+
+```
+Error in generate_reference_doc() : could not find function "generate_reference_doc"
+```
+
+Or:
+
+```
+[generate-reference] Error: package 'docstyle' not found
+```
+
+### Cause
+
+The docstyle R package is not installed. The pre-render hook that generates `reference.docx` from CSS requires the R package.
+
+### Solution
+
+Install the R package:
+```r
+remotes::install_github("DougManuel/docstyle")
+```
+
+Or from a local clone:
+```r
+devtools::install_local("path/to/docstyle")
+```
+
+**Note:** The Quarto extension alone is not sufficient for the full workflow. The R package provides the CSS parsing and reference document generation.
+
+## Sidecar folder not created
+
+### Symptom
+
+```
+Error: cannot open file '_docstyle/reference.docx': No such file or directory
+```
+
+### Cause
+
+The `_docstyle/` folder doesn't exist or wasn't created during the first render.
+
+### Solution
+
+The sidecar folder should be created automatically by the pre-render hook. If it's not:
+
+1. **Ensure the R package is installed** (see above)
+
+2. **Create the folder manually:**
+   ```bash
+   mkdir _docstyle
+   ```
+
+3. **Check your `_quarto.yml` has the bootstrap hooks:**
+   ```yaml
+   project:
+     pre-render: _docstyle/pre-render.R
+     post-render: _docstyle/post-render.R
+   ```
+
+4. **Check that bootstrap scripts exist** in `_docstyle/`. If missing, run `docstyle::init()` or copy from the package:
+   ```r
+   docstyle::init(overwrite = TRUE)
+   ```
+
+## Lua filter configuration not working
+
+### Symptom
+
+Configuration in `_quarto.yml` under `docstyle:` is ignored by Lua filters (e.g., `author-plate` preset not loading).
+
+### Cause
+
+Quarto processes extension configuration and may strip certain nested keys before passing them to Lua filters. This affects runtime configuration like `author-plate` settings.
+
+### Solution
+
+**Move filter-specific configuration to the QMD front matter** instead of `_quarto.yml`:
+
+```yaml
+# In your .qmd file front matter
+---
+title: "My Document"
+docstyle:
+  author-plate:
+    preset: smdm-abstract
+  authors:
+    - name:
+        given: "First"
+        family: "Last"
+      affiliations:
+        - ref: inst1
+  affiliations:
+    - id: inst1
+      name: "Institution Name"
+---
+```
+
+**What goes where:**
+
+| Configuration | Location | Why |
+|--------------|----------|-----|
+| `css:` | `_quarto.yml` | Used by pre-render R script |
+| `header:`, `footer:` | `_quarto.yml` | Used by pre-render R script |
+| `author-plate:` | QMD front matter | Used by Lua filter at render time |
+| `authors:`, `affiliations:` | QMD front matter | Used by Lua filter at render time |
+
+**Add a note in `_quarto.yml`:**
+```yaml
+docstyle:
+  css: styles.css
+  # NOTE: author-plate config must be in QMD front matter,
+  # not here, because Quarto strips nested docstyle.* keys
+  # before passing to Lua filters.
+```
+
+## Hash mismatch / stale reference document
+
+### Symptom
+
+CSS changes aren't reflected in the output, or you see:
+```
+[generate-reference] Reference doc up to date (hash match)
+```
+
+But you know changes should apply.
+
+### Solution
+
+Delete the hash file to force regeneration:
+```bash
+rm _docstyle/reference.docx.hash
+quarto render document.qmd
+```
+
+Or delete the entire sidecar folder:
+```bash
+rm -rf _docstyle
+quarto render document.qmd
+```
+
+## Wrong font in output
+
+### Symptom
+
+Output uses a different font than specified in CSS.
+
+### Cause
+
+1. Font name spelling differs from what Word expects
+2. Font not installed on the system
+
+### Solution
+
+Use exact font names as Word knows them:
+
+```css
+/* Correct */
+font-family: "Times New Roman", Times, serif;
+font-family: "Arial", sans-serif;
+font-family: "Calibri", sans-serif;
+
+/* Incorrect */
+font-family: "TimesNewRoman", serif;  /* No spaces */
+font-family: "times new roman";        /* Wrong case */
+```
+
+Check font availability:
+- Windows: Control Panel → Fonts
+- macOS: Font Book
+- Linux: `fc-list | grep -i "font name"`
+
+## Subdirectory project checklist
+
+When setting up docstyle in a subdirectory (e.g., `reports/my-report/`):
+
+- [ ] Extension accessible via `_extensions/docstyle/` (symlink or local copy)
+- [ ] `_docstyle/` folder created in subdirectory
+- [ ] `_quarto.yml` in subdirectory with correct relative paths
+- [ ] Bootstrap scripts in `_docstyle/`: `pre-render.R` and `post-render.R`
+- [ ] R package installed: `docstyle`
+- [ ] Filter config (author-plate, etc.) in QMD front matter, not `_quarto.yml`
+
+## Debug mode
+
+Enable debug output to see what's happening:
+
+```bash
+DOCSTYLE_DEBUG=1 quarto render document.qmd
+```
+
+This prints messages from Lua filters like:
+```
+[author-plate] Found 4 authors (from by-author)
+[author-plate] Loading preset: smdm-abstract
+```
+
+## Getting help
+
+If these solutions don't resolve your issue:
+
+1. Check existing [GitHub issues](https://github.com/DougManuel/docstyle/issues)
+2. Open a new issue with:
+   - Quarto version (`quarto --version`)
+   - R version (`R --version`)
+   - docstyle version (`packageVersion("docstyle")`)
+   - Minimal reproducible example
+   - Full error message

@@ -1,0 +1,42 @@
+{
+  "3": {
+    "id": "3",
+    "author": "Reviewer 1",
+    "date": "2025-01-15T10:30:00Z",
+    "content": "Is this phrase clear enough for the target audience?",
+    "parent_id": null,
+    "initials": "R1"
+  },
+  "2": {
+    "id": "2",
+    "author": "Doug Manuel",
+    "date": "2025-12-10T16:55:00Z",
+    "content": "adding a comment that spans a sections.",
+    "parent_id": null,
+    "initials": "DGM"
+  },
+  "4": {
+    "id": "4",
+    "author": "Editor",
+    "date": "2025-01-16T14:00:00Z",
+    "content": "Consider rephrasing for clarity.",
+    "parent_id": null,
+    "initials": "ED"
+  },
+  "6": {
+    "id": "6",
+    "author": "Doug Manuel",
+    "date": "2025-12-10T16:54:00Z",
+    "content": "adding a comment to a header",
+    "parent_id": null,
+    "initials": "DGM"
+  },
+  "12": {
+    "id": "12",
+    "author": "Committee Chair",
+    "date": "2025-01-17T09:15:00Z",
+    "content": "This is the key recommendation - ensure it's prominent.",
+    "parent_id": null,
+    "initials": "CC"
+  }
+}

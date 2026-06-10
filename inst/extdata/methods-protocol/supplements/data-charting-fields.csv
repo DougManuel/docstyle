@@ -1,0 +1,11 @@
+field_name,group,definition,allowed_values,required,notes
+study_id,bibliographic,"Unique identifier — typically last-author-year-letter (e.g., smith2024a)","string",TRUE,Used as join key to other tables
+citation,bibliographic,"Full citation in AMA format","string",TRUE,
+year,bibliographic,"Publication year","integer",TRUE,
+country,bibliographic,"First-author country","ISO 3166-1 alpha-3",FALSE,
+study_design,context,"Study design","cross-sectional|cohort|case-control|RCT|qualitative|review|other",TRUE,Use 'other' sparingly
+population_size,population,"Number of participants or units","integer",FALSE,
+population_description,population,"Free-text description of the population","string",TRUE,
+concept_present,concept,"Whether the central concept appears in the study","yes|no|partial",TRUE,'partial' is rare; flag for discussion
+context_setting,context,"Setting (clinical, community, regional, national)","string",TRUE,
+notes,review,"Reviewer notes / disagreement reasons","string",FALSE,

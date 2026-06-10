@@ -1,0 +1,32 @@
+---
+title: "Comments and Revisions Test"
+author: "Test Author"
+date: last-modified
+format: docx
+---
+
+## Testing comments
+
+This paragraph contains [a comment on this phrase]{.comment id="1"} to demonstrate the comment round-trip workflow.
+
+Here is another paragraph with [multiple words]{.comment id="2"} that have a comment attached.
+
+## Testing revisions (track changes)
+
+This paragraph demonstrates insertions: [this text was added]{.ins id="rev_101"} by a reviewer.
+
+This paragraph demonstrates deletions: [~~this text was removed~~]{.del id="rev_102"} by an editor.
+
+Here is a paragraph with both [inserted content]{.ins id="rev_103"} and [~~deleted content~~]{.del id="rev_104"} in the same sentence.
+
+## Mixed content
+
+The committee [recommends]{.comment id="3"} that the [updated]{.ins id="rev_105"} guidelines be [~~immediately~~]{.del id="rev_106"} adopted [within the next quarter]{.ins id="rev_107"}.
+
+## Normal content
+
+This paragraph has no comments or revisions - it should render normally.
+
+- Bullet point one
+- Bullet point two
+- Bullet point three

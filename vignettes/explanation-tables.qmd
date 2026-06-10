@@ -1,0 +1,291 @@
+---
+title: "Tables: An evolving ecosystem"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Tables: An evolving ecosystem}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: false
+  echo: true
+---
+
+## Overview
+
+Tables in the Quarto/R ecosystem are in flux. Multiple packages compete for the same space, each with different strengths across output formats. This guide documents the current landscape and how docstyle fits in.
+
+## The challenge
+
+Scientific documents need tables that:
+
+- Render consistently to Word, PDF, and HTML
+- Support styling (borders, shading, alignment)
+- Handle complex structures (merged cells, footnotes, captions)
+- Work within a reproducible workflow
+
+No single solution does all of this well today.
+
+## Current options
+
+### Pandoc pipe tables (Markdown native)
+
+The simplest option. Works everywhere Pandoc does.
+
+```markdown
+| Column A | Column B | Column C |
+|----------|----------|----------|
+| Data 1   | Data 2   | Data 3   |
+| Data 4   | Data 5   | Data 6   |
+```
+
+**Strengths:**
+
+- Universal support (Word, PDF, HTML)
+- Human-readable source
+- No R dependency
+
+**Limitations:**
+
+- Minimal styling control
+- No merged cells
+- No conditional formatting
+- Column widths are approximate
+
+**docstyle integration:** Use CSS classes via fenced divs:
+
+```markdown
+::: {.table-formal}
+| Column A | Column B |
+|----------|----------|
+| Data     | Data     |
+:::
+```
+
+The Lua filter applies borders and shading based on CSS definitions.
+
+### gt
+
+The tidyverse-adjacent option from RStudio/Posit. Excellent design philosophy.
+Good for communication and publication.
+
+```r
+library(gt)
+
+data |>
+  gt() |>
+  tab_header(title = "My Table") |>
+  fmt_number(columns = value, decimals = 2)
+```
+
+**Strengths:**
+
+- Beautiful HTML output
+- Rich formatting API
+- Active development
+- Good PDF support (via LaTeX)
+
+**Limitations:**
+
+- Word support is improving but still limited
+- Complex dependency tree
+- API can be verbose for simple tables
+
+**docstyle integration:** Limited. gt generates its own HTML/LaTeX. For Word output, consider flextable or pipe tables.
+
+### flextable
+
+Designed specifically for Word output via the officer package.
+
+```r
+library(flextable)
+
+data |>
+  flextable() |>
+  theme_vanilla() |>
+  autofit()
+```
+
+**Strengths:**
+
+- Excellent Word output
+- Full control over Word table properties
+- Merged cells, complex layouts
+- Good PDF via paginated reports
+
+**Limitations:**
+
+- Word-centric design
+- HTML output is functional but not elegant
+- Different mental model from tidyverse
+
+**docstyle integration:** Works well. flextable generates native Word XML that integrates cleanly with docstyle's reference.docx styling.
+
+### kableExtra
+
+The classic R Markdown solution. Mature and well-documented.
+
+```r
+library(kableExtra)
+
+data |>
+  kable() |>
+  kable_styling(bootstrap_options = "striped")
+```
+
+**Strengths:**
+
+- Familiar to R Markdown users
+- Good HTML and PDF
+- Extensive documentation
+
+**Limitations:**
+
+- Word support is weak
+- Less active development
+- Some features are format-specific
+
+**docstyle integration:** Not recommended for Word output.
+
+### tinytable
+
+A newer, minimalist option. Growing in popularity.
+
+```r
+library(tinytable)
+
+tt(data)
+```
+
+**Strengths:**
+
+- Lightweight (minimal dependencies)
+- Clean, simple API
+- Good multi-format support
+- Active development
+
+**Limitations:**
+
+- Younger project, API may evolve
+- Fewer advanced features than gt/flextable
+
+**docstyle integration:** Promising. tinytable's simplicity aligns with docstyle's philosophy. Worth watching.
+
+### Typst (emerging)
+
+Typst is a new typesetting system that competes with LaTeX. Quarto 1.4+ supports Typst output, and Positron has native Typst preview.
+
+```typst
+#table(
+  columns: 3,
+  [Column A], [Column B], [Column C],
+  [Data 1], [Data 2], [Data 3],
+)
+```
+
+**Strengths:**
+
+- Fast compilation (vs LaTeX)
+- Modern syntax
+- Excellent PDF output
+- Growing ecosystem
+
+**Limitations:**
+
+- No Word output (PDF only)
+- Young ecosystem
+- Limited R package integration currently
+
+**docstyle integration:** None directly. Typst is a parallel output format, not a Word workflow tool. However, Typst's rise may shift the landscape: if PDF becomes the primary archival format (with Word used only for collaboration), the importance of Word-native table styling decreases.
+
+## Recommendation matrix
+
+| Use case | Recommended | Why |
+|----------|-------------|-----|
+| Simple data display (any format) | Pipe tables | Universal, readable |
+| Word-first workflow | flextable | Best Word support |
+| HTML-first with PDF | gt | Beautiful, powerful |
+| Minimal dependencies | tinytable | Lightweight |
+| PDF-only, modern tooling | Typst tables | Fast, clean |
+
+## docstyle's approach
+
+docstyle provides CSS-based table styling for pipe tables:
+
+```css
+/* styles.css */
+.table-formal {
+  border-top: 1pt solid #7F7F7F;
+  border-bottom: 1pt solid #7F7F7F;
+}
+
+.table-formal th {
+  background-color: #D9D9D9;
+}
+
+.table-grid {
+  border: 1pt solid #000000;
+  border-collapse: collapse;
+}
+
+.table-grid th,
+.table-grid td {
+  border: 1pt solid #000000;
+}
+```
+
+Apply in QMD:
+
+```markdown
+::: {.table-formal}
+| Domain | Responsibility |
+|--------|----------------|
+| Research | Design studies |
+| Policy | Implementation |
+:::
+```
+
+This works because:
+
+1. The CSS defines the visual properties
+2. A Lua filter reads the div class
+3. The filter injects OpenXML table properties during rendering
+
+**Limitations of this approach:**
+
+- Only works for pipe tables (not R-generated tables)
+- Limited to properties that map to Word's table model
+- No conditional formatting or computed styles
+
+## The future
+
+Several trends may reshape this landscape:
+
+### Typst adoption
+
+If Typst becomes the standard PDF engine for Quarto (replacing LaTeX), table workflows will shift. Typst's native tables are excellent for PDF. Word would become a "collaboration format" rather than a primary output, reducing the need for Word-native table packages.
+
+### CSS Paged Media
+
+The CSS Working Group's Paged Media specification brings print concepts (page breaks, margins, headers) to CSS. Tools like Paged.js and WeasyPrint implement this for HTML-to-PDF. If this matures, CSS could become the universal styling language across all formats.
+
+### Convergence
+
+The ecosystem may consolidate. gt and tinytable are both moving toward better multi-format support. A future where one package handles Word, PDF, and HTML equally well is plausible.
+
+## Practical guidance for today
+
+1. **For simple tables:** Use pipe tables with docstyle CSS classes
+2. **For complex Word tables:** Use flextable
+3. **For publication-quality HTML/PDF:** Use gt
+4. **For minimal setup:** Use tinytable
+5. **Watch:** Typst integration with Quarto and R
+
+The landscape is evolving. Choose based on your primary output format, and be prepared to reassess as the ecosystem matures.
+
+## Further reading
+
+- [gt documentation](https://gt.rstudio.com/)
+- [flextable documentation](https://ardata-fr.github.io/flextable-book/)
+- [tinytable documentation](https://vincentarelbundock.github.io/tinytable/)
+- [Typst documentation](https://typst.app/docs/)
+- [Quarto tables guide](https://quarto.org/docs/authoring/tables.html)

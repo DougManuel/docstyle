@@ -1,0 +1,237 @@
+---
+title: "Converting Word documents to Quarto"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Converting Word documents to Quarto}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: true
+  echo: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+devtools::load_all("../")
+```
+
+## Overview
+
+This guide shows how to convert existing Word documents to Quarto markdown. This is
+useful when:
+
+- Collaborators have edited a Word document you need to bring back to Quarto
+- You're starting from an existing Word-based workflow
+- You want to extract and preserve document structure
+
+## Creating a test document
+
+First, let's create a simple Word document to convert. In practice, you would use
+an existing document from collaborators.
+
+```{r}
+#| label: create-test-doc
+# Create a simple Word document using officer
+library(officer)
+
+# Generate a reference doc dynamically from POPCORN config (has Title style)
+config_path <- system.file("extdata/popcorn/_quarto.yml", package = "docstyle")
+if (config_path == "") config_path <- "../inst/extdata/popcorn/_quarto.yml"
+
+base_docx <- tempfile(fileext = ".docx")
+generate_reference_doc(config_path, output_path = base_docx)
+
+doc <- read_docx(base_docx)
+
+# Clear existing content and add our own
+doc <- body_add_par(doc, "Sample Research Report", style = "Title")
+
+# Add content
+doc <- body_add_par(doc, "Introduction", style = "Heading 1")
+doc <- body_add_par(doc,
+  "This document demonstrates the Word to Quarto conversion process. The docstyle package preserves heading structure, paragraph text, and document metadata.",
+  style = "Normal"
+)
+
+doc <- body_add_par(doc, "Methods", style = "Heading 1")
+doc <- body_add_par(doc, "Data collection", style = "Heading 2")
+doc <- body_add_par(doc,
+  "We collected data using standardised protocols across all study sites.",
+  style = "Normal"
+)
+
+doc <- body_add_par(doc, "Analysis approach", style = "Heading 2")
+doc <- body_add_par(doc,
+  "Statistical analysis was performed using R version 4.3.0.",
+  style = "Normal"
+)
+
+doc <- body_add_par(doc, "Results", style = "Heading 1")
+doc <- body_add_par(doc,
+  "The analysis revealed significant findings across all measures.",
+  style = "Normal"
+)
+
+# Save to temp file
+test_docx <- file.path(tempdir(), "test-report.docx")
+print(doc, target = test_docx)
+
+cat("Created test document:", test_docx, "\n")
+cat("Size:", file.size(test_docx), "bytes\n")
+```
+
+## Converting to Quarto
+
+The `docx_to_qmd()` function handles the conversion:
+
+```{r}
+#| label: convert-doc
+output_qmd <- file.path(tempdir(), "test-report.qmd")
+
+# Convert the document
+result <- docx_to_qmd(
+  docx_path = test_docx,
+  output_path = output_qmd
+)
+
+cat("Created:", result, "\n")
+```
+
+## Examining the output
+
+Let's see what the conversion produced:
+
+```{r}
+#| label: show-output
+qmd_content <- readLines(output_qmd)
+cat(qmd_content, sep = "\n")
+```
+
+The conversion:
+
+- Extracted the title to YAML front matter
+- Converted Word heading styles to markdown headings (`#`, `##`)
+- Preserved paragraph text
+- Set up the document format as `docx` for round-tripping
+
+## Using a style template
+
+You can apply a docstyle template during conversion:
+
+```{r}
+#| label: convert-with-style
+output_styled <- file.path(tempdir(), "test-report-styled.qmd")
+
+# Convert with POPCORN style
+result_styled <- docx_to_qmd(
+  docx_path = test_docx,
+  output_path = output_styled,
+  style = "popcorn"
+)
+
+# Show the YAML header
+styled_content <- readLines(output_styled)
+yaml_end <- which(styled_content == "---")[2]
+cat(styled_content[1:yaml_end], sep = "\n")
+```
+
+The `reference-doc` field is automatically added, so rendering back to Word will
+use consistent styling.
+
+## Style mapping
+
+Word styles are mapped to markdown elements:
+
+| Word Style | Markdown |
+|------------|----------|
+| Title | YAML `title:` |
+| Subtitle | YAML `subtitle:` |
+| Heading 1 | `# Heading` |
+| Heading 2 | `## Heading` |
+| Heading 3 | `### Heading` |
+| ListBullet | `- item` |
+| ListNumber | `1. item` |
+| Normal | Paragraph text |
+
+## Handling lists
+
+List items are converted to markdown lists:
+
+```{r}
+#| label: list-example
+# Create doc with lists (using POPCORN template for styles)
+doc_lists <- read_docx(base_docx)
+doc_lists <- body_add_par(doc_lists, "Project Tasks", style = "Title")
+doc_lists <- body_add_par(doc_lists, "Key deliverables:", style = "Normal")
+doc_lists <- body_add_par(doc_lists, "Complete data analysis", style = "Block Text")
+doc_lists <- body_add_par(doc_lists, "Write methods section", style = "Block Text")
+doc_lists <- body_add_par(doc_lists, "Prepare figures", style = "Block Text")
+
+list_docx <- file.path(tempdir(), "list-example.docx")
+print(doc_lists, target = list_docx)
+
+# Convert
+list_qmd <- docx_to_qmd(list_docx)
+cat(readLines(list_qmd), sep = "\n")
+```
+
+## Round-trip workflow
+
+The typical collaboration workflow is:
+
+1. **Start in Quarto**: Write your document in `.qmd`
+2. **Render to Word**: `quarto render doc.qmd --to docx`
+3. **Collaborator edits**: Send `.docx` for review/editing
+4. **Convert back**: `docx_to_qmd("edited.docx")`
+5. **Diff and merge**: Review changes in your `.qmd`
+
+This preserves the benefits of version-controlled markdown while allowing
+Word-based collaboration.
+
+## Preserving YAML headers on re-import
+
+When re-importing an edited Word document, you often want to keep your curated
+YAML front matter (author info, affiliations, version history) while getting
+the updated body content. The `preserve_header` parameter handles this:
+
+```{r}
+#| label: preserve-header-example
+#| eval: false
+# Re-import edited document, keeping your existing YAML header
+docx_to_qmd(
+  docx_path = "edited-by-colleague.docx",
+  output_path = "manuscript.qmd",
+  preserve_header = TRUE  # This is the default
+)
+```
+
+When `preserve_header = TRUE` and the output file already exists:
+
+1. The existing YAML header is extracted and preserved
+
+2. The old file is renamed to `*_old.qmd` as a backup
+3. The new file gets: preserved header + fresh body content from Word
+
+This is particularly useful when you've added rich metadata like:
+
+```yaml
+---
+title: "My Research Paper"
+author:
+  - name: "Jane Smith"
+    orcid: "0000-0001-2345-6789"
+    affiliations:
+      - ref: uottawa
+version: "1.2"
+---
+```
+
+Set `preserve_header = FALSE` to regenerate the YAML header from the Word document's
+Title/Subtitle styles.
+
+## Next steps
+
+- **[Zotero citations](zotero-citations.html)**: Handle citation extraction during conversion
+- **[CSS to Word](css-to-word.html)**: Create custom templates from CSS
+- **[Architecture](architecture.html)**: Understand the design philosophy

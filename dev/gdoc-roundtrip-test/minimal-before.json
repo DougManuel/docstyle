@@ -1,0 +1,604 @@
+{
+  "source": "minimal-example.docx",
+  "zip_contents": [
+    "[Content_Types].xml",
+    "_rels/.rels",
+    "docProps/app.xml",
+    "docProps/core.xml",
+    "docProps/custom.xml",
+    "word/_rels/document.xml.rels",
+    "word/_rels/footnotes.xml.rels",
+    "word/comments.xml",
+    "word/document.xml",
+    "word/fontTable.xml",
+    "word/footer1.xml",
+    "word/footer2.xml",
+    "word/footnotes.xml",
+    "word/numbering.xml",
+    "word/settings.xml",
+    "word/styles.xml",
+    "word/theme/theme1.xml",
+    "word/webSettings.xml"
+  ],
+  "field_codes": [
+    {
+      "instruction": "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationID\":\"k4y16OXJ\",\"properties\":{\"formattedCitation\":\"(Knuth, 1984)\",\"plainCitation\":\"(Knuth, 1984)\",\"noteIndex\":0},\"citationItems\":[{\"id\":80420,\"uris\":[\"http://zotero.org/groups/6333496/items/9KHPSE8E\"],\"itemData\":{\"id\":80420,\"type\":\"article-journal\",\"container-title\":\"The Computer Journal\",\"DOI\":\"10.1093/comjnl/27.2.97\",\"ISSN\":\"0010-4620, 1460-2067\",\"issue\":\"2\",\"journalAbbreviation\":\"Comput. J.\",\"language\":\"en\",\"page\":\"97-111\",\"source\":\"DOI.org (Crossref)\",\"title\":\"Literate programming\",\"URL\":\"https://academic.oup.com/comjnl/article-lookup/doi/10.1093/comjnl/27.2.97\",\"volume\":\"27\",\"author\":[{\"family\":\"Knuth\",\"given\":\"D. E.\"}],\"accessed\":{\"date-parts\":[[\"2025\",12,4]]},\"issued\":{\"date-parts\":[[\"1984\",2,1]]},\"citation-key\":\"[@Knuth_CJ_1984]\"}}],\"schema\":\"https://github.com/citation-style-language/schema/raw/master/csl-citation.json\"}",
+      "type": "zotero_citation"
+    },
+    {
+      "instruction": "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationID\":\"rwiwS1DZ\",\"properties\":{\"formattedCitation\":\"(Tufte, 2018)\",\"plainCitation\":\"(Tufte, 2018)\",\"noteIndex\":0},\"citationItems\":[{\"id\":80421,\"uris\":[\"http://zotero.org/groups/6333496/items/PBL8EV7C\"],\"itemData\":{\"id\":80421,\"type\":\"book\",\"edition\":\"2 edition, 10 printing, April 2018\",\"event-place\":\"Cheshire, Conn\",\"ISBN\":\"978-0-9613921-4-7\",\"language\":\"en\",\"number-of-pages\":\"197\",\"publisher\":\"Graphics Press\",\"publisher-place\":\"Cheshire, Conn\",\"source\":\"K10plus ISBN\",\"title\":\"The visual display of quantitative information\",\"author\":[{\"family\":\"Tufte\",\"given\":\"Edward R.\"}],\"issued\":{\"date-parts\":[[\"2018\"]]},\"citation-key\":\"[@Tufte_VisualDisplayQuantitative_2018]\"}}],\"schema\":\"https://github.com/citation-style-language/schema/raw/master/csl-citation.json\"}",
+      "type": "zotero_citation"
+    },
+    {
+      "instruction": "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationID\":\"DRLAVR8d\",\"properties\":{\"formattedCitation\":\"(Bertin, Berg, & Bertin, 2011)\",\"plainCitation\":\"(Bertin, Berg, & Bertin, 2011)\",\"noteIndex\":0},\"citationItems\":[{\"id\":80415,\"uris\":[\"http://zotero.org/groups/6333496/items/UMIXTUAY\"],\"itemData\":{\"id\":80415,\"type\":\"book\",\"edition\":\"1. ed\",\"event-place\":\"Redlands, Calif\",\"ISBN\":\"978-1-58948-261-6\",\"language\":\"eng\",\"number-of-pages\":\"438\",\"publisher\":\"ESRI Press\",\"publisher-place\":\"Redlands, Calif\",\"source\":\"K10plus ISBN\",\"title\":\"Semiology of graphics: diagrams, networks, maps\",\"title-short\":\"Semiology of graphics\",\"author\":[{\"family\":\"Bertin\",\"given\":\"Jacques\"},{\"family\":\"Berg\",\"given\":\"William J.\"},{\"family\":\"Bertin\",\"given\":\"Jacques\"}],\"issued\":{\"date-parts\":[[\"2011\"]]},\"citation-key\":\"[@Bertin_SemiologyGraphicsDiagrams_2011]\"}}],\"schema\":\"https://github.com/citation-style-language/schema/raw/master/csl-citation.json\"}",
+      "type": "zotero_citation"
+    },
+    {
+      "instruction": "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationID\":\"eRJrJ803\",\"properties\":{\"formattedCitation\":\"[@knuth1984; @tufte2018; @bertin2011]\",\"plainCitation\":\"[@knuth1984; @tufte2018; @bertin2011]\",\"noteIndex\":0},\"citationItems\":[{\"id\":80420,\"uris\":[\"http://zotero.org/groups/6333496/items/9KHPSE8E\"],\"itemData\":{\"DOI\":\"10.1093/comjnl/27.2.97\",\"ISSN\":\"0010-4620, 1460-2067\",\"URL\":\"https://academic.oup.com/comjnl/article-lookup/doi/10.1093/comjnl/27.2.97\",\"accessed\":{\"date-parts\":[[\"2025\",12,4]]},\"author\":[{\"family\":\"Knuth\",\"given\":\"D. E.\"}],\"citation-key\":\"[@Knuth_CJ_1984]\",\"container-title\":\"The Computer Journal\",\"id\":80420,\"issue\":\"2\",\"issued\":{\"date-parts\":[[\"1984\",2,1]]},\"journalAbbreviation\":\"Comput. J.\",\"language\":\"en\",\"page\":\"97-111\",\"source\":\"DOI.org (Crossref)\",\"title\":\"Literate programming\",\"type\":\"article-journal\",\"volume\":\"27\"}},{\"id\":80421,\"uris\":[\"http://zotero.org/groups/6333496/items/PBL8EV7C\"],\"itemData\":{\"ISBN\":\"978-0-9613921-4-7\",\"author\":[{\"family\":\"Tufte\",\"given\":\"Edward R.\"}],\"citation-key\":\"[@Tufte_VisualDisplayQuantitative_2018]\",\"edition\":\"2 edition, 10 printing, April 2018\",\"event-place\":\"Cheshire, Conn\",\"id\":80421,\"issued\":{\"date-parts\":[[\"2018\"]]},\"language\":\"en\",\"number-of-pages\":\"197\",\"publisher\":\"Graphics Press\",\"publisher-place\":\"Cheshire, Conn\",\"source\":\"K10plus ISBN\",\"title\":\"The visual display of quantitative information\",\"type\":\"book\"}},{\"id\":80415,\"uris\":[\"http://zotero.org/groups/6333496/items/UMIXTUAY\"],\"itemData\":{\"ISBN\":\"978-1-58948-261-6\",\"author\":[{\"family\":\"Bertin\",\"given\":\"Jacques\"},{\"family\":\"Berg\",\"given\":\"William J.\"},{\"family\":\"Bertin\",\"given\":\"Jacques\"}],\"citation-key\":\"[@Bertin_SemiologyGraphicsDiagrams_2011]\",\"edition\":\"1. ed\",\"event-place\":\"Redlands, Calif\",\"id\":80415,\"issued\":{\"date-parts\":[[\"2011\"]]},\"language\":\"eng\",\"number-of-pages\":\"438\",\"publisher\":\"ESRI Press\",\"publisher-place\":\"Redlands, Calif\",\"source\":\"K10plus ISBN\",\"title\":\"Semiology of graphics: diagrams, networks, maps\",\"title-short\":\"Semiology of graphics\",\"type\":\"book\"}}],\"schema\":\"https://github.com/citation-style-language/schema/raw/master/csl-citation.json\"}",
+      "type": "zotero_citation"
+    },
+    {
+      "instruction": "ADDIN ZOTERO_BIBL {\"uncited\":[],\"omitted\":[],\"custom\":[]} CSL_BIBLIOGRAPHY",
+      "type": "zotero_bibliography"
+    }
+  ],
+  "comments": [],
+  "comment_ranges": [],
+  "tracked_changes": [],
+  "bookmarks": [
+    {
+      "id": "20",
+      "name": "introduction"
+    },
+    {
+      "id": "21",
+      "name": "key-features"
+    },
+    {
+      "id": "28",
+      "name": "list-styles-demonstration"
+    },
+    {
+      "id": "22",
+      "name": "simple-bullet-list"
+    },
+    {
+      "id": "23",
+      "name": "nested-bullet-list"
+    },
+    {
+      "id": "24",
+      "name": "simple-numbered-list"
+    },
+    {
+      "id": "25",
+      "name": "numbered-list-with-bullet-sub-items"
+    },
+    {
+      "id": "26",
+      "name": "deeply-nested-numbered-with-bullets"
+    },
+    {
+      "id": "27",
+      "name": "formal-nested-numbered-list-1.a.i."
+    },
+    {
+      "id": "30",
+      "name": "data-visualisation"
+    },
+    {
+      "id": "29",
+      "name": "a-subsection"
+    },
+    {
+      "id": "34",
+      "name": "table-styles-demonstration"
+    },
+    {
+      "id": "31",
+      "name": "X0038d0b544f6013f61a5a03e642e4400beb77f3"
+    },
+    {
+      "id": "32",
+      "name": "grid-table-full-borders"
+    },
+    {
+      "id": "33",
+      "name": "plain-table-pandoc-default"
+    },
+    {
+      "id": "36",
+      "name": "landscape-section-demonstration"
+    },
+    {
+      "id": "35",
+      "name": "wide-comparison-table"
+    },
+    {
+      "id": "37",
+      "name": "references"
+    }
+  ],
+  "styles": [
+    {
+      "id": "Normal",
+      "type": "paragraph",
+      "name": "Normal",
+      "based_on": ""
+    },
+    {
+      "id": "BodyText",
+      "type": "paragraph",
+      "name": "Body Text",
+      "based_on": "Normal"
+    },
+    {
+      "id": "FirstParagraph",
+      "type": "paragraph",
+      "name": "First Paragraph",
+      "based_on": "BodyText"
+    },
+    {
+      "id": "Compact",
+      "type": "paragraph",
+      "name": "Compact",
+      "based_on": "BodyText"
+    },
+    {
+      "id": "Title",
+      "type": "paragraph",
+      "name": "Title",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Subtitle",
+      "type": "paragraph",
+      "name": "Subtitle",
+      "based_on": "Title"
+    },
+    {
+      "id": "Author",
+      "type": "paragraph",
+      "name": "Author",
+      "based_on": ""
+    },
+    {
+      "id": "Date",
+      "type": "paragraph",
+      "name": "Date",
+      "based_on": ""
+    },
+    {
+      "id": "AbstractTitle",
+      "type": "paragraph",
+      "name": "Abstract Title",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Abstract",
+      "type": "paragraph",
+      "name": "Abstract",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Bibliography",
+      "type": "paragraph",
+      "name": "Bibliography",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading1",
+      "type": "paragraph",
+      "name": "Heading 1",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading2",
+      "type": "paragraph",
+      "name": "Heading 2",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading3",
+      "type": "paragraph",
+      "name": "Heading 3",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading4",
+      "type": "paragraph",
+      "name": "Heading 4",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading5",
+      "type": "paragraph",
+      "name": "Heading 5",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading6",
+      "type": "paragraph",
+      "name": "Heading 6",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading7",
+      "type": "paragraph",
+      "name": "Heading 7",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading8",
+      "type": "paragraph",
+      "name": "Heading 8",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Heading9",
+      "type": "paragraph",
+      "name": "Heading 9",
+      "based_on": "Normal"
+    },
+    {
+      "id": "BlockText",
+      "type": "paragraph",
+      "name": "Block Text",
+      "based_on": "BodyText"
+    },
+    {
+      "id": "FootnoteText",
+      "type": "paragraph",
+      "name": "Footnote Text",
+      "based_on": "Normal"
+    },
+    {
+      "id": "DefaultParagraphFont",
+      "type": "character",
+      "name": "Default Paragraph Font",
+      "based_on": ""
+    },
+    {
+      "id": "Table",
+      "type": "table",
+      "name": "Table",
+      "based_on": "TableNormal"
+    },
+    {
+      "id": "DefinitionTerm",
+      "type": "paragraph",
+      "name": "Definition Term",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Definition",
+      "type": "paragraph",
+      "name": "Definition",
+      "based_on": "Normal"
+    },
+    {
+      "id": "Caption",
+      "type": "paragraph",
+      "name": "Caption",
+      "based_on": "Normal"
+    },
+    {
+      "id": "TableCaption",
+      "type": "paragraph",
+      "name": "Table Caption",
+      "based_on": "Caption"
+    },
+    {
+      "id": "ImageCaption",
+      "type": "paragraph",
+      "name": "Image Caption",
+      "based_on": "Caption"
+    },
+    {
+      "id": "Figure",
+      "type": "paragraph",
+      "name": "Figure",
+      "based_on": "Normal"
+    },
+    {
+      "id": "CaptionedFigure",
+      "type": "paragraph",
+      "name": "Captioned Figure",
+      "based_on": "Figure"
+    },
+    {
+      "id": "BodyTextChar",
+      "type": "character",
+      "name": "Body Text Char",
+      "based_on": "DefaultParagraphFont"
+    },
+    {
+      "id": "VerbatimChar",
+      "type": "character",
+      "name": "Verbatim Char",
+      "based_on": "BodyTextChar"
+    },
+    {
+      "id": "SectionNumber",
+      "type": "character",
+      "name": "Section Number",
+      "based_on": "BodyTextChar"
+    },
+    {
+      "id": "FootnoteReference",
+      "type": "character",
+      "name": "Footnote Reference",
+      "based_on": "BodyTextChar"
+    },
+    {
+      "id": "Hyperlink",
+      "type": "character",
+      "name": "Hyperlink",
+      "based_on": "BodyTextChar"
+    },
+    {
+      "id": "TOCHeading",
+      "type": "paragraph",
+      "name": "TOC Heading",
+      "based_on": "Heading1"
+    },
+    {
+      "id": "DateChar",
+      "type": "character",
+      "name": "Date Char",
+      "based_on": ""
+    },
+    {
+      "id": "footer",
+      "type": "paragraph",
+      "name": "Footer",
+      "based_on": ""
+    },
+    {
+      "id": "SourceCode",
+      "type": "paragraph",
+      "name": "Source Code",
+      "based_on": "Normal"
+    },
+    {
+      "id": "KeywordTok",
+      "type": "character",
+      "name": "KeywordTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "DataTypeTok",
+      "type": "character",
+      "name": "DataTypeTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "DecValTok",
+      "type": "character",
+      "name": "DecValTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "BaseNTok",
+      "type": "character",
+      "name": "BaseNTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "FloatTok",
+      "type": "character",
+      "name": "FloatTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "ConstantTok",
+      "type": "character",
+      "name": "ConstantTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "CharTok",
+      "type": "character",
+      "name": "CharTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "SpecialCharTok",
+      "type": "character",
+      "name": "SpecialCharTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "StringTok",
+      "type": "character",
+      "name": "StringTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "VerbatimStringTok",
+      "type": "character",
+      "name": "VerbatimStringTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "SpecialStringTok",
+      "type": "character",
+      "name": "SpecialStringTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "ImportTok",
+      "type": "character",
+      "name": "ImportTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "CommentTok",
+      "type": "character",
+      "name": "CommentTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "DocumentationTok",
+      "type": "character",
+      "name": "DocumentationTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "AnnotationTok",
+      "type": "character",
+      "name": "AnnotationTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "CommentVarTok",
+      "type": "character",
+      "name": "CommentVarTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "OtherTok",
+      "type": "character",
+      "name": "OtherTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "FunctionTok",
+      "type": "character",
+      "name": "FunctionTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "VariableTok",
+      "type": "character",
+      "name": "VariableTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "ControlFlowTok",
+      "type": "character",
+      "name": "ControlFlowTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "OperatorTok",
+      "type": "character",
+      "name": "OperatorTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "BuiltInTok",
+      "type": "character",
+      "name": "BuiltInTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "ExtensionTok",
+      "type": "character",
+      "name": "ExtensionTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "PreprocessorTok",
+      "type": "character",
+      "name": "PreprocessorTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "AttributeTok",
+      "type": "character",
+      "name": "AttributeTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "RegionMarkerTok",
+      "type": "character",
+      "name": "RegionMarkerTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "InformationTok",
+      "type": "character",
+      "name": "InformationTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "WarningTok",
+      "type": "character",
+      "name": "WarningTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "AlertTok",
+      "type": "character",
+      "name": "AlertTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "ErrorTok",
+      "type": "character",
+      "name": "ErrorTok",
+      "based_on": "VerbatimChar"
+    },
+    {
+      "id": "NormalTok",
+      "type": "character",
+      "name": "NormalTok",
+      "based_on": "VerbatimChar"
+    }
+  ],
+  "content_controls": [],
+  "footnotes": [],
+  "sections": [
+    {
+      "page_width": "12240",
+      "page_height": "15840",
+      "orient": "portrait",
+      "margin_top": "1137",
+      "margin_right": "1137",
+      "margin_bottom": "1137",
+      "margin_left": "1137",
+      "margin_header": "720",
+      "margin_footer": "720"
+    },
+    {
+      "page_width": "15840",
+      "page_height": "12240",
+      "orient": "landscape",
+      "margin_top": "720",
+      "margin_right": "720",
+      "margin_bottom": "720",
+      "margin_left": "720",
+      "margin_header": "720",
+      "margin_footer": "720"
+    },
+    {
+      "page_width": "12240",
+      "page_height": "15840",
+      "orient": "portrait",
+      "margin_top": "1138",
+      "margin_right": "1138",
+      "margin_bottom": "1138",
+      "margin_left": "1138",
+      "margin_header": "720",
+      "margin_footer": "720"
+    }
+  ],
+  "summary": {
+    "zip_files": 18,
+    "field_codes": 5,
+    "field_code_types": {
+      "zotero_citation": 4,
+      "zotero_bibliography": 1
+    },
+    "comments": 0,
+    "comment_ranges": 0,
+    "tracked_changes_ins": 0,
+    "tracked_changes_del": 0,
+    "bookmarks": 18,
+    "styles": 71,
+    "content_controls": 0,
+    "footnotes": 0,
+    "sections": 3
+  }
+}

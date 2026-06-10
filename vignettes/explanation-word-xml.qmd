@@ -1,0 +1,225 @@
+---
+title: "Understanding Word's document format"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Understanding Word's document format}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+This document explains how Microsoft Word stores documents internally, which helps understand why certain round-trip challenges exist and how docstyle addresses them. No technical knowledge is assumed.
+
+## What is a DOCX file?
+
+A `.docx` file is actually a ZIP archive containing XML files. You can verify this yourself:
+
+```bash
+# Rename and unzip to see the contents
+cp document.docx document.zip
+unzip document.zip -d document_contents/
+```
+
+Inside you'll find:
+
+```
+document_contents/
+├── [Content_Types].xml     # File type registry
+├── _rels/                  # Relationship files
+├── word/
+│   ├── document.xml        # Main content
+│   ├── styles.xml          # Style definitions
+│   ├── comments.xml        # Comment content
+│   ├── footnotes.xml       # Footnote content
+│   └── ...
+└── docProps/               # Document properties
+```
+
+The key insight: **Word documents are structured data, not opaque binaries.** This is what makes round-tripping possible.
+
+## How Word stores text
+
+Consider this simple sentence in Word:
+
+> The quick **brown** fox.
+
+Word represents this as:
+
+```xml
+<w:p>                              <!-- paragraph -->
+  <w:r>                            <!-- run (text chunk) -->
+    <w:t>The quick </w:t>          <!-- text -->
+  </w:r>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>          <!-- run properties: bold -->
+    <w:t>brown</w:t>
+  </w:r>
+  <w:r>
+    <w:t> fox.</w:t>
+  </w:r>
+</w:p>
+```
+
+Key concepts:
+
+- **Paragraph (`w:p`)**: A block of text ending with a paragraph mark
+- **Run (`w:r`)**: A contiguous chunk of text with the same formatting
+- **Text (`w:t`)**: The actual characters
+- **Run properties (`w:rPr`)**: Formatting like bold, italic, font
+
+Every time formatting changes, Word starts a new run. This is why "The quick **brown** fox" becomes three runs, not one.
+
+## How Word stores comments
+
+Comments in Word use a "stand-off" markup model. The comment content lives separately from the document text, connected by markers:
+
+```xml
+<!-- In document.xml -->
+<w:p>
+  <w:r><w:t>Review this </w:t></w:r>
+  <w:commentRangeStart w:id="1"/>        <!-- Comment starts here -->
+  <w:r><w:t>important phrase</w:t></w:r>
+  <w:commentRangeEnd w:id="1"/>          <!-- Comment ends here -->
+  <w:r>
+    <w:commentReference w:id="1"/>       <!-- Clickable marker -->
+  </w:r>
+  <w:r><w:t> carefully.</w:t></w:r>
+</w:p>
+
+<!-- In comments.xml -->
+<w:comment w:id="1" w:author="Jane Smith" w:date="2025-01-15T10:30:00Z">
+  <w:p>
+    <w:r><w:t>This needs clarification</w:t></w:r>
+  </w:p>
+</w:comment>
+```
+
+This design allows comments to:
+
+- Span multiple paragraphs
+- Overlap with other comments
+- Contain their own formatted text
+
+**The challenge for markdown:** Pandoc's document model is hierarchical (nested elements), but Word's comment markers can cross hierarchy boundaries. A comment might start in one paragraph and end in another—something markdown spans cannot represent.
+
+## How Word stores track changes
+
+Track changes (insertions and deletions) work similarly:
+
+```xml
+<w:p>
+  <w:r><w:t>The document </w:t></w:r>
+  <w:ins w:author="Editor" w:date="2025-01-20T14:00:00Z">
+    <w:r><w:t>now </w:t></w:r>
+  </w:ins>
+  <w:r><w:t>includes </w:t></w:r>
+  <w:del w:author="Editor" w:date="2025-01-20T14:01:00Z">
+    <w:r>
+      <w:delText>old text</w:delText>
+    </w:r>
+  </w:del>
+  <w:r><w:t>new content.</w:t></w:r>
+</w:p>
+```
+
+- **`w:ins`**: Marks inserted text (green underline in Word)
+- **`w:del`**: Marks deleted text (red strikethrough in Word)
+- **`w:delText`**: Special element for deleted characters
+
+Both carry author and timestamp metadata.
+
+## The overlapping hierarchy problem
+
+Consider a comment that starts before a tracked insertion and ends after it:
+
+```
+Text: "Review [this important] phrase"
+Comment spans: "this important phrase"
+Insertion: "important "
+```
+
+In Word's XML:
+
+```xml
+<w:commentRangeStart w:id="1"/>
+<w:r><w:t>this </w:t></w:r>
+<w:ins>
+  <w:r><w:t>important </w:t></w:r>
+</w:ins>
+<w:r><w:t>phrase</w:t></w:r>
+<w:commentRangeEnd w:id="1"/>
+```
+
+The comment range *crosses* the insertion boundary. In Pandoc's tree model, this would require:
+
+```
+Comment [
+  Text "this "
+  Insertion [
+    Text "important "  ← Can't split here!
+  ]
+  Text "phrase"
+]
+```
+
+But `Insertion` is already a container—you can't have Comment both wrap *around* it and end *inside* it without violating tree structure.
+
+## How docstyle solves this
+
+docstyle uses **HTML comment markers** that exist outside Pandoc's content model:
+
+```markdown
+`<!-- comment:start id="1" -->`{=html}this [important ]{.ins id="rev_1"}phrase`<!-- comment:end id="1" -->`{=html}
+```
+
+The `{=html}` attribute tells Pandoc to treat these as raw HTML, not content. During rendering, docstyle's Lua filter converts them to the appropriate OpenXML markers.
+
+This approach:
+
+1. **Survives Pandoc parsing**: Raw HTML passes through unchanged
+2. **Spans any structure**: Comments can wrap tracked changes, multiple paragraphs, anything
+3. **Handles orphans gracefully**: Missing end markers become point comments
+
+## What docstyle does with this knowledge
+
+Understanding Word's structure informs docstyle's design:
+
+| Word Concept | docstyle Approach |
+|--------------|-------------------|
+| Styles in `styles.xml` | Generated from CSS during pre-render |
+| Comments in `comments.xml` | Stored in `comments.json`, injected post-render |
+| Track changes metadata | Stored in `revisions.json`, passed via Pandoc metadata |
+| Field codes (Zotero) | Stored in `field-codes.json`, injected post-render |
+| Overlapping ranges | HTML markers + Lua filter conversion |
+
+The sidecar JSON approach mirrors Word's own separation of content and metadata.
+
+## Why round-tripping is hard
+
+Several factors make Word ↔ Quarto conversion challenging:
+
+1. **Loss of structure**: Markdown doesn't distinguish between "Normal" and "Body Text" styles—they both become paragraphs
+2. **Overlapping annotations**: As shown above, ranges can cross hierarchical boundaries
+3. **Proprietary extensions**: Zotero field codes, custom XML parts, and other extensions store data in ways markdown cannot represent
+4. **Formatting granularity**: Word tracks every font change; markdown abstracts away inline formatting details
+
+docstyle addresses these by:
+
+- Using sidecar files to preserve metadata
+- Converting spans to stand-off markers where needed
+- Injecting Word-specific structures post-render
+
+## Practical implications
+
+When working with docstyle:
+
+1. **Comments spanning complex structures**: If a comment spans tracked changes or multiple paragraphs, docstyle uses HTML markers automatically during import
+2. **Orphan markers**: If you accidentally delete one end of a comment marker, docstyle converts it to a point comment (no range, just a marker at the position)
+3. **Editing in QMD**: You can accept/reject changes by simply removing the span wrappers—the underlying text remains
+4. **Rendering**: `quarto render` + post-processing injects all the Word-specific XML
+
+## Further reading
+
+- [Architecture](architecture.html): Technical details of the processing pipeline
+- [Comments and revisions](comments-revisions.html): Workflow for handling comments
+- [YAML schema](reference-yaml-schema.html): Configuration reference
+- [ECMA-376 Standard](https://www.ecma-international.org/publications-and-standards/standards/ecma-376/): The official OOXML specification (technical)

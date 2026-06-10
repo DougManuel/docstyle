@@ -1,0 +1,21 @@
+{
+  "size": "letter",
+  "margins": {
+    "top": "0.79in",
+    "right": "0.79in",
+    "bottom": "0.79in",
+    "left": "0.79in"
+  },
+  "named": {
+    "landscape": {
+      "size": "letter",
+      "orientation": "landscape",
+      "margins": {
+        "top": "0.5in",
+        "right": "0.5in",
+        "bottom": "0.5in",
+        "left": "0.5in"
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+---
+title: "Comments and Revisions Test"
+format: docx
+---
+
+Test 
+last-modified
+
+## Testing comments
+This paragraph contains a comment on this phrase to demonstrate the comment round-trip workflow.
+Here is another paragraph with multiple words that have a comment attached.
+
+## Testing revisions (track changes)
+This paragraph demonstrates insertions: this text was added by a reviewer.
+This paragraph demonstrates deletions:  by an editor.
+Here is a paragraph with both inserted content and  in the same sentence.
+
+## Mixed content
+The committee recommends that the updated guidelines be  adopted within the next quarter.
+
+## Normal content
+This paragraph has no comments or revisions - it should render normally.
+
+- Bullet point one
+- Bullet point two
+- Bullet point three
+
+This is a test of adding new changes.

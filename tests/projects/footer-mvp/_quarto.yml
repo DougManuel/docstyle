@@ -1,0 +1,18 @@
+project:
+  type: default
+  pre-render: _extensions/docstyle/generate-reference.R
+  post-render: _extensions/docstyle/update-field-codes.R
+  output-dir: output
+format:
+  docstyle-docx:
+    toc: false
+    number-sections: false
+execute:
+  echo: false
+  warning: false
+docstyle:
+  footer:
+    enabled: true
+    first-page: false
+    left: Footer MVP Test
+    right: Page {page} of {pages}

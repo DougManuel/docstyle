@@ -1,0 +1,184 @@
+/* docstyle preset: formal
+ * Professional documents: reports, proposals, charters
+ */
+
+/* ==============================================
+   PAGE LAYOUT
+   ============================================== */
+
+@page {
+  size: letter;
+  margin: 1in;
+}
+
+/* ==============================================
+   TYPOGRAPHY
+   ============================================== */
+
+body {
+  font-family: 'Calibri', 'Arial', sans-serif;
+  font-size: 11pt;
+  line-height: 1.15;
+}
+
+h1 {
+  font-size: 16pt;
+  font-weight: bold;
+  color: #1F4E79;
+  margin-top: 18pt;
+  margin-bottom: 6pt;
+}
+
+h2 {
+  font-size: 13pt;
+  font-weight: bold;
+  color: #2E75B6;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: bold;
+  color: #2E75B6;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 6pt;
+  text-align: justify;
+}
+
+/* ==============================================
+   HEADER AND FOOTER
+   ============================================== */
+
+.header {
+  font-size: 10pt;
+  color: #666666;
+}
+
+.footer {
+  font-size: 10pt;
+  color: #666666;
+}
+
+/* ==============================================
+   BODY TEXT VARIANTS
+   ============================================== */
+
+/* .body-text { } */
+/* .first-paragraph { } */
+/* .compact { margin-bottom: 2pt; } */
+
+blockquote {
+  margin-left: 0.5in;
+  margin-right: 0.5in;
+  font-style: italic;
+  color: #333;
+}
+
+/* ==============================================
+   CAPTIONS
+   ============================================== */
+
+caption, .caption {
+  font-size: 10pt;
+  color: #333;
+}
+
+.table-caption {
+  font-size: 10pt;
+  font-weight: bold;
+  color: #1F4E79;
+}
+
+.image-caption {
+  font-size: 10pt;
+  font-style: italic;
+  color: #333;
+}
+
+/* ==============================================
+   BIBLIOGRAPHY
+   ============================================== */
+
+.bibliography {
+  text-indent: -0.5in;
+  padding-left: 0.5in;
+}
+
+/* ==============================================
+   DEFINITION LISTS
+   ============================================== */
+
+dt {
+  font-weight: bold;
+  color: #1F4E79;
+}
+
+dd {
+  margin-left: 0.25in;
+}
+
+/* ==============================================
+   FOOTNOTES
+   ============================================== */
+
+.footnote-text {
+  font-size: 9pt;
+  color: #333;
+}
+
+/* ==============================================
+   TABLES
+   ============================================== */
+
+table {
+  font-size: 10pt;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 4pt 6pt;
+  border: 1px solid #8EAADB;
+}
+
+th {
+  font-weight: bold;
+  background-color: #D9E2F3;
+}
+
+/* ==============================================
+   LISTS
+   ============================================== */
+
+ul, ol {
+  margin-top: 6pt;
+  margin-bottom: 6pt;
+  padding-left: 24pt;
+}
+
+li {
+  margin-bottom: 3pt;
+}
+
+/* ==============================================
+   TITLE
+   ============================================== */
+
+.title {
+  font-size: 26pt;
+  font-weight: bold;
+  color: #1F4E79;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 14pt;
+  color: #2E75B6;
+  text-align: center;
+}

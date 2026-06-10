@@ -1,0 +1,353 @@
+---
+title: "How to: QMD formatting for Word output"
+format: html
+vignette: >
+  %\VignetteIndexEntry{How to: QMD formatting for Word output}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: false
+  echo: true
+---
+
+## Overview
+
+This guide covers formatting techniques for Quarto documents targeting Word output. It explains the relationship between CSS style definitions and how you apply them in your QMD files.
+
+## Two types of styling
+
+When working with docstyle, there are two distinct concerns:
+
+1. **Defining styles** → Done in CSS (what the style looks like)
+2. **Applying styles** → Done in QMD (where the style is used)
+
+Understanding when each happens—automatically vs explicitly—is key to effective formatting.
+
+## Automatic styling: elements Pandoc recognises
+
+Some document elements are styled automatically because Pandoc maps them to Word styles:
+
+| QMD element | Word style | CSS selector |
+|-------------|------------|--------------|
+| `# Heading` | Heading 1 | `h1` |
+| `## Heading` | Heading 2 | `h2` |
+| Plain paragraph | Normal | `p` |
+| `**bold**` | Strong | (built-in) |
+| `*italic*` | Emphasis | (built-in) |
+| `> blockquote` | Quote | `blockquote` |
+
+For these elements, you only need to define the style in CSS. Pandoc applies them automatically:
+
+**CSS (`my-styles.css`):**
+```css
+h1 {
+  font-family: "Georgia", serif;
+  font-size: 18pt;
+  color: #1a1a2e;
+}
+
+p {
+  font-family: "Arial", sans-serif;
+  font-size: 11pt;
+}
+```
+
+**QMD:**
+```markdown
+# Introduction
+
+This paragraph automatically uses the Normal style.
+```
+
+No special markup needed—headings get Heading styles, paragraphs get Normal.
+
+## Explicit styling with `custom-style`
+
+For formatting that Pandoc doesn't handle automatically, use the `custom-style` attribute. This requires two steps:
+
+### Step 1: Define the style in CSS
+
+```css
+.center {
+  text-align: center;
+}
+
+.brand-highlight {
+  color: #2ea6cc;
+  font-weight: bold;
+}
+```
+
+### Step 2: Apply it in QMD with `custom-style`
+
+```markdown
+::: {custom-style="center"}
+Version 1.0.0
+:::
+
+This project uses [docstyle]{custom-style="brand-highlight"} for templates.
+```
+
+**Why is `custom-style` needed?** Pandoc doesn't know that `.center` in your CSS should apply to a particular div. The `custom-style` attribute explicitly tells Pandoc: "format this content using the Word style named 'center'."
+
+## Divs vs spans: paragraph vs character styles
+
+Word has two types of styles, and `custom-style` works with both:
+
+### Paragraph styles (divs)
+
+Use fenced divs for paragraph-level formatting:
+
+```markdown
+::: {custom-style="center"}
+This entire paragraph will be centred.
+:::
+```
+
+Paragraph styles control:
+
+- Text alignment (`text-align`)
+- Spacing before/after
+- Indentation
+- Line height
+
+### Character styles (spans)
+
+Use bracketed spans for inline text:
+
+```markdown
+This has [highlighted text]{custom-style="brand-highlight"} in the middle.
+```
+
+This requires `brand-highlight` to be defined in your CSS:
+
+```css
+.brand-highlight {
+  color: #2ea6cc;
+  font-weight: bold;
+}
+```
+
+Character styles control:
+
+- Font family, size, weight, style
+- Colour
+- Underline, strikethrough
+
+### Character styles with metadata (shortcodes in spans)
+
+docstyle provides special character styles that can be populated from YAML metadata. This is useful for date/version stamps that should be styled consistently:
+
+**CSS:**
+```css
+.date {
+  font-family: "Arial", sans-serif;
+  color: #666666;
+}
+
+.version {
+  font-family: "Arial", sans-serif;
+  color: #666666;
+}
+```
+
+**YAML:**
+```yaml
+version-summary:
+  date: "2025-12-14"
+  version: "1.0.0"
+```
+**QMD (three equivalent syntaxes):**
+```markdown
+<!-- Preferred: shortcode with styling -->
+Date: [{{< meta version-summary.date >}}]{.date}
+
+<!-- Alternative: empty span auto-populates from version-summary -->
+Date: []{.date}
+
+<!-- Explicit: literal text with styling -->
+Date: [2025-12-14]{.date}
+```
+
+The shortcode syntax is recommended because:
+
+- The value comes from YAML (single source of truth)
+- Any metadata field can be used, not just `version-summary`
+- The span applies the character style from CSS
+
+**Note:** This works because the `char-style.lua` filter runs at `post-quarto` timing, after shortcodes are expanded.
+
+### Which to use?
+
+| Formatting need | Type | Syntax | Style source |
+|----------------|------|--------|--------------|
+| Centre a paragraph | Paragraph | `::: {custom-style="center"}` | Define in CSS |
+| Bold specific words | Character | `[text]{custom-style="Strong"}` | Built-in Word style |
+| Block quote | Paragraph | `::: {custom-style="Quote"}` | Built-in Word style |
+| Brand colour on text | Character | `[text]{custom-style="brand-highlight"}` | Define in CSS |
+
+**Key insight:** Properties like `text-align` are paragraph properties in Word. A span won't centre text—you need a div.
+
+## Standard markdown vs `custom-style`
+
+Standard markdown provides basic formatting that maps to Word's built-in styles:
+
+| Markdown | Word style |
+|----------|------------|
+| `**bold**` | Strong |
+| `*italic*` | Emphasis |
+| `` `code` `` | Verbatim Char |
+
+These work without any CSS because the styles are built into Word.
+
+**When to use which:**
+
+- **Standard markdown** (`**bold**`, `*italic*`): For semantic emphasis. Readable in source, portable across formats.
+- **`custom-style`**: For formatting beyond bold/italic—styles you've defined in CSS.
+
+You can combine both:
+
+```markdown
+[**Important:** this is critical]{custom-style="warning"}
+```
+
+## Common formatting patterns
+
+### Centred title page elements
+
+```markdown
+---
+title: "Document title"
+---
+
+::: {custom-style="center"}
+2025-11-24
+:::
+
+::: {custom-style="center"}
+Version 1.0.0
+:::
+
+{{< pagebreak >}}
+```
+
+### Table of contents with field code
+
+Insert a Word TOC field that updates when opened:
+
+````markdown
+# Contents {.unnumbered .unlisted}
+
+```{=openxml}
+<w:p>
+  <w:r>
+    <w:fldChar w:fldCharType="begin"/>
+  </w:r>
+  <w:r>
+    <w:instrText xml:space="preserve"> TOC \o "1-2" \h \z \u </w:instrText>
+  </w:r>
+  <w:r>
+    <w:fldChar w:fldCharType="separate"/>
+  </w:r>
+  <w:r>
+    <w:t>[Update field to generate table of contents]</w:t>
+  </w:r>
+  <w:r>
+    <w:fldChar w:fldCharType="end"/>
+  </w:r>
+</w:p>
+```
+
+{{< pagebreak >}}
+````
+
+**Note:** In Word, right-click the TOC placeholder and select "Update Field" to generate the table of contents.
+
+### Page breaks
+
+Use Quarto's pagebreak shortcode:
+
+```markdown
+Content on page 1.
+
+{{< pagebreak >}}
+
+Content on page 2.
+```
+
+### Combining with Quarto classes
+
+You can combine `custom-style` with Quarto's built-in classes:
+
+```markdown
+# Appendix A {.unnumbered .unlisted}
+
+::: {custom-style="center"}
+Supplementary materials
+:::
+```
+
+## Built-in Word styles
+
+These styles exist in all Word documents and can be used without defining in CSS:
+
+| Style name | Purpose |
+|-----------|---------|
+| `Normal` | Default body text |
+| `Heading 1` - `Heading 9` | Section headings |
+| `Title` | Document title |
+| `Subtitle` | Document subtitle |
+| `Quote` | Block quotations |
+| `Strong` | Bold emphasis |
+| `Emphasis` | Italic emphasis |
+| `Hyperlink` | Link text |
+
+Example using built-in styles:
+
+```markdown
+::: {custom-style="Quote"}
+This will use Word's built-in Quote paragraph style.
+:::
+```
+
+## Troubleshooting
+
+### Style not applied
+
+If a style isn't appearing in Word:
+
+1. **Check the style exists**: The style must be defined in your CSS and present in the generated reference.docx
+2. **Check paragraph vs character**: Alignment needs a div, not a span
+3. **Check the style name**: Names are case-sensitive
+
+### Div not working for text properties
+
+If you're using a div but text properties (like colour) aren't applied, the style might need to be defined with both paragraph and run properties:
+
+```css
+.callout {
+  /* Paragraph properties */
+  text-align: center;
+
+  /* Run/text properties */
+  font-family: "Arial", sans-serif;
+  font-style: italic;
+  color: #666666;
+}
+```
+
+### Finding style names in existing documents
+
+To see what styles are available in a Word document:
+
+```r
+doc <- officer::read_docx("document.docx")
+styles <- officer::styles_info(doc)
+styles[styles$style_type == "paragraph", c("style_id", "style_name")]
+```
+
+## Next steps
+
+- **[CSS to Word](css-to-word.html)**: Define custom styles in CSS
+- **[Round-trip workflow](how-to-roundtrip.html)**: Complete Word ↔ Quarto workflow
+- **[Architecture](architecture.html)**: How docstyle generates templates

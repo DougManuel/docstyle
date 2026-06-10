@@ -1,0 +1,222 @@
+---
+title: "{{TITLE}}"
+subtitle: "Scoping review protocol"
+keywords:
+  - scoping review
+  - protocol
+  - PRISMA-ScR
+abstract: |
+  **Introduction:** Background and rationale. State the problem the
+  scoping review will map. Reference the most relevant prior work (one
+  or two sentences).
+
+  **Methods and analysis:** Brief overview of the PCC framework
+  (Population, Concept, Context), search strategy, screening process,
+  data charting plan, and synthesis approach.
+
+  **Dissemination:** How the results will be reported (this preprint,
+  the eventual peer-reviewed manuscript, conference presentations,
+  partner organisations).
+
+  **Conclusion:** One sentence summarising the contribution.
+
+  **Keywords:** scoping review; protocol; PRISMA-ScR; (replace with
+  topic-specific terms)
+
+  **Ethics and Dissemination:** Scoping reviews of secondary literature
+  do not require ethics approval. Findings will be disseminated via
+  peer-reviewed publication and conference presentation.
+
+version-history:
+  - version: "0.1.0"
+    date: "{{DATE}}"
+    description: "Initial draft"
+---
+
+::: version-history
+:::
+
+::: author-plate
+:::
+
+::: toc
+:::
+
+# Article summary
+
+## Strengths and limitations
+
+- Strength: structured PRISMA-ScR-aligned protocol with a-priori PCC
+  framework, eligibility criteria, and search strategy.
+- Strength: methodological transparency — protocol pre-registered before
+  screening begins.
+- Limitation: scoping reviews provide breadth of coverage, not effect
+  estimates — risk of bias is not formally assessed.
+- Limitation: (add review-specific limitations)
+
+# 1. Introduction
+
+## 1.1 Rationale
+
+Why this scoping review is needed. Cite key prior work: existing
+reviews, gaps they did not cover, and how this review extends them.
+Define the practical or policy-relevant question motivating the work.
+
+## 1.2 Objective
+
+State the overall objective in one sentence.
+
+### 1.2.1 Research questions
+
+1. (Primary research question, framed in PCC terms)
+2. (Secondary question, if any)
+3. (Methodological question, if any)
+
+# 2. Methods
+
+## 2.1 Approach
+
+This protocol follows the PRISMA-ScR framework [@tricco2018] and the
+JBI methodology for scoping reviews [@peters2020]. The review is
+registered on the Open Science Framework at <OSF URL>.
+
+## 2.2 Study scope
+
+State the scope using the PCC framework:
+
+- **Population:** (who or what)
+- **Concept:** (the central concept being mapped)
+- **Context:** (geographic, temporal, setting boundaries)
+
+## 2.3 Eligibility criteria
+
+### 2.3.1 Inclusion criteria
+
+- Population: (specify)
+- Concept: (specify)
+- Context: (specify)
+- Study designs: (specify or "any")
+- Language: (specify, typically English)
+- Publication date: (specify range)
+
+### 2.3.2 Exclusion criteria
+
+- Studies that do not meet the inclusion criteria
+- Conference abstracts without full text available
+- Editorials, commentaries, and opinion pieces (unless framed as
+  methodological contributions)
+- (Add review-specific exclusions)
+
+## 2.4 Identifying relevant studies
+
+### 2.4.1 Search strategy
+
+The search strategy was developed with an information specialist using
+controlled vocabulary (MeSH, Emtree) and free-text terms. The strategy
+was peer-reviewed using the PRESS checklist [@mcgowan2016].
+
+The full search strategy is available in `supplements/search-strategy.json`.
+
+### 2.4.2 Database search
+
+Databases to be searched:
+
+- MEDLINE (Ovid)
+- Embase (Ovid)
+- Web of Science Core Collection
+- (Add or remove databases as appropriate)
+
+### 2.4.3 Grey literature
+
+(Specify grey-literature sources, if any: institutional websites,
+preprint servers, government reports, conference proceedings.)
+
+### 2.4.4 Hand searching
+
+(Specify journals to be hand-searched, if any.)
+
+### 2.4.5 Reference checking
+
+Reference lists of all included studies and relevant systematic
+reviews will be screened for additional eligible studies.
+
+## 2.5 Study selection
+
+### 2.5.1 Title and abstract screening
+
+Titles and abstracts will be screened independently by two reviewers
+against the eligibility criteria. Disagreements will be resolved by
+discussion or by a third reviewer. (Specify any AI-assisted screening
+methodology and validation here, with detailed methods in an appendix.)
+
+### 2.5.2 Full-text screening
+
+Studies appearing potentially eligible will be retrieved in full and
+screened independently by two reviewers. Reasons for exclusion at the
+full-text stage will be recorded.
+
+### 2.5.3 Reporting exclusions and PRISMA flow
+
+A PRISMA-ScR flow diagram will report the number of records identified,
+screened, assessed for eligibility, and included, with reasons for
+exclusion at each stage.
+
+## 2.6 Data charting
+
+A data charting form will be developed iteratively. The charting form
+template is in `supplements/data-charting-fields.csv`. Two reviewers
+will independently chart data from a calibration sample (10 studies)
+and agreement will be discussed before full charting begins.
+
+Fields charted will include (at minimum):
+
+- Bibliographic information (citation, year, country)
+- Study design
+- Population characteristics
+- Concept-relevant data items
+- Context-relevant data items
+- (Add review-specific fields)
+
+## 2.7 Synthesis of results
+
+Results will be synthesised narratively, with tables summarising study
+characteristics and findings against the research questions. Where
+appropriate, frequency counts and proportions will quantify thematic
+patterns. The synthesis will not pool effect estimates.
+
+# 3. Dissemination
+
+Findings will be disseminated through:
+
+- This preprint (medRxiv, OSF Preprints)
+- A peer-reviewed manuscript
+- (Add: conference presentations, partner reports, lay summaries)
+
+# 4. Ethics
+
+This review uses only published secondary literature. Ethics committee
+approval is not required.
+
+# 5. Funding
+
+(Funding statement. If none, state "This work received no specific
+funding.")
+
+# 6. Competing interests
+
+(Competing interests statement.)
+
+# 7. Author contributions
+
+Author contributions follow the CRediT taxonomy (see `_quarto.yml`).
+
+# 8. Data availability
+
+The protocol, search strategy, screening prompts (if applicable), and
+data charting form are deposited on OSF at <OSF URL>. The full review
+data and code will be made available alongside the final manuscript.
+
+# References
+
+::: bibliography
+:::

@@ -1,0 +1,416 @@
+---
+title: "Comments and revisions round-trip"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Comments and revisions round-trip}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: true
+  echo: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+devtools::load_all("../")
+```
+
+## Overview
+
+The comments and revisions workflow enables round-tripping Word comments and track changes (insertions/deletions) through Quarto editing. This allows collaborative review workflows where:
+
+1. Colleagues add comments and track changes in Word
+2. You import to QMD for editing in a plain-text environment
+3. Comments and revisions are preserved as lightweight spans
+4. You render back to Word with full comment/revision metadata intact
+
+**Key design:** docstyle uses a "hybrid span + sidecar" model—comments and revisions appear as simple Pandoc spans in your QMD, while rich metadata (author, date, initials) lives in JSON sidecar files.
+
+## The workflow
+
+```
+┌─────────────────┐     extract_comments()    ┌─────────────────┐
+│   Word (.docx)  │     extract_revisions()   │   Quarto (.qmd) │
+│   with comments │ ──────────────────────▶   │   + JSON files  │
+│   and changes   │     docx_to_qmd()         │                 │
+└─────────────────┘                           └─────────────────┘
+                                                      │
+                                                      │ edit in Quarto
+                                                      ▼
+┌─────────────────┐     quarto render          ┌─────────────────┐
+│   Word (.docx)  │     inject_comments()     │   Quarto (.qmd) │
+│   comments and  │ ◀──────────────────────   │   edited version│
+│   changes intact│                           │                 │
+└─────────────────┘                           └─────────────────┘
+```
+
+## QMD syntax
+
+### Comments
+
+docstyle supports two formats for comment markers:
+
+**Span-based (simple cases):**
+
+```markdown
+This paragraph contains [a comment on this phrase]{.comment id="3"} to demonstrate
+the comment round-trip workflow.
+```
+
+**HTML markers (complex structures):**
+
+For comments that span tracked changes, multiple formatting regions, or other complex structures, docstyle uses raw HTML markers:
+
+```markdown
+This `<!-- comment:start id="3" -->`{=html}phrase spans [inserted text]{.ins id="rev_1"} and more`<!-- comment:end id="3" -->`{=html} content.
+```
+
+The HTML marker format is used automatically during import when comments cross structural boundaries that Pandoc spans cannot represent. Both formats render identically to Word.
+
+**Fallback behaviour:** If a start marker has no matching end marker (e.g., due to editing), docstyle renders it as a "point comment"—a comment marker at the start position with no range. Orphan end markers are silently ignored.
+
+The `id` links to metadata in `comments.json`:
+
+```json
+{
+  "3": {
+    "id": "3",
+    "author": "Reviewer 1",
+    "date": "2025-01-15T10:30:00Z",
+    "content": "Is this phrase clear enough for the target audience?",
+    "parent_id": null,
+    "initials": "R1"
+  }
+}
+```
+
+### Track changes: insertions
+
+Insertions use spans with the `.ins` class:
+
+```markdown
+This paragraph demonstrates insertions: [this text was added]{.ins id="rev_7"} by a reviewer.
+```
+
+### Track changes: deletions
+
+Deletions combine strikethrough with the `.del` class:
+```markdown
+This paragraph demonstrates deletions: [~~this text was removed~~]{.del id="rev_8"} by an editor.
+```
+
+Both insertions and deletions link to metadata in `revisions.json`:
+
+```json
+{
+  "rev_7": {
+    "id": "rev_7",
+    "type": "insertion",
+    "author": "Jane Doe",
+    "date": "2025-01-20T14:00:00Z"
+  },
+  "rev_8": {
+    "id": "rev_8",
+    "type": "deletion",
+    "author": "Editor",
+    "date": "2025-01-21T09:30:00Z"
+  }
+}
+```
+
+## Step 1: Extract from Word
+
+### Extract comments
+
+```{r}
+#| label: extract-comments-example
+#| eval: false
+# Extract comments from a Word document
+comments <- extract_comments("reviewed-draft.docx")
+
+# Write to JSON sidecar
+write_comments_json(comments, "comments.json")
+
+# What you get:
+names(comments)
+# [1] "1" "2" "3"  # Comment IDs
+
+comments[["1"]]
+# $id: "1"
+# $author: "Reviewer 1"
+# $date: "2025-01-15T10:30:00Z"
+# $content: "Is this phrase clear?"
+# $initials: "R1"
+```
+
+### Extract revisions (track changes)
+
+```{r}
+#| label: extract-revisions-example
+#| eval: false
+# Extract track changes from a Word document
+revisions <- extract_revisions("reviewed-draft.docx")
+
+# Write to JSON sidecar
+write_revisions_json(revisions, "revisions.json")
+
+# Summary of changes
+count_revisions(revisions)
+# insertions  deletions
+#          5          3
+
+summarise_revisions_by_author(revisions)
+#        author insertions deletions
+# 1    Jane Doe          3         1
+# 2 Reviewer 2           2         2
+```
+### Convert document to QMD
+
+The `docx_to_qmd()` function automatically detects comment ranges and track changes:
+
+```{r}
+#| label: convert-example
+#| eval: false
+# Convert Word to QMD with comment/revision spans
+docx_to_qmd(
+  "reviewed-draft.docx",
+  output_path = "reviewed-draft.qmd"
+)
+```
+
+The resulting QMD contains spans like:
+
+```markdown
+The committee [recommends]{.comment id="12"} that the [updated]{.ins id="rev_13"}
+guidelines be [~~immediately~~]{.del id="rev_14"} adopted
+[within the next quarter]{.ins id="rev_15"}.
+```
+
+## Step 2: Edit in Quarto
+
+### Editing workflow
+
+In your QMD, you interact with comments and revisions as plain text:
+
+| User intent | Action in QMD | Result |
+|-------------|---------------|--------|
+| **Resolve comment** | Remove `[...]{.comment}` wrapper, keep text | Comment disappears |
+| **Accept insertion** | Remove `[...]{.ins}` wrapper, keep text | Text becomes normal |
+| **Reject insertion** | Delete the entire span | Text is removed |
+| **Accept deletion** | Delete the entire span including text | Text is removed |
+| **Reject deletion** | Remove `[~~...~~]{.del}` wrapper, keep text | Text is restored |
+| **Defer decision** | Leave syntax as is | Re-appears in Word |
+
+### Visual preview
+
+When previewing your QMD as HTML, the CSS styles highlight comments and revisions:
+
+- **Comments**: Yellow background with gold underline
+- **Insertions**: Green background with underline
+- **Deletions**: Red background with strikethrough
+
+These styles are defined in your CSS (e.g., `popcorn-print.css`):
+
+```css
+.comment {
+  background-color: #fff3cd;
+  border-bottom: 2px solid #ffc107;
+}
+
+.ins {
+  background-color: #e6ffec;
+  text-decoration: underline;
+}
+
+.del {
+  background-color: #ffebe9;
+  text-decoration: line-through;
+  color: #6a737d;
+}
+```
+
+## Step 3: Render back to Word
+
+### Basic rendering
+
+```bash
+# Render QMD back to Word
+quarto render reviewed-draft.qmd
+```
+
+The Lua filters automatically convert spans to OpenXML:
+
+- `.comment` spans → `w:commentRangeStart`, `w:commentRangeEnd`, `w:commentReference`
+- `.ins` spans → `w:ins` with author/date
+- `.del` spans → `w:del` with `w:delText`
+
+### Injecting comments
+
+After rendering, inject the `comments.xml` file:
+
+```{r}
+#| label: inject-comments
+#| eval: false
+# Inject comments into the rendered Word document
+inject_comments(
+  docx_path = "output/reviewed-draft.docx",
+  comments_json = "comments.json"
+)
+```
+
+This:
+
+1. Scans the document for used comment IDs
+2. Builds `word/comments.xml` with only the referenced comments
+
+3. Updates `[Content_Types].xml` and `document.xml.rels`
+4. Repacks the DOCX
+
+### Passing revision metadata
+
+For revisions to include author/date metadata, pass the JSON path via Pandoc metadata:
+
+```{r}
+#| label: render-with-revisions
+#| eval: false
+# In your _quarto.yml or render call:
+# -M revisions-file:revisions.json
+
+# Or programmatically:
+system(paste(
+
+  "quarto render reviewed-draft.qmd",
+  "-M revisions-file:revisions.json",
+  "--to docx"
+))
+```
+
+## Complete example
+
+Here's a full workflow using the test files included with docstyle:
+
+```{r}
+#| label: full-example
+#| eval: false
+# 1. Start with a Word document containing comments and track changes
+input_docx <- "colleague-review.docx"
+
+# 2. Extract comments and revisions
+comments <- extract_comments(input_docx)
+revisions <- extract_revisions(input_docx)
+
+write_comments_json(comments, "comments.json")
+write_revisions_json(revisions, "revisions.json")
+
+# 3. Convert to QMD (spans are automatically inserted)
+docx_to_qmd(input_docx, output_path = "colleague-review.qmd")
+
+# 4. Edit in your favourite text editor...
+# - Accept/reject changes by editing spans
+# - Resolve comments by removing span markers
+# - Add new content
+
+# 5. Render back to Word
+# quarto render colleague-review.qmd
+
+# 6. Inject comments into the output
+inject_comments(
+  docx_path = "output/colleague-review.docx",
+  comments_json = "comments.json"
+)
+
+# Result: Word document with preserved comments and track changes
+```
+
+## File structure
+
+A typical project with comments/revisions:
+
+```
+project/
+├── manuscript.qmd           # Contains [text]{.comment id="x"}, etc.
+├── comments.json            # Comment metadata (author, date, content)
+├── revisions.json           # Track changes metadata (author, date, type)
+├── references.json          # CSL-JSON citations (if using Zotero)
+├── field-codes.json         # Zotero field codes (if using Zotero)
+├── _quarto.yml              # Project configuration
+└── output/
+    └── manuscript.docx      # Generated Word doc with comments
+```
+
+## Known limitations
+
+### Comments spanning complex structures
+
+Comments that span tracked changes, multiple paragraphs, or nested formatting are handled using HTML markers (see above). This approach is robust but makes the QMD slightly less readable:
+
+```markdown
+`<!-- comment:start id="3" -->`{=html}text with [insertion]{.ins id="rev_1"}`<!-- comment:end id="3" -->`{=html}
+```
+
+### Nested/overlapping comments
+
+Word allows overlapping comment ranges (e.g., Comment A on words 1-3, Comment B on words 2-4). docstyle supports this using multiple comment markers, but deeply nested overlaps may require manual adjustment after import.
+
+### Orphan markers
+
+If you accidentally delete one end of a comment marker pair:
+
+- **Missing end marker**: Renders as a point comment (marker at start position, no range)
+- **Missing start marker**: Orphan end is silently removed
+
+This fallback prevents rendering errors but may not match original intent.
+
+### Formatting inside deletions
+
+Rich formatting (bold, italic) inside deleted text is converted to plain text. The deletion itself is preserved, but internal formatting is lost.
+
+### Move tracking
+
+Word's "move" tracking (`w:moveFrom`/`w:moveTo`) is downgraded to simple deletion/insertion pairs.
+
+## Troubleshooting
+
+### Comments not appearing in Word
+
+1. Ensure you called `inject_comments()` after rendering
+2. Check that `comments.json` exists and contains valid data
+3. Verify the comment IDs in your QMD match the JSON keys
+
+### "Unknown" author on revisions
+
+If revisions show "Unknown" as the author:
+
+1. Ensure `revisions.json` exists with metadata
+2. Pass the JSON path via `-M revisions-file:revisions.json`
+3. Check that revision IDs match (the QMD uses `rev_X` format)
+
+### Orphaned brackets in QMD
+
+If you see stray `[` or `]` characters after import:
+
+1. These likely come from complex comment structures
+2. Check for mismatched HTML markers: `` `<!-- comment:start -->`{=html} `` without matching end
+3. docstyle will render orphan starts as point comments, so the document will still build
+
+### Render warnings about orphan comments
+
+If you see warnings like:
+
+```
+[comment-inject] Warning: orphan start marker id=3 (will appear as point comment)
+```
+
+This means a comment start marker has no matching end. The comment will appear in Word at the start position without highlighting a text range. To fix:
+
+1. Find the start marker in your QMD
+2. Either add the missing end marker or remove the start marker entirely
+
+## Further reading
+
+- [Understanding Word's format](explanation-word-xml.html): Why round-tripping is challenging
+- [File conventions](reference-file-conventions.html): Sidecar file formats
+- [Round-trip workflow](how-to-roundtrip.html): General Word ↔ Quarto workflow
+- [Zotero citations](zotero-citations.html): Combining comments with citation round-trip
+- [Architecture](architecture.html): Technical details of the Lua filters and XML injection

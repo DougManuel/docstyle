@@ -1,0 +1,21 @@
+project:
+  type: default
+  pre-render: _extensions/docstyle/generate-reference.R
+  post-render: _extensions/docstyle/update-field-codes.R
+  output-dir: output
+
+format:
+  docstyle-docx:
+    toc: false
+    number-sections: false
+
+execute:
+  echo: false
+  warning: false
+
+docstyle:
+  css: styles.css
+  footer:
+    enabled: true
+    first-page: true
+    right: "Page {page}"

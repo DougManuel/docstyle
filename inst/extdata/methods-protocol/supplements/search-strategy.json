@@ -1,0 +1,39 @@
+{
+  "_comment": "Replace this stub with your structured search strategy. Each database gets its own object with controlled-vocabulary terms (MeSH for MEDLINE, Emtree for Embase, etc.) and the Boolean assembly. Versioning the strategy as JSON makes it diffable and lets external tools (RIS importers, Cochrane RoBINT, etc.) consume it directly.",
+  "version": "1.0.0",
+  "date_finalized": "YYYY-MM-DD",
+  "peer_reviewed_by": "Information specialist name (PRESS-checked)",
+  "databases": [
+    {
+      "name": "MEDLINE (Ovid)",
+      "platform": "Ovid",
+      "interface": "ovid.com",
+      "controlled_vocabulary": ["MeSH"],
+      "free_text_fields": ["title", "abstract", "keyword"],
+      "search_string": "(replace with the database-specific search string)",
+      "limits": {
+        "language": ["English"],
+        "publication_date": "YYYY/01/01-YYYY/12/31",
+        "publication_type": []
+      },
+      "n_records_retrieved": null
+    },
+    {
+      "name": "Embase (Ovid)",
+      "platform": "Ovid",
+      "interface": "ovid.com",
+      "controlled_vocabulary": ["Emtree"],
+      "free_text_fields": ["title", "abstract", "keyword"],
+      "search_string": "(replace with the database-specific search string)",
+      "limits": {
+        "language": ["English"],
+        "publication_date": "YYYY/01/01-YYYY/12/31",
+        "publication_type": []
+      },
+      "n_records_retrieved": null
+    }
+  ],
+  "grey_literature_sources": [],
+  "hand_searched_journals": [],
+  "reference_checking": "All included studies and relevant systematic reviews"
+}

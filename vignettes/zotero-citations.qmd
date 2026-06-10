@@ -1,0 +1,244 @@
+---
+title: "Working with Zotero citations"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Working with Zotero citations}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: false
+  echo: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+#| eval: true
+devtools::load_all("../")
+```
+
+## Overview
+
+Collaborating with Word users who use Zotero can be challenging. When you convert a Word document to Markdown, citations usually become static text. When you convert back to Word, they remain static—breaking your collaborator's workflow.
+
+**docstyle** solves this by preserving live, editable Zotero citations through the round-trip.
+
+## Quick start
+
+The simplest workflow:
+
+```{r}
+#| label: quick-start
+library(docstyle)
+
+# 1. Import Word document (extracts content + citations)
+result <- import_docx("colleague-draft.docx")
+
+# 2. Edit the QMD file...
+
+# 3. Render back to Word with live Zotero citations
+# quarto render colleague-draft.qmd
+```
+
+That's it. Your colleague receives a Word document where Zotero citations work normally.
+
+## How it works
+
+### JSON-based citation management
+
+Unlike typical Quarto workflows that use `.bib` files, docstyle keeps reference metadata in JSON format—similar to how Zotero manages citations in Word:
+
+| File | Purpose |
+|------|---------|
+| `references.json` | CSL-JSON citation data for rendering |
+| `field-codes.json` | Zotero field code metadata for injection |
+
+This approach:
+
+- Avoids merge conflicts when multiple authors edit citations
+- Keeps metadata "behind the scenes" during editing
+- Enables seamless round-trip with Word
+
+### The three-step process
+
+1. **Extract**: `import_docx()` reads Zotero field codes from Word and saves them as JSON
+2. **Edit**: Work in Quarto using standard `[@key]` citation syntax
+3. **Render**: `quarto render` with the docstyle extension injects field codes back into the output Word document
+
+## Detailed workflow
+
+### Step 1: Extract from Word
+
+When you receive a Word document with Zotero citations:
+
+```{r}
+#| label: extract
+# Extract citations and content in one step
+result <- import_docx(
+  docx_path = "draft_from_colleague.docx",
+  output_dir = "project/"
+)
+
+# What you get:
+result$qmd_path         # QMD with content
+result$references_json  # CSL-JSON for rendering
+result$field_codes_json # Zotero metadata for round-trip
+result$n_citations      # Number of citations found
+```
+
+Or extract citations only (without converting content):
+
+```{r}
+#| label: extract-only
+extraction <- extract_citations(
+  docx_path = "draft_from_colleague.docx",
+  output_dir = "project/"
+)
+```
+
+### Step 2: Edit in Quarto
+
+Your QMD uses standard Pandoc citation syntax:
+
+```markdown
+Evidence suggests this approach is effective [@smith2023].
+```
+
+Edit freely—add text, reorganise sections, even add new citations.
+
+### Step 3: Render with the docstyle extension
+
+With the docstyle extension configured in `_quarto.yml`, render your document:
+
+```bash
+quarto render project/paper.qmd
+```
+
+The extension automatically:
+
+1. Generates a `reference.docx` from your CSS + YAML configuration
+2. Renders the QMD using Quarto/Pandoc
+3. Injects Zotero field codes so citations remain editable in Word
+
+## The "offline" advantage
+
+You might ask: *Why not use the Better BibTeX Pandoc filter?*
+
+The BBT filter (`zotero.lua`) is excellent, but requires that **every citation exists in your local Zotero library**.
+
+docstyle's approach uses citation data **from the original Word document**:
+
+- **No Zotero Desktop required**: Render without Zotero running
+- **No missing references**: If your colleague cited a paper you don't have, docstyle preserves it exactly
+- **No library sync issues**: Works offline with the extracted metadata
+
+## Validation
+
+Before round-tripping, validate that citations match your canonical library:
+
+```{r}
+#| label: validate
+validate_citations(
+  docx_path = "draft.docx",
+  bib_path = "master_library.bib"
+)
+```
+
+This reports:
+
+- **Matches**: Citations correctly linked
+- **Orphans**: Citations in the document missing from your library
+
+## Adding new citations without a Word round-trip
+
+If you are writing a document from scratch in Quarto (no existing Word file to harvest from), you can add citations directly from your local Zotero library:
+
+```{r}
+#| label: add-citations
+library(docstyle)
+
+# Add one or more citekeys from Zotero to _docstyle/field-codes.json
+add_citations_from_zotero(c("tyas1998", "vangeli2011"))
+```
+
+This requires Zotero to be running with the [Better BibTeX](https://retorque.re/zotero-better-bibtex/) extension installed. Each citekey is looked up against your local Zotero library, and the CSL-JSON metadata plus Zotero URI are written into `_docstyle/field-codes.json`. By default, `references.bib` is also updated for LaTeX/Typst workflows.
+
+```{r}
+#| label: add-citations-options
+# Suppress BibTeX export (docx-only workflow)
+add_citations_from_zotero("tyas1998", write_bib = FALSE)
+
+# Specify project directory explicitly
+add_citations_from_zotero("tyas1998", project_dir = "path/to/project")
+```
+
+Behaviour:
+
+- **Existing entries are never overwritten.** Re-running with the same citekey is safe.
+- **Not-found citekeys produce a warning** and are skipped.
+- **`write_bib = TRUE` (default)** calls `export_bibliography()` to sync `_docstyle/references.bib`.
+
+After running, reference the citekey in your QMD with standard `[@citekey]` syntax and `quarto render` will inject a live `ADDIN ZOTERO_ITEM` field code into the output DOCX.
+
+### Comparison with the round-trip workflow
+
+| Scenario | Recommended approach |
+|----------|---------------------|
+| Starting from an existing Word file with citations | `docx_to_qmd()` (harvests citations automatically) |
+| Writing from scratch, adding new references | `add_citations_from_zotero()` |
+| Adding a citation to an existing project | `add_citations_from_zotero()` |
+| Rendering without Zotero running | Either: metadata is cached in `field-codes.json` |
+
+## Lower-level functions
+
+For more control, use the individual functions:
+
+### `extract_citations()`
+
+Extract Zotero field codes from Word:
+
+```{r}
+#| label: extract-detailed
+extraction <- extract_citations("document.docx", output_dir = "project/")
+extraction$references_path   # Path to references.json
+extraction$field_codes_path  # Path to field-codes.json
+extraction$citations         # Parsed citation objects
+```
+
+### `inject_zotero_fields()`
+
+Inject field codes into an existing Word document:
+
+```{r}
+#| label: inject
+inject_zotero_fields(
+  docx_path = "rendered.docx",
+  field_codes_path = "field-codes.json"
+)
+```
+
+## Troubleshooting
+
+### Missing citations in output
+
+Check that:
+
+1. Citation keys in QMD match keys in `references.json`
+2. `field-codes.json` contains entries for all citations
+3. Run `validate_citations()` to identify mismatches
+
+### Field codes not working in Word
+
+Verify the output document:
+
+1. Open in Word
+2. Press Alt+F9 to show field codes
+3. Zotero citations should show as `ADDIN ZOTERO_ITEM ...`
+
+If they appear as static text, the injection may have failed. Check the console for warnings.
+
+## Next steps
+
+- **[Round-trip workflow](how-to-roundtrip.html)**: Complete workflow tutorial
+- **[Getting started](tutorial-getting-started.html)**: docstyle basics
+- **[CSS to Word](css-to-word.html)**: Customise document styling

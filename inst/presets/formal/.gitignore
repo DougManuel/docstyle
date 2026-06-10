@@ -1,0 +1,9 @@
+# docstyle generated files
+_extensions/
+_docstyle/reference.docx
+_docstyle/reference.docx.hash
+_docstyle/page-config.json
+_docstyle/section-map.json
+.quarto/
+output/
+*_files/

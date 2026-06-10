@@ -1,0 +1,19 @@
+# docstyle preset: default
+# Neutral starting point for custom documents
+
+project:
+  type: default
+  pre-render: _docstyle/pre-render.R
+  post-render: _docstyle/post-render.R
+
+format:
+  docstyle-docx:
+    toc: false
+    number-sections: false
+
+execute:
+  echo: false
+  warning: false
+
+docstyle:
+  css: styles.css

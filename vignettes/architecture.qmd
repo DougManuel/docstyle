@@ -1,0 +1,316 @@
+---
+title: "Architecture and design philosophy"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Architecture and design philosophy}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  eval: true
+  echo: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+devtools::load_all("../")
+```
+
+## The problem
+
+To customise a Quarto Word document today, you must:
+
+1. Render a document
+2. Open it in Microsoft Word
+3. Manually click through "Modify Style" menus for *every single style*
+4. Save this as `reference.docx`
+5. Commit this binary blob to Git
+
+**Why this fails:**
+
+- **Opaque**: You cannot diff a binary file or see what changed between versions
+- **Fragile**: Changing your brand colour requires manually editing 20+ styles
+- **Unmaintainable**: There's no single source of truth—the style lives in a black box
+
+## The solution: style-as-code
+
+docstyle treats `reference.docx` as a **compiled artifact**, not an editable file.
+Like a PDF or executable, you never edit it directly. Instead, you edit the source
+code (CSS), and docstyle compiles a fresh `reference.docx` for you.
+
+```
+CSS (human-readable) → docstyle → reference.docx (artifact)
+                                        ↓
+                               Quarto/Pandoc → Final document
+```
+
+## CSS as lingua franca
+
+CSS has evolved far beyond web styling. It's becoming the universal language for
+visual specification across platforms:
+
+| Domain | CSS role |
+|--------|----------|
+| **Web** | Native styling (original use case) |
+| **Print/PDF** | `@page` rules, Paged.js, WeasyPrint |
+| **Word/OOXML** | docstyle translates CSS → Word styles |
+| **SVG** | Inline styles, external stylesheets, selectors for paths |
+| **Desktop apps** | Electron, React Native, Flutter styling paradigms |
+| **Design systems** | Design tokens often export to CSS variables |
+
+The pattern: CSS provides a declarative, human-readable syntax. Tools translate
+it to their native format (OpenXML for Word, PostScript for PDF, render trees
+for native apps).
+
+**Why this matters for docstyle:**
+
+1. **Familiarity**: Most developers and designers already know CSS
+2. **Tooling**: Syntax highlighting, linting, formatters, IDE support
+3. **Diffability**: Text-based, easy to review changes in Git
+4. **Composability**: Layered stylesheets, cascading rules, variables
+5. **Future-proof**: CSS is a living standard with active W3C development
+
+docstyle's investment in CSS support—`@page` rules, named page styles, custom
+properties for line numbers—aligns with this broader trend. As CSS Paged Media
+matures (via specs like CSS Page Floats and CSS Generated Content for Paged Media),
+the same stylesheets may work across more output formats with less translation.
+
+**The convergence hypothesis:** We may be moving toward a world where CSS is
+the universal styling language, with format-specific renderers (browsers for HTML,
+WeasyPrint/Prince for PDF, docstyle for Word) all consuming the same source.
+This isn't fully realised today, but the trajectory is clear.
+
+**Readability enables collaboration:** Markdown won for content because it's
+readable. CSS is winning for styling for the same reason—people can read it,
+edit it, and discuss it. In a world where AI assists with code, it can assist
+with styling too. CSS provides a readable surface for that collaboration: the
+human can review and refine what the AI generates, rather than trusting opaque
+output like Word XML or LaTeX.
+
+## Core principles
+
+### 1. CSS as visual truth
+
+The aesthetic definition of your brand—fonts, colours, sizes—exists in one place
+only: the CSS file.
+
+```css
+/* popcorn-print.css - Print/Word styling */
+h1 {
+  font-family: "Libre Baskerville", "Georgia", serif;
+  font-size: 14pt;
+  font-weight: bold;
+  color: #262c3a;
+}
+
+p {
+  font-family: "Hanken Grotesk", "Arial", sans-serif;
+  font-size: 11pt;
+  color: #000000;
+}
+```
+
+docstyle parses this CSS and translates it into the XML dialect Word requires
+(`word/styles.xml`). If it's blue, it's defined in CSS.
+
+### 2. Platform-specific styling (design tokens)
+
+A brand needs consistent identity across platforms, but **appropriate expression**
+for each medium. Web pages use large display fonts for impact; printed documents
+use conservative typography for readability.
+
+docstyle supports this through platform-specific CSS files:
+
+```
+popcorn.css         → Web (Basically A Mono headings, large scale)
+popcorn-print.css   → Word/PDF (Libre Baskerville headings, traditional scale)
+```
+Both share:
+
+- The colour palette (#262c3a Valhalla, #fdc882 Chardonnay)
+- Body font (Hanken Grotesk)
+- Visual hierarchy ratios
+
+But differ in:
+
+- Heading typeface (display vs serif)
+- Font sizes (48px/32px web vs 14pt/13pt print)
+
+This follows the **design token** pattern from modern design systems: abstract
+values that translate appropriately per platform.
+
+### 3. Layout truth from configuration
+
+Document geometry (margins, headers, page size) comes from the project
+configuration, typically `_quarto.yml`. This separates visual styling from
+structural layout.
+
+### 4. Clean slate base
+
+We start from a minimal base document that contains the structural styles
+Pandoc expects (Body Text, VerbatimChar, etc.). This skeleton is bundled with
+docstyle and provides a stable foundation.
+
+## The generation process
+
+```
+1. Copy Base Doc (Skeleton)
+   └── Contains Pandoc's expected style structure
+
+2. Inject Visual Styles (CSS)
+   └── Translate CSS properties to OOXML <w:rPr> and <w:pPr>
+
+3. Inject Page Layout (Optional)
+   └── Margins, headers, footers from configuration
+
+4. Save as reference.docx
+   └── Ready for Quarto/Pandoc to use
+```
+
+## CSS to Word mapping
+
+Not all CSS translates to Word, but docstyle supports the most important properties:
+
+```{r}
+#| label: mapping-table
+#| echo: false
+mapping <- data.frame(
+  CSS = c("font-family", "font-size", "font-weight", "font-style", "color", "font (shorthand)"),
+  Word = c("w:rFonts", "w:sz", "w:b", "w:i", "w:color", "(expands)"),
+  Notes = c(
+    "First font in stack",
+    "Converted to half-points",
+    "600+ = bold",
+    "italic → italic",
+    "Hex to OOXML",
+    "Parses to components"
+  )
+)
+knitr::kable(mapping, col.names = c("CSS Property", "Word XML", "Notes"))
+```
+
+### Unit conversion
+
+Word uses its own unit system. docstyle handles the conversions:
+
+```{r}
+#| label: units
+# Font sizes: CSS to Word half-points (1pt = 2 half-points)
+css_to_half_points("16px")  # 16px
+css_to_half_points("12pt")  # 12pt
+
+# Margins: CSS to Word twips
+css_to_twips("1in")         # 1 inch
+```
+
+## Semantic mapping for complex content
+
+Standard markdown supports headings and paragraphs. For scientific documents,
+you need abstracts, author affiliations, and custom callouts. docstyle uses
+**semantic CSS mapping**:
+
+1. **CSS**: Define `.abstract { font-style: italic; }`
+2. **docstyle**: Creates "Abstract" style in Word
+3. **QMD**: Use fenced divs: `::: {.abstract}`
+4. **Pandoc**: Maps the div class to the Word style automatically
+
+This keeps your `.qmd` semantic while centralising styling in CSS.
+
+## Round-trip collaboration
+
+docstyle enables collaboration with Word users without losing your markdown
+source:
+
+```
+       You                    Collaborator
+        │                          │
+   Write .qmd                      │
+        │                          │
+   Render to .docx ──────────→  Edit in Word
+        │                          │
+        │              ←──────── Return .docx
+        │                          │
+   docx_to_qmd()                   │
+        │                          │
+   Review diff in Git              │
+        │                          │
+   Merge changes                   │
+```
+
+Citations from Zotero are extracted and converted to Quarto format, so the
+round-trip preserves bibliographic data.
+
+## Implementation notes
+
+### XML injection
+
+docstyle uses the `officer` package to read/write Word documents and `xml2`
+for direct XML manipulation. Style definitions live in `word/styles.xml`
+within the docx container (which is just a ZIP file).
+
+```{r}
+#| label: xml-demo
+# Generate a reference document dynamically from config
+config_path <- system.file("extdata/minimal-example/_quarto.yml", package = "docstyle")
+if (config_path == "") config_path <- "../inst/extdata/minimal-example/_quarto.yml"
+
+ref_path <- tempfile(fileext = ".docx")
+generate_reference_doc(config_path, output_path = ref_path)
+
+doc <- officer::read_docx(ref_path)
+
+# Access the styles XML
+styles_xml <- get_styles_xml(doc)
+
+# Find a specific style
+ns <- c(w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main")
+h1 <- xml2::xml_find_first(styles_xml, "//w:style[@w:styleId='Heading1']", ns)
+
+# Show the run properties (font, size, colour)
+rPr <- xml2::xml_find_first(h1, ".//w:rPr", ns)
+as.character(rPr)
+```
+
+### Why not use Pandoc directly?
+
+Pandoc already handles markdown → Word conversion. docstyle doesn't replace
+Pandoc—it manufactures the `reference.docx` that Pandoc needs. This separation
+keeps each tool focused on what it does best:
+
+- **Pandoc**: Content conversion (markdown → Word paragraphs)
+- **docstyle**: Style management (CSS → Word styles)
+
+## Comparison with alternatives
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Manual Word editing | Familiar | No version control, error-prone |
+| YAML-only config | Simple syntax | Limited expressiveness |
+| CSS (docstyle) | Web-standard, diffable, powerful | Requires CSS knowledge |
+
+docstyle is best for teams who already use CSS for web styling and want to
+maintain consistency across HTML, PDF, and Word outputs.
+
+## Further reading
+
+**Tutorials:**
+
+- [Getting started](tutorial-getting-started.html): Quick introduction
+- [Round-trip workflow](how-to-roundtrip.html): Word ↔ Quarto collaboration
+
+**How-to guides:**
+
+- [CSS to Word](css-to-word.html): Create templates from CSS
+- [Word to Quarto](word-to-quarto.html): Convert documents back
+- [Comments and revisions](comments-revisions.html): Track changes workflow
+- [Zotero citations](zotero-citations.html): Citation handling
+
+**Explanation:**
+
+- [Understanding Word's format](explanation-word-xml.html): How DOCX files work internally
+- [Tables: An evolving ecosystem](explanation-tables.html): Table packages and formats
+
+**Reference:**
+
+- [YAML schema](reference-yaml-schema.html): All configuration options
+- [File conventions](reference-file-conventions.html): Directory structure and sidecar files

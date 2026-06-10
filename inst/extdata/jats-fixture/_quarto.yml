@@ -1,0 +1,7 @@
+# JATS fixture for tests/testthat/test-jats-fixups.R
+
+project:
+  type: default
+
+format:
+  docstyle-jats: default

@@ -1,0 +1,9 @@
+/.quarto/
+/output/
+/_docstyle/reference.docx
+/_docstyle/reference.docx.hash
+/_docstyle/page-config.json
+/_docstyle/section-map.json
+.DS_Store
+
+**/*.quarto_ipynb
