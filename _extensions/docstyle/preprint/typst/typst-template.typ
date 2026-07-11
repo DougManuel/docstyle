@@ -92,6 +92,14 @@
   fontsize: 11pt,
   title-size: 1.5em,
   subtitle-size: 1.25em,
+  // Author names and affiliations sit close to body size so they don't
+  // compete with the title (#11). Previously both inherited display
+  // sizes (subtitle-size / 1.1em).
+  author-size: 1.05em,
+  affiliation-size: 1em,
+  // Journal convention is flush-left headings (#12); set to `center`
+  // for the pre-0.20 centred level-1 look.
+  heading-align: left,
   // Structure settings
   sectionnumbering: none,
   pagenumbering: "1",
@@ -197,6 +205,15 @@
   // Don't indent anything in block quotes
   show quote.where(block: true): set par(first-line-indent: 0em)
 
+  /* Journal-style tables (#12) */
+  // Pandoc emits #table(...) with no stroke of its own, a table.header,
+  // and one table.hline under the header (the booktabs mid-rule). The
+  // template supplies the rest: no grid, top and bottom rules via the
+  // wrapping block, bold header text.
+  set table(stroke: none, inset: (x: 0.5em, y: 0.4em))
+  show table.cell.where(y: 0): set text(weight: "bold")
+  show table: it => block(stroke: (top: 0.75pt, bottom: 0.75pt), it)
+
   /* Improved figure display */
   // Add space above and below
   show figure: f => { [#v(leading) #f #v(leading) ] }
@@ -269,7 +286,7 @@
     show heading: set text(fill: headingcolor)
   }
   show heading.where(level: 1): it => block(width: 100%, below: 0.8em, above: 1em)[
-    #set align(center)
+    #set align(heading-align)
     #set text(size: fontsize * 1.1, weight: "bold")
     #it
   ]
@@ -384,17 +401,19 @@
 
   // Title block content (shared between flow modes)
   let title_block_content = {
+    // hyphenate: false on the display lines — titles and proper names
+    // should wrap at word boundaries, never break ("En-hanced") (#11).
     if title != none {
       align(center)[
         #block(width: 100%, above: 0em, below: 0em)[
-          #text(weight: "bold", size: title-size)[#title]
+          #text(weight: "bold", size: title-size, hyphenate: false)[#title]
         ]
       ]
     }
     if subtitle != none {
       align(center)[
         #block(width: 100%, above: 1em, below: 0em)[
-          #text(weight: "bold", size: subtitle-size)[#subtitle]
+          #text(weight: "bold", size: subtitle-size, hyphenate: false)[#subtitle]
         ]
       ]
     }
@@ -402,7 +421,7 @@
     if author_display != none {
       align(center)[
         #block(width: 100%, above: 2em, below: 0em)[
-          #text(weight: "regular", size: subtitle-size)[#author_display]
+          #text(weight: "regular", size: author-size, hyphenate: false)[#author_display]
         ]
       ]
     }
@@ -410,7 +429,7 @@
     if affiliations != none {
       align(center)[
         #block(width: 100%, above: 1em, below: 2em)[
-          #text(weight: "regular", size: 1.1em)[
+          #text(weight: "regular", size: affiliation-size)[
             #for (i, a) in affiliations.enumerate() [
               // Number each affiliation 1-based to match the numeric
               // superscripts on author names. (#144)

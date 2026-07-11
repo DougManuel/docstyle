@@ -6,8 +6,12 @@ $endif$
 $if(subtitle)$
   subtitle: [$subtitle$],
 $endif$
+// Fall back to Quarto/scholarly `short-title` when `running-head` is
+// not set explicitly — the two conventions name the same thing (#11).
 $if(running-head)$
   running-head: [$running-head$],
+$elseif(short-title)$
+  running-head: [$short-title$],
 $endif$
 $if(by-author)$
   authors: (
@@ -167,6 +171,16 @@ $if(fontsize)$
   fontsize: $fontsize$,
 $elseif(brand.typography.base.size)$
   fontsize: $brand.typography.base.size$,
+$endif$
+// Title-plate typography overrides (#11); defaults live in typst-template.typ
+$if(author-size)$
+  author-size: $author-size$,
+$endif$
+$if(affiliation-size)$
+  affiliation-size: $affiliation-size$,
+$endif$
+$if(heading-align)$
+  heading-align: $heading-align$,
 $endif$
 $if(columns)$
   cols: $columns$,
