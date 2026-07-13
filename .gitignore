@@ -27,7 +27,9 @@ Meta/
 output/
 
 # Development notes
-dev/
+dev/*
+!dev/vnext/
+!dev/vnext/**
 
 # Temporary working files
 tmp/
