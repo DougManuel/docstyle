@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "artifact": "pdf",
+  "title": "Prediction Model Protocol Fixture",
+  "pages": 2,
+  "pageSize": "595.276 x 841.89 pts (A4)",
+  "tagged": true,
+  "encrypted": false,
+  "pdfVersion": "1.7",
+  "textHash": "sha256:d298c3bb4b7e4fc2b5c946118bd1212572a8a7d992ea9cff74f29751bba76f7d"
+}

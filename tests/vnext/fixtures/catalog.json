@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "id": "demport-protocol",
+      "description": "Reduced prediction-protocol fixture with structured abstract, many authors, citations, tables and a landscape section.",
+      "origin": {
+        "repository": "https://github.com/Big-Life-Lab/DemPoRT-V2-dev",
+        "path": "papers/protocol/demport-v2-protocol.qmd",
+        "sourceLicence": "Not declared",
+        "fixtureLicence": "MIT; synthetic prose and reduced structure"
+      },
+      "sourceDir": "demport-protocol/source",
+      "document": "protocol.qmd",
+      "formats": ["docstyle-docx", "docstyle-typst"],
+      "features": [
+        "structured-abstract",
+        "author-affiliations",
+        "inline-metadata",
+        "citations",
+        "semantic-table",
+        "landscape-section"
+      ],
+      "visualPages": [1, 2]
+    },
+    {
+      "id": "popcorn-protocol",
+      "description": "Reduced scoping-review protocol with author plate, version history, line-numbered sections and parallel JATS output.",
+      "origin": {
+        "repository": "https://github.com/Big-Life-Lab/popcorn-review",
+        "path": "reports/scoping-review-protocol/POPCORN_scoping_protocol.qmd",
+        "sourceLicence": "CC BY 4.0",
+        "fixtureLicence": "CC BY 4.0"
+      },
+      "sourceDir": "popcorn-protocol/source",
+      "document": "protocol.qmd",
+      "formats": ["docstyle-docx", "docstyle-typst", "docstyle-jats"],
+      "features": [
+        "structured-abstract",
+        "author-plate",
+        "version-history",
+        "inline-metadata",
+        "line-numbered-section",
+        "jats"
+      ],
+      "visualPages": [1, 2]
+    },
+    {
+      "id": "independent-manuscript",
+      "description": "Synthetic manuscript designed independently of DemPoRT and POPCORN with nested lists, a figure, footnote, equation and mixed page geometry.",
+      "origin": {
+        "repository": "https://github.com/DougManuel/docstyle",
+        "path": "tests/vnext/fixtures/independent-manuscript/source/manuscript.qmd",
+        "sourceLicence": "MIT",
+        "fixtureLicence": "MIT"
+      },
+      "sourceDir": "independent-manuscript/source",
+      "document": "manuscript.qmd",
+      "formats": ["docstyle-docx", "docstyle-typst", "docstyle-jats"],
+      "features": [
+        "nested-lists",
+        "semantic-table",
+        "accessible-figure",
+        "footnote",
+        "equation",
+        "landscape-section"
+      ],
+      "visualPages": [1, 2]
+    }
+  ]
+}

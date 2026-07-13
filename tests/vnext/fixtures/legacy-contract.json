@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "characterizedRelease": "0.19.0",
+  "fieldCodes": {
+    "instructionPrefix": "ADDIN DOCSTYLE",
+    "writerVersion": 3,
+    "readerVersions": [
+      1,
+      2,
+      3
+    ],
+    "futureVersionPolicy": "Strict reading rejects versions greater than 3",
+    "payloadTypes": [
+      "char",
+      "div",
+      "list",
+      "section",
+      "table",
+      "figure",
+      "float",
+      "anchor"
+    ],
+    "interoperablePrefixes": [
+      "ADDIN ZOTERO_ITEM",
+      "ADDIN ZOTERO_BIBL",
+      "ADDIN ZOTERO_PREF"
+    ]
+  },
+  "sidecars": [
+    {
+      "name": "field-codes.json",
+      "lifecycle": "durable",
+      "authority": "mixed",
+      "purpose": "Zotero fields, references hash and extraction provenance",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "comments.json",
+      "lifecycle": "durable",
+      "authority": "returned-docx",
+      "purpose": "Word comments and replies",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "revisions.json",
+      "lifecycle": "durable",
+      "authority": "returned-docx",
+      "purpose": "Tracked insertion and deletion metadata",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "references.json",
+      "lifecycle": "generated",
+      "authority": "source",
+      "purpose": "CSL JSON reference cache",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "page-config.json",
+      "lifecycle": "generated",
+      "authority": "source",
+      "purpose": "Resolved document, page and named-section properties",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "style-map.json",
+      "lifecycle": "generated",
+      "authority": "source",
+      "purpose": "Resolved Word style identifiers",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "section-map.json",
+      "lifecycle": "generated",
+      "authority": "rendered-docx",
+      "purpose": "Section boundary inventory",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "harvest-map.json",
+      "lifecycle": "generated",
+      "authority": "rendered-docx",
+      "purpose": "Paragraph correspondence cache",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "figures.json",
+      "lifecycle": "generated",
+      "authority": "mixed",
+      "purpose": "Figure identifiers and source paths",
+      "versioning": "unversioned"
+    },
+    {
+      "name": "styles.json",
+      "lifecycle": "generated",
+      "authority": "rendered-docx",
+      "purpose": "Extracted style inventory",
+      "versioning": "unversioned"
+    }
+  ]
+}

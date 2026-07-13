@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "artifact": "docx",
+  "packageParts": ["_rels/.rels", "[Content_Types].xml", "docProps/app.xml", "docProps/core.xml", "docProps/custom.xml", "word/_rels/document.xml.rels", "word/_rels/footnotes.xml.rels", "word/comments.xml", "word/document.xml", "word/fontTable.xml", "word/footer3.xml", "word/footnotes.xml", "word/numbering.xml", "word/settings.xml", "word/styles.xml", "word/theme/theme1.xml", "word/webSettings.xml"],
+  "counts": {
+    "paragraphs": 35,
+    "tables": 1,
+    "tableRows": 3,
+    "tableCells": 9,
+    "sections": 3,
+    "comments": 0,
+    "insertions": 0,
+    "deletions": 0
+  },
+  "fields": {
+    "total": 7,
+    "byType": {
+      "docstyle": 6,
+      "zotero-preferences": 1
+    },
+    "instructionHashes": ["sha256:88fab9f86f879a05bed11201b3b335dc27a375c182598678990367f4f047ea7b", "sha256:aa9238efcfa87a79b52b07c40422a0a1da4fd4faf0e0e1231f641eaa0d579fbb", "sha256:a645418b0f6b4c94bf248e95d618b226f0e150bc2296a284fca8d9b414b6f707", "sha256:ab28a4961093307f1b2eebfbcc8e02a2f59bf88721cae97fc76064d83ed12844", "sha256:3eacaf91664ce0d0dad4f9bad777b6e08873695339ac80a1dbb251970da0f97f", "sha256:b37c6e5c3fd136a4e3d2c9f4f267f31e00da8b5ebe210575ef0794a216a884fc", "sha256:cddb54f52d62a3a7795ef54188f18bb4f3343adf155f10621e224237850e7ab5"]
+  },
+  "paragraphStyles": ["Abstract", "AbstractTitle", "Affiliation", "Author", "Bibliography", "Compact", "FirstParagraph", "Heading1", "Title"],
+  "sections": [
+    {
+      "width": "12240",
+      "height": "15840",
+      "orientation": null,
+      "marginTop": "1224",
+      "marginRight": "1224",
+      "marginBottom": "1224",
+      "marginLeft": "1224",
+      "lineNumbering": null
+    },
+    {
+      "width": "12240",
+      "height": "15840",
+      "orientation": null,
+      "marginTop": "1224",
+      "marginRight": "1224",
+      "marginBottom": "1224",
+      "marginLeft": "1224",
+      "lineNumbering": "1"
+    },
+    {
+      "width": "12240",
+      "height": "15840",
+      "orientation": null,
+      "marginTop": "1224",
+      "marginRight": "1224",
+      "marginBottom": "1224",
+      "marginLeft": "1224",
+      "lineNumbering": null
+    }
+  ],
+  "textHash": "sha256:34ca3488eb37c5368eb43a344bc7d21e0761826a5eca31dedbf4294672cd6079"
+}

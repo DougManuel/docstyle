@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "fixture": "independent-manuscript",
+  "expectations": [
+    {
+      "feature": "semantic-lists-and-tables",
+      "format": "all",
+      "status": "observed",
+      "evidence": "Lists and tables are emitted as native backend structures.",
+      "reference": "legacy v0.19.0"
+    },
+    {
+      "feature": "figure-alt-text",
+      "format": "docstyle-docx,docstyle-jats",
+      "status": "known-bug",
+      "evidence": "Legacy DOCX and JATS omit the authored figure alt text.",
+      "reference": "vNext work packages 3 and 5"
+    },
+    {
+      "feature": "section-geometry",
+      "format": "docstyle-typst",
+      "status": "unsupported",
+      "evidence": "Legacy Typst ignores the named landscape section markers.",
+      "reference": "vNext work packages 3 and 6"
+    },
+    {
+      "feature": "duplicate-reference-heading",
+      "format": "docstyle-typst",
+      "status": "known-bug",
+      "evidence": "Legacy Typst emits both the authored and generated References headings.",
+      "reference": "vNext work packages 3 and 6"
+    },
+    {
+      "feature": "nested-field-ranges",
+      "format": "docstyle-docx",
+      "status": "known-bug",
+      "evidence": "Flat range precedence can mis-handle nested generated regions.",
+      "reference": "GitHub issue #19"
+    },
+    {
+      "feature": "independent-validation",
+      "format": "docstyle-docx",
+      "status": "known-bug",
+      "evidence": "The legacy validator can pass when harvest loses a table.",
+      "reference": "GitHub issue #20"
+    }
+  ]
+}

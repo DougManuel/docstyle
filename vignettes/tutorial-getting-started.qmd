@@ -191,7 +191,10 @@ Let's see docstyle in action using the bundled POPCORN study styles.
 
 ```{r}
 #| label: read-css
-css_path <- system.file("extdata/popcorn/popcorn.css", package = "docstyle")
+css_path <- system.file(
+  "extdata/popcorn-theme/popcorn-base.css",
+  package = "docstyle"
+)
 styles <- read_css(css_path)
 ```
 

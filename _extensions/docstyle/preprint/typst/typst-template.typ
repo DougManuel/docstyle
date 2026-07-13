@@ -1,8 +1,12 @@
 // Standalone Typst preprint template
 
 // Imports
-#import "@preview/fontawesome:0.5.0": *
-#import "@preview/wordometer:0.1.5": total-words, word-count
+#import "_extensions/docstyle/preprint/vendor/wordometer-0.1.5/exports.typ": total-words, word-count
+
+#let docstyle-orcid-mark(fill: rgb("a6ce39"), size: 0.8em) = {
+  h(0.2em)
+  text(fill: fill, size: size, weight: "bold")[ORCID]
+}
 
 // Appendix function. To use, include in .typ before appendix header
 // #show: appendix.with(prefix: "A")
@@ -385,7 +389,7 @@
         }
 
         if a.keys().contains("orcid") {
-          parts.push(link(a.orcid, fa-orcid(fill: rgb("a6ce39"), size: 0.8em)))
+          parts.push(link(a.orcid, docstyle-orcid-mark(fill: rgb("a6ce39"), size: 0.8em)))
         }
         parts.join()
       })

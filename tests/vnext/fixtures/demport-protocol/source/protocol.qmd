@@ -1,0 +1,61 @@
+---
+title: "Prediction Model Protocol Fixture"
+short-title: "Prediction protocol"
+version: "0.1"
+date: 2026-07-13
+author:
+  - name: Researcher One
+    affiliations: [{ref: centre}]
+  - name: Researcher Two
+    affiliations: [{ref: centre}, {ref: institute}]
+affiliations:
+  - id: centre
+    name: Population Health Centre
+  - id: institute
+    name: Open Methods Institute
+abstract: |
+  **Background:** This synthetic protocol represents a prediction study.
+
+  **Methods:** The fixture exercises metadata, tables and section geometry.
+keywords: [prediction, protocol, reproducibility]
+---
+
+Protocol version {{< meta version >}}
+
+::: docstyle-abstract
+:::
+
+# Background
+
+The study develops a prediction model using reproducible methods
+[@fixture2024].
+
+# Methods
+
+The analysis includes:
+
+1. prespecified predictors;
+2. internal validation; and
+3. calibration assessment.
+
+| Construct | Representation | Policy |
+|---|---|---|
+| Age | Continuous | Authored |
+| Outcome | Time to event | Authored |
+
+::: section-landscape
+:::
+
+## Wide analysis table
+
+| Model | Development | Validation | Calibration | Reporting |
+|---|---|---|---|---|
+| Base | Full cohort | Bootstrap | Flexible curve | Full equation |
+
+::: section-default
+:::
+
+# References
+
+::: {#refs}
+:::

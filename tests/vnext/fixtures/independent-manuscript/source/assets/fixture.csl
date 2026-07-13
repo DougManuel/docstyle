@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" version="1.0"
+       class="in-text" default-locale="en-CA">
+  <info>
+    <title>Docstyle fixture numeric style</title>
+    <id>https://example.org/styles/docstyle-fixture</id>
+    <link href="https://example.org/styles/docstyle-fixture" rel="self"/>
+    <updated>2026-07-13T00:00:00+00:00</updated>
+  </info>
+  <citation collapse="citation-number">
+    <layout prefix="[" suffix="]" delimiter=",">
+      <text variable="citation-number"/>
+    </layout>
+  </citation>
+  <bibliography et-al-min="7" et-al-use-first="3">
+    <layout suffix=".">
+      <text variable="citation-number" suffix=". "/>
+      <names variable="author" suffix=". ">
+        <name initialize-with=" " delimiter=", "/>
+      </names>
+      <text variable="title"/>
+      <date variable="issued" prefix=". ">
+        <date-part name="year"/>
+      </date>
+    </layout>
+  </bibliography>
+</style>

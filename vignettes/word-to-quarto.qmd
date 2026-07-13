@@ -35,9 +35,11 @@ an existing document from collaborators.
 # Create a simple Word document using officer
 library(officer)
 
-# Generate a reference doc dynamically from POPCORN config (has Title style)
-config_path <- system.file("extdata/popcorn/_quarto.yml", package = "docstyle")
-if (config_path == "") config_path <- "../inst/extdata/popcorn/_quarto.yml"
+# Generate a reference document from the bundled minimal example.
+config_path <- system.file(
+  "extdata/minimal-example/_quarto.yml",
+  package = "docstyle"
+)
 
 base_docx <- tempfile(fileext = ".docx")
 generate_reference_doc(config_path, output_path = base_docx)
@@ -160,7 +162,7 @@ List items are converted to markdown lists:
 
 ```{r}
 #| label: list-example
-# Create doc with lists (using POPCORN template for styles)
+# Create a document with lists using the bundled minimal example styles.
 doc_lists <- read_docx(base_docx)
 doc_lists <- body_add_par(doc_lists, "Project Tasks", style = "Title")
 doc_lists <- body_add_par(doc_lists, "Key deliverables:", style = "Normal")
