@@ -105,6 +105,9 @@ validate_legacy_contract <- function(contract) {
       call. = FALSE
     )
   }
+  if (!is.list(contract$sidecars)) {
+    stop("legacy sidecars must be a list", call. = FALSE)
+  }
   sidecar_names <- vapply(
     contract$sidecars,
     function(x) as.character(x$name),
@@ -112,6 +115,35 @@ validate_legacy_contract <- function(contract) {
   )
   if (anyDuplicated(sidecar_names)) {
     stop("legacy sidecar names must be unique", call. = FALSE)
+  }
+  expected_sidecar_names <- vapply(
+    legacy_sidecar_contract(),
+    function(x) as.character(x$name),
+    character(1)
+  )
+  if (!setequal(sidecar_names, expected_sidecar_names)) {
+    stop(
+      "legacy sidecars must contain the complete expected set",
+      call. = FALSE
+    )
+  }
+  required_fields <- c(
+    "name", "lifecycle", "authority", "purpose", "versioning"
+  )
+  complete_records <- vapply(contract$sidecars, function(sidecar) {
+    if (!all(required_fields %in% names(sidecar))) {
+      return(FALSE)
+    }
+    all(vapply(required_fields, function(field) {
+      value <- sidecar[[field]]
+      length(value) == 1L && !is.na(value) && nzchar(as.character(value))
+    }, logical(1)))
+  }, logical(1))
+  if (!all(complete_records)) {
+    stop(
+      "legacy sidecars must contain non-empty required fields",
+      call. = FALSE
+    )
   }
   valid_lifecycles <- c("durable", "generated")
   if (!all(vapply(

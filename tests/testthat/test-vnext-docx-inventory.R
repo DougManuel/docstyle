@@ -18,6 +18,32 @@ test_that("DOCX inventory describes package and semantic structures", {
   expect_false(any(grepl(tempdir(), unlist(inventory), fixed = TRUE)))
 })
 
+test_that("repeatable DOCX inventory fields retain JSON array shape", {
+  path <- testthat::test_path(
+    "../../inst/extdata/minimal-example/minimal-example.docx"
+  )
+  inventory <- inspect_legacy_docx(path)
+  single_item_inventory <- list(
+    packageParts = inventory$packageParts[1],
+    paragraphStyles = inventory$paragraphStyles[1],
+    fields = list(
+      instructionHashes = inventory$fields$instructionHashes[1]
+    )
+  )
+  output <- tempfile(fileext = ".json")
+  on.exit(unlink(output), add = TRUE)
+  jsonlite::write_json(
+    single_item_inventory,
+    output,
+    auto_unbox = TRUE
+  )
+  decoded <- jsonlite::read_json(output, simplifyVector = FALSE)
+
+  expect_type(decoded$packageParts, "list")
+  expect_type(decoded$paragraphStyles, "list")
+  expect_type(decoded$fields$instructionHashes, "list")
+})
+
 test_that("field classifier distinguishes Zotero and DOCSTYLE fields", {
   expect_equal(
     classify_docx_field("ADDIN ZOTERO_ITEM CSL_CITATION {}"),

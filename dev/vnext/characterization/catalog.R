@@ -25,6 +25,9 @@ validate_fixture_catalog <- function(catalog, root, check_files = TRUE) {
       )
     }
     formats <- as.character(unlist(fixture$formats, use.names = FALSE))
+    if (length(formats) < 1L) {
+      stop("fixture must declare at least one format", call. = FALSE)
+    }
     if (!all(formats %in% characterization_formats)) {
       stop(
         "fixture contains unsupported format: ",

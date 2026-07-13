@@ -27,6 +27,44 @@ offline_wordometer_hashes <- c(
     "c33a5648cee72a57bdfee4b309998e04569001904d65189cd1204b1772a0fe86"
 )
 
+read_wordometer_checksum_file <- function(path) {
+  if (!file.exists(path)) {
+    stop("wordometer checksum manifest does not exist", call. = FALSE)
+  }
+  lines <- trimws(readLines(path, warn = FALSE, encoding = "UTF-8"))
+  lines <- lines[nzchar(lines)]
+  matches <- regexec(
+    "^([0-9a-fA-F]{64})[[:space:]]+[*]?(.+)$",
+    lines
+  )
+  fields <- regmatches(lines, matches)
+  if (length(fields) < 1L || any(lengths(fields) != 3L)) {
+    stop("wordometer checksum manifest is malformed", call. = FALSE)
+  }
+  hashes <- tolower(vapply(fields, function(x) x[[2]], character(1)))
+  names(hashes) <- vapply(fields, function(x) x[[3]], character(1))
+  if (anyDuplicated(names(hashes))) {
+    stop("wordometer checksum filenames must be unique", call. = FALSE)
+  }
+  hashes
+}
+
+test_that("wordometer checksum manifest matches independent pins", {
+  root <- locate_offline_typst_root()
+  checksum_path <- file.path(
+    root,
+    "_extensions", "docstyle", "preprint", "vendor",
+    "wordometer-0.1.5", "SHA256SUMS"
+  )
+  manifest_hashes <- read_wordometer_checksum_file(checksum_path)
+
+  expect_setequal(names(manifest_hashes), names(offline_wordometer_hashes))
+  expect_identical(
+    manifest_hashes[names(offline_wordometer_hashes)],
+    offline_wordometer_hashes
+  )
+})
+
 test_that("Typst template imports only project-local dependencies", {
   root <- locate_offline_typst_root()
   template <- readLines(file.path(

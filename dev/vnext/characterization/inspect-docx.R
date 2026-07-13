@@ -171,7 +171,7 @@ inspect_legacy_docx <- function(path) {
   list(
     schemaVersion = 1L,
     artifact = "docx",
-    packageParts = unname(package_parts),
+    packageParts = as.list(unname(package_parts)),
     counts = list(
       paragraphs = length(xml2::xml_find_all(
         document,
@@ -213,13 +213,15 @@ inspect_legacy_docx <- function(path) {
     fields = list(
       total = length(instructions),
       byType = field_counts,
-      instructionHashes = unname(vapply(
+      instructionHashes = as.list(unname(vapply(
         instructions,
         characterization_sha256,
         character(1)
-      ))
+      )))
     ),
-    paragraphStyles = sort(unique(style_values[!is.na(style_values)])),
+    paragraphStyles = as.list(sort(unique(
+      style_values[!is.na(style_values)]
+    ))),
     sections = unname(lapply(sections, docx_section_record)),
     textHash = characterization_sha256(visible_text)
   )

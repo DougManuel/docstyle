@@ -162,7 +162,7 @@ List items are converted to markdown lists:
 
 ```{r}
 #| label: list-example
-# Create doc with lists (using POPCORN template for styles)
+# Create a document with lists using the bundled minimal example styles.
 doc_lists <- read_docx(base_docx)
 doc_lists <- body_add_par(doc_lists, "Project Tasks", style = "Title")
 doc_lists <- body_add_par(doc_lists, "Key deliverables:", style = "Normal")

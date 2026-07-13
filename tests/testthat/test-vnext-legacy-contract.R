@@ -42,6 +42,30 @@ test_that("legacy contract classifies every known JSON sidecar", {
   expect_true(validate_legacy_contract(contract))
 })
 
+test_that("legacy contract rejects a partial sidecar set", {
+  contract <- characterize_legacy_contract(
+    normalizePath(testthat::test_path("../.."))
+  )
+  contract$sidecars <- contract$sidecars[-1]
+
+  expect_error(
+    validate_legacy_contract(contract),
+    "complete expected set"
+  )
+})
+
+test_that("legacy contract requires complete sidecar records", {
+  contract <- characterize_legacy_contract(
+    normalizePath(testthat::test_path("../.."))
+  )
+  contract$sidecars[[1]]$authority <- NULL
+
+  expect_error(
+    validate_legacy_contract(contract),
+    "required fields"
+  )
+})
+
 test_that("committed legacy contract matches the characterized release", {
   path <- testthat::test_path("../vnext/fixtures/legacy-contract.json")
   expect_true(file.exists(path))

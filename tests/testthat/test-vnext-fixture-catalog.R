@@ -49,6 +49,15 @@ test_that("fixture catalogue rejects unsupported formats", {
   )
 })
 
+test_that("fixture catalogue rejects an empty format list", {
+  catalog <- valid_catalog()
+  catalog$fixtures[[1]]$formats <- list()
+  expect_error(
+    validate_fixture_catalog(catalog, tempdir(), check_files = FALSE),
+    "at least one format"
+  )
+})
+
 test_that("fixture catalogue checks source files when requested", {
   expect_error(
     validate_fixture_catalog(valid_catalog(), tempdir(), check_files = TRUE),
