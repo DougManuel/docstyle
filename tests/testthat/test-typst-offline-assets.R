@@ -1,14 +1,19 @@
 locate_offline_typst_root <- function() {
   candidates <- c(
     testthat::test_path("../.."),
-    normalizePath(".", mustWork = FALSE)
+    normalizePath(".", mustWork = FALSE),
+    system.file(package = "docstyle")
   )
+  candidates <- candidates[nzchar(candidates)]
   hit <- candidates[file.exists(file.path(
     candidates,
     "_extensions", "docstyle", "_extension.yml"
   ))]
   if (length(hit) < 1L) {
-    stop("Docstyle repository root not found", call. = FALSE)
+    stop(
+      "Docstyle source or installed package root not found",
+      call. = FALSE
+    )
   }
   normalizePath(hit[[1]], mustWork = TRUE)
 }
