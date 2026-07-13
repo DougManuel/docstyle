@@ -1,4 +1,7 @@
 source(testthat::test_path(
+  "../../dev/vnext/characterization/render-legacy.R"
+))
+source(testthat::test_path(
   "../../dev/vnext/characterization/capture-baselines.R"
 ))
 

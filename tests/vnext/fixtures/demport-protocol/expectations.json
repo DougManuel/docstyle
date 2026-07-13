@@ -24,6 +24,20 @@
       "reference": "vNext work packages 3 and 6"
     },
     {
+      "feature": "section-geometry",
+      "format": "docstyle-typst",
+      "status": "unsupported",
+      "evidence": "Legacy Typst ignores the named landscape section markers.",
+      "reference": "vNext work packages 3 and 6"
+    },
+    {
+      "feature": "duplicate-reference-heading",
+      "format": "docstyle-typst",
+      "status": "known-bug",
+      "evidence": "Legacy Typst emits both the authored and generated References headings.",
+      "reference": "vNext work packages 3 and 6"
+    },
+    {
       "feature": "picos-profile",
       "format": "all",
       "status": "unsupported",

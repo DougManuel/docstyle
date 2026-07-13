@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "artifact": "pdf",
+  "title": "Independent Scientific Manuscript Fixture",
+  "pages": 2,
+  "pageSize": "595.276 x 841.89 pts (A4)",
+  "tagged": true,
+  "encrypted": false,
+  "pdfVersion": "1.7",
+  "textHash": "sha256:678c3a215e5d5ed7afa101299c1f7b37fd6cc69aa986a49a5153077e5388559e"
+}

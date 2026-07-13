@@ -9,7 +9,7 @@ abstract: |
 
 # Introduction
 
-The workflow has three parts (Figure @fig-workflow).[^note]
+The workflow has three parts (@fig-workflow).[^note]
 
 ![Source, semantic model and output](assets/diagram.svg){#fig-workflow fig-alt="Source flows to semantic model and then output."}
 

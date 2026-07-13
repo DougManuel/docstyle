@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "fixture": "independent-manuscript",
+  "characterizedRelease": "0.19.0",
+  "expectations": "../../expectations.json",
+  "legacyContract": "../../../legacy-contract.json",
+  "artifacts": [
+    {
+      "format": "docstyle-docx",
+      "file": "docstyle-docx.docx",
+      "inventory": "docstyle-docx-inventory.json",
+      "visualPages": []
+    },
+    {
+      "format": "docstyle-typst",
+      "file": "docstyle-typst.pdf",
+      "inventory": "docstyle-typst-inventory.json",
+      "visualPages": [
+        "pages/docstyle-typst-page-001.png",
+        "pages/docstyle-typst-page-002.png"
+      ]
+    },
+    {
+      "format": "docstyle-jats",
+      "file": "docstyle-jats.xml",
+      "inventory": "docstyle-jats-inventory.json",
+      "visualPages": []
+    }
+  ]
+}

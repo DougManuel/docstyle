@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "artifact": "docx",
+  "packageParts": ["_rels/.rels", "[Content_Types].xml", "docProps/app.xml", "docProps/core.xml", "docProps/custom.xml", "word/_rels/document.xml.rels", "word/_rels/footnotes.xml.rels", "word/comments.xml", "word/document.xml", "word/fontTable.xml", "word/footer3.xml", "word/footnotes.xml", "word/numbering.xml", "word/settings.xml", "word/styles.xml", "word/theme/theme1.xml", "word/webSettings.xml"],
+  "counts": {
+    "paragraphs": 41,
+    "tables": 2,
+    "tableRows": 5,
+    "tableCells": 19,
+    "sections": 3,
+    "comments": 0,
+    "insertions": 0,
+    "deletions": 0
+  },
+  "fields": {
+    "total": 5,
+    "byType": {
+      "docstyle": 3,
+      "toc": 1,
+      "zotero-preferences": 1
+    },
+    "instructionHashes": ["sha256:88fab9f86f879a05bed11201b3b335dc27a375c182598678990367f4f047ea7b", "sha256:7a7b78fcd70c97eb251e9ca924bbd50505d384210a8b7758b0425a04dfbbda96", "sha256:e3f0fd5473aaa15392010c5cc1b8ec640b413c8442303cd96a9a42b5523cfc0d", "sha256:fc83ac7a898c44d8f186e5cabe1de0d4ef4f913009762a7d332f474e18c71225", "sha256:4c6519f0a870852dd19efcfc2ba81b0975627c5b58cd3526145e33327329ec7c"]
+  },
+  "paragraphStyles": ["Abstract", "AbstractTitle", "Author", "Bibliography", "Compact", "Date", "FirstParagraph", "Heading1", "Heading2", "Title", "TOCHeading"],
+  "sections": [
+    {
+      "width": "15840",
+      "height": "12240",
+      "orientation": null,
+      "marginTop": "864",
+      "marginRight": "864",
+      "marginBottom": "864",
+      "marginLeft": "864",
+      "lineNumbering": null
+    },
+    {
+      "width": "12240",
+      "height": "15840",
+      "orientation": null,
+      "marginTop": "1224",
+      "marginRight": "1224",
+      "marginBottom": "1224",
+      "marginLeft": "1224",
+      "lineNumbering": null
+    },
+    {
+      "width": "12240",
+      "height": "15840",
+      "orientation": null,
+      "marginTop": "1224",
+      "marginRight": "1224",
+      "marginBottom": "1224",
+      "marginLeft": "1224",
+      "lineNumbering": null
+    }
+  ],
+  "textHash": "sha256:22b6010f171f894f9e1ea6549d424992d13072520b2928a54d68771cb42ed050"
+}

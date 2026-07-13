@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "artifact": "jats",
+  "articleType": "other",
+  "counts": {
+    "sections": 6,
+    "paragraphs": 9,
+    "tables": 0,
+    "figures": 0,
+    "references": 1,
+    "crossReferences": 2
+  },
+  "abstractHash": "sha256:b6426b25ed33c053f3ec8951ff9c2b8780e8551b99c59d25dc0e7ff44547209f",
+  "textHash": "sha256:5ad108e1c9112c36c89be8be9e692eeb3a034151d74db253367a5c51ce885df6"
+}
