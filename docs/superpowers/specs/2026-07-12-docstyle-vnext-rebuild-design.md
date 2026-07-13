@@ -1,7 +1,7 @@
 # Docstyle vNext Rebuild Programme Specification
 
-**Status:** Draft for review
-**Date:** July 12, 2026
+**Status:** Approved programme direction; refined specification for final review
+**Date:** July 13, 2026
 **Decision:** Proceed with a field-code-centred, Lua-first rebuild
 **Primary audiences:** Users and collaborators; maintainers, contributors and coding agents
 **Implementation planning:** Separate work-package specifications and plans will follow this programme specification
@@ -10,9 +10,9 @@
 
 Docstyle vNext will rebuild Docstyle as long-term open infrastructure for reproducible scientific documents. Quarto will be the only required user runtime. Lua and Pandoc will implement the core pipeline. R will remain available during migration, but it will not be part of the permanent user-facing architecture.
 
-QMD will remain the normal authored source. YAML will hold semantic document metadata. CSS will provide transparent, version-controlled styling for document, page, section and element properties. Versioned `ADDIN DOCSTYLE` field codes will preserve portable semantics inside DOCX files. JSON sidecars will retain richer local state for citations, comments, revisions, stable identifiers, provenance and round-trip reconciliation.
+QMD will remain the normal authored source. YAML, typed content regions and versioned metadata profiles will hold semantic document data. CSS will provide transparent, version-controlled styling for document, page, section and element properties. Versioned `ADDIN DOCSTYLE` field codes will preserve portable semantics inside DOCX files. JSON sidecars will retain richer local state for citations, comments, revisions, scholarly metadata, stable identifiers, provenance and round-trip reconciliation.
 
-A shared semantic document model will support separate DOCX, Typst and JATS backends. The backends will preserve common content and metadata while declaring format-specific capabilities. They will not promise visual equivalence.
+A shared semantic document model will support separate DOCX, Typst/PDF and JATS backends. The backends will preserve common content and metadata while declaring format-specific capabilities. DOCX and Typst/PDF will aim for the closest practical visual correspondence from the same CSS intent. Supported properties will have explicit equivalence requirements, while renderer-dependent differences will be measured and reported.
 
 The rebuild will be FAIR-informed. It will favour machine-actionable metadata, persistent identifiers, open schemas, qualified relationships, provenance, accessible local tools and transparent document structure. It will not claim that a DOCX file or Docstyle output is formally FAIR-compliant.
 
@@ -37,11 +37,14 @@ vNext will:
 5. Use versioned JSON sidecars for durable local workflow state.
 6. Support warm and cold DOCX round trips with explicit fidelity reporting.
 7. Preserve semantic structure for headings, paragraphs, lists, tables, citations, figures and annotations.
-8. Use one shared semantic model with separate DOCX, Typst and JATS backends.
-9. Provide model-neutral local commands for inspection, extraction, semantic patching and validation.
-10. Fail safely when content, metadata or provenance cannot be reconciled.
-11. Publish schemas, capability contracts and migration rules.
-12. Retire the legacy R engine after explicit acceptance gates pass.
+8. Store typed scholarly metadata, including named document regions and extensible domain profiles, in representations that remain recoverable across QMD, DOCX and PDF.
+9. Use one shared semantic model with separate DOCX, Typst/PDF and JATS backends.
+10. Make additional OOXML features implementable as bounded capability modules rather than extensions to a central transformation pipeline.
+11. Seek the closest practical visual correspondence between DOCX and Typst/PDF for supported style and layout properties.
+12. Provide model-neutral local commands for inspection, extraction, semantic patching and validation.
+13. Fail safely when content, metadata or provenance cannot be reconciled.
+14. Publish schemas, capability contracts and migration rules.
+15. Retire the legacy R engine after explicit acceptance gates pass.
 
 ## Non-goals
 
@@ -49,12 +52,13 @@ The initial rebuild will not:
 
 - claim formal FAIR compliance;
 - reproduce full browser CSS;
-- require exact visual parity across DOCX, Typst and JATS;
+- promise byte-identical, pixel-identical or page-break-identical DOCX and PDF output;
 - round-trip arbitrary Word documents without constraints;
 - accept every edit that Word permits;
 - preserve the current R API or internal file structure;
 - preserve incidental layout quirks from the legacy engine;
 - include MCP or provider-specific LLM integrations in the core;
+- publish a stable third-party plug-in API in the first rebuild release;
 - maintain two permanent rendering engines;
 - replace Zotero as a reference manager;
 - infer causal or semantic meaning from visual formatting alone.
@@ -77,6 +81,10 @@ Docstyle will build on the `ADDIN` field-code pattern used successfully by Zoter
 
 Field codes must travel with the DOCX. Sidecars may retain richer state that would be inefficient or inappropriate to repeat in every field. Sidecars will use documented JSON schemas and clear lifecycle classifications: durable state, derived cache or operation report.
 
+### Scholarly metadata is first-class data
+
+Docstyle will distinguish structured scholarly data from its visible rendering. The relationship will follow the useful precedent established by Zotero fields: a reader sees ordinary document content, while software can recover the typed record that gives the content meaning. The core will support common document metadata and named regions. Versioned profiles will add domain structures such as PICOS without placing discipline-specific logic in the rendering engine.
+
 ### Semantic structure precedes presentation
 
 Lists, tables, headings and other structures must remain semantic Pandoc and OOXML objects for as long as possible. Styling must not require converting their authored content into opaque strings or monolithic raw XML. This principle improves accessibility, harvest fidelity, machine interpretation and filter composition.
@@ -87,7 +95,15 @@ CSS will describe document defaults, Word styles, page properties, section prope
 
 ### Backends share meaning, not implementation
 
-DOCX, Typst and JATS will consume one semantic model. Each backend will implement the model using format-appropriate mechanisms. The architecture will not force OOXML, Typst and XML publishing structures through one rendering implementation.
+DOCX, Typst/PDF and JATS will consume one semantic model. Each backend will implement the model using format-appropriate mechanisms. The architecture will not force OOXML, Typst and XML publishing structures through one rendering implementation.
+
+### OOXML features are modular
+
+The DOCX backend will separate generic package operations from feature handlers. Headers, comments, citations, equations and future OOXML capabilities will declare the parts, relationships, semantic objects, read and write operations, and validation rules they own. The first release does not need a public plug-in API, but its internal boundaries must permit a feature to be added without expanding one central conditional pipeline.
+
+### Visual correspondence is a tested objective
+
+DOCX and Typst/PDF should look as similar as their rendering models permit. The contract will distinguish supported property equivalence from renderer-dependent visual correspondence. It will measure both. Semantic fidelity remains blocking when a visual approximation would alter meaning, reading order or accessibility.
 
 ### Validation is independent and conservative
 
@@ -100,7 +116,7 @@ Field-code and sidecar payloads are untrusted data. Docstyle will validate them 
 ## Conceptual architecture
 
 ```text
-QMD + YAML + CSS + durable sidecar state
+QMD + YAML + CSS + metadata profiles + durable sidecar state
                     |
                     v
              source normalizer
@@ -111,7 +127,7 @@ QMD + YAML + CSS + durable sidecar state
         +-----------+-----------+
         |                       |
         v                       v
-   DOCX backend          Typst/JATS backends
+   DOCX backend       Typst/PDF and JATS backends
         |
         v
 DOCX with DOCSTYLE and Zotero field codes
@@ -136,7 +152,9 @@ Docstyle will distinguish authored intent, portable document state and local wor
 | Information | Normal authority | Portable or recoverable representation |
 |---|---|---|
 | Authored prose and semantic structure | QMD | Visible DOCX content within identified regions |
-| Document metadata | YAML | Document-level field-code snapshot and standard DOCX properties where appropriate |
+| Document metadata | YAML and typed metadata records | Embedded metadata catalogue, document-level field-code snapshot and standard DOCX/PDF properties where appropriate |
+| Named semantic regions | QMD identifiers and typed block attributes | DOCSTYLE field anchors; PDF structure or metadata relationships where supported |
+| Domain metadata profiles | QMD/YAML or linked authored metadata files | Embedded versioned metadata envelope plus normalized durable state and format-native mappings |
 | Presentation and layout | CSS | Resolved styles and page/section properties in the rendered artifact |
 | Region identity and preservation policy | QMD-derived semantic model | DOCSTYLE field-code payload |
 | Zotero-managed citations | Zotero field instructions and citation catalogue | Live Zotero fields in DOCX plus citation sidecar |
@@ -150,8 +168,10 @@ Authority for a returned edit is type-specific. The field-code schema will state
 
 The shared model will include:
 
-- document identity, version and provenance;
-- title, abstract and structured metadata;
+- document identity and provenance;
+- title, abstract, version, date and structured metadata;
+- typed semantic regions, including a precisely identified abstract;
+- versioned domain metadata profiles and qualified relationships among their records and content regions;
 - authors, affiliations, ORCID identifiers and ROR identifiers;
 - funders, grants and related persistent identifiers;
 - ordered semantic content;
@@ -167,6 +187,66 @@ The shared model will include:
 - declared expected losses or approximations.
 
 The model will have a versioned JSON Schema. Internal Lua objects may provide behaviour, but serialized model output must remain inspectable with ordinary JSON tools.
+
+## Semantic metadata and scholarly objects
+
+Docstyle will treat scholarly metadata as typed data rather than a collection of display strings. A metadata record may describe the document, identify a content region, describe a scholarly object or relate one object to another. The semantic model will preserve the underlying record even when a backend renders only a human-readable view.
+
+The initial core will include:
+
+- document identity, title, abstract, version, status and relevant dates;
+- people, organizations, funders, grants and persistent identifiers;
+- named regions such as abstract, methods, acknowledgements and reference list;
+- citations, figures, tables, equations, datasets, software and related outputs;
+- provenance and qualified relationships among records and regions.
+
+Domain-specific metadata will use versioned profiles. A profile will declare its namespace, schema, required and repeatable fields, controlled terms where suitable, relationships to content regions and mappings to supported backends. PICOS will be an early research-document profile. Its records may identify population, intervention or exposure, comparator, outcomes and study design, and may point to the exact authored regions that support those values. The profile specification will determine the final PICOS vocabulary and cardinality.
+
+The engine will not infer an abstract, PICOS element or other scholarly meaning from typography alone. Authors will identify semantic regions through YAML, typed QMD blocks or explicit attributes. Importers may propose inferred metadata for foreign documents, but they must label it as inferred until a person accepts it.
+
+### QMD binding model
+
+Docstyle will build on familiar Quarto authoring patterns rather than introduce a separate markup language:
+
+- YAML variables and external metadata records hold typed values;
+- inline variables render selected metadata as visible prose without making the display string authoritative;
+- stable QMD identifiers bind content to metadata records and round-trip regions;
+- registered classes declare semantic roles or profile types;
+- attributes carry typed relationships, policies and record references;
+- CSS selectors may style those identifiers and classes, but CSS declarations control presentation rather than scholarly meaning.
+
+The same identifier or class can therefore support styling and machine interpretation while preserving a clear authority boundary. A class has semantic meaning only when a registered metadata profile defines it. Unregistered classes remain presentation hooks. This prevents a visual selector from silently becoming an uncontrolled vocabulary.
+
+An illustrative QMD binding is:
+
+```qmd
+---
+version: 0.3
+docstyle:
+  profiles: [picos]
+---
+
+Protocol version {{< meta version >}}
+
+::: {#abstract .abstract data-docstyle-record="region:abstract"}
+The authored abstract remains ordinary QMD content.
+:::
+```
+
+The final profile specification will define reserved attributes and class names. It will prefer existing Quarto and Pandoc conventions where they can carry the required meaning.
+
+### Portable representations
+
+| Format | Required representation |
+|---|---|
+| QMD | YAML for concise metadata, typed block or inline attributes for semantic regions, inline variables for rendered views, and documented links to richer durable JSON records |
+| DOCX | DOCSTYLE field anchors for visible semantic regions, an embedded versioned metadata catalogue for cold recovery, and mappings to standard core or custom properties where appropriate |
+| Typst/PDF | The shared metadata model during rendering, format-compatible document metadata and an attached versioned JSON metadata envelope. Attachment-capable archival profiles will identify the envelope as an associated data file. A profile that forbids attachments is reduced capability and must emit the envelope as a paired sidecar with an explicit warning |
+| JATS | Native JATS elements and relationships where available, with namespaced custom metadata for profile fields that JATS cannot represent directly |
+
+The embedded catalogue and sidecar will share stable identifiers and content hashes. A visible item may be authored content, such as an abstract, or a generated view of structured data, such as a version history. Its preservation policy will state which representation is authoritative and whether reverse editing is supported. PDF records will include normalized content hashes and, where the backend supports them, tagged-structure identifiers that connect records to visible regions.
+
+Metadata profiles will be registered through schemas and mappings rather than hard-coded branches in each backend. This provides a path for future study-design, reporting-guideline and domain profiles without requiring the core engine to understand every field.
 
 ## Field-code contract
 
@@ -249,6 +329,7 @@ Durable state will include:
 - schema and software versions;
 - source and content hashes;
 - stable region registry;
+- semantic metadata records and profile versions;
 - citation metadata and exact field instructions where required;
 - comment and revision anchors;
 - source-to-DOCX mappings;
@@ -269,7 +350,7 @@ A warm round trip has the reviewed DOCX, current QMD and prior durable sidecar s
 
 ### Cold round trip
 
-A cold round trip has only the DOCX. Docstyle will reconstruct a new project state from DOCSTYLE fields, Zotero fields, comments, revisions, document properties and structural OOXML. Cold import may lack local history, but it must recover every object declared portable by the field-code contract.
+A cold round trip has only the DOCX. Docstyle will reconstruct a new project state from DOCSTYLE fields, the embedded metadata catalogue, Zotero fields, comments, revisions, document properties and structural OOXML. Cold import may lack local history, but it must recover every object declared portable by the field-code and metadata contracts.
 
 ### Foreign Word documents
 
@@ -350,9 +431,16 @@ Each backend will consume the semantic document model and publish a capability p
 
 The DOCX backend will preserve Word-native collaboration features, field codes, comments, revisions, styles, section properties and package relationships. It will use Pandoc for the main document writer and Lua for semantic filters and package finalization.
 
-### Typst backend
+The backend will have two architectural layers:
 
-The Typst backend will render the shared scholarly content and metadata using Typst-native structures. DOCX-only collaboration metadata may be omitted from visible output but must remain represented in validation and provenance where relevant.
+1. A package core will provide ZIP parts, content types, namespace-aware XML, relationships, identifiers, atomic writes and preservation of unknown parts.
+2. Feature modules will translate defined semantic objects to and from specific OOXML capabilities and contribute their own validation rules and fixtures.
+
+Each feature module will declare its dependencies, owned or amended package parts, relationships, semantic-model types, capability level, read and write operations, migration rules and validator. A registry will compose these modules and detect conflicting ownership. New internal modules must not require edits throughout the package core. A stable public extension interface may be considered only after several independently developed modules establish the boundary.
+
+### Typst/PDF backend
+
+The Typst/PDF backend will render the shared scholarly content and metadata using Typst-native structures. Its PDF finalization step will apply the selected metadata and conformance profile. The default portable profile will attach the versioned JSON metadata envelope to the PDF through Typst's native PDF attachment mechanism. Attachment-capable archival profiles will declare the envelope's data relationship. DOCX-only collaboration metadata may be omitted from visible output but must remain represented in validation and provenance where relevant.
 
 ### JATS backend
 
@@ -360,7 +448,21 @@ The JATS backend will prioritize structured scholarly metadata and machine-reada
 
 ### Cross-format validation
 
-Cross-format tests will compare semantic content and declared metadata, not binary files or page-by-page visual identity. Backend-specific approximations must appear in machine-readable reports.
+Cross-format tests will compare semantic content, declared metadata and supported style intent. Binary identity is irrelevant. Visual comparison will operate on rendered pages and resolved properties according to the contract below. Backend-specific approximations must appear in machine-readable reports.
+
+## Cross-format visual-fidelity contract
+
+Docstyle will strive for the closest practical visual duplication between DOCX and Typst/PDF. CSS is the common statement of style intent. The two backends may implement that intent differently, but neither may silently ignore a property it declares supported.
+
+The contract has three levels:
+
+1. **Semantic identity:** content, reading order, hierarchy, labels and accessibility meaning must agree. A difference is blocking unless the capability profile declares the feature unavailable.
+2. **Supported property equivalence:** fonts, sizes, weights, colours, margins, page geometry, paragraph spacing, table rules and other properties in the shared capability matrix must resolve to equivalent backend values. A mismatch in a property declared fully supported is a validation failure.
+3. **Rendered visual correspondence:** representative pages and identified semantic regions will be rasterized through supported renderers and compared using documented tolerances. Tests will assess geometry, typography, spacing, alignment, colour and repeated page elements. Thresholds may vary by property or fixture, but they must be version-controlled and justified.
+
+Exact line breaks, pagination, glyph rasterization, hyphenation, floating-object placement and font metrics can differ among Microsoft Word, LibreOffice and Typst. These differences are acceptable only when the semantic and supported-property contracts pass and the fidelity report identifies material visual divergence. A project may designate one renderer as its release reference, but the semantic model and CSS remain authoritative.
+
+Work package 3 will publish the shared property matrix and comparison method. Work package 6 will establish baseline DOCX-to-PDF and Typst/PDF comparisons for the three real-project fixtures. Later releases may tighten tolerances as backend support improves.
 
 ## Lua-first runtime
 
@@ -371,6 +473,7 @@ The Lua runtime will support:
 - pre-render source and CSS normalization;
 - Pandoc AST filters;
 - field-code generation;
+- semantic metadata normalization and profile validation;
 - post-render DOCX package inspection and modification;
 - validation;
 - import and extraction commands;
@@ -442,10 +545,10 @@ MCP servers, Codex skills and other agent integrations may wrap this interface l
 1. **Schema validation:** field codes, sidecars and semantic-model objects.
 2. **Package validation:** ZIP parts, content types, relationships and XML well-formedness.
 3. **Structural validation:** sections, styles, fields, annotations, lists and tables.
-4. **Semantic validation:** required metadata and backend capability contracts.
+4. **Semantic validation:** required metadata, named regions, profile schemas and backend capability contracts.
 5. **Fidelity validation:** authored content, citations, comments, revisions and region identity.
-6. **Cross-format validation:** shared content and metadata across DOCX, Typst and JATS.
-7. **Visual validation:** rendered pages for properties that require layout inspection.
+6. **Cross-format validation:** shared content, metadata and style intent across DOCX, Typst/PDF and JATS.
+7. **Visual validation:** resolved-property equivalence and rendered-page comparison under the visual-fidelity contract.
 
 ### Result states
 
@@ -476,6 +579,7 @@ Docstyle will improve machine actionability and transparency without claiming fo
 
 - support DOI, ORCID, ROR, funder and grant identifiers;
 - retain stable document and region identifiers;
+- expose typed scholarly objects, named regions and versioned domain profiles;
 - export metadata suitable for repository indexing;
 - include explicit relationships to code, data and related outputs.
 
@@ -491,6 +595,7 @@ Docstyle will improve machine actionability and transparency without claiming fo
 - use shared identifiers and controlled vocabularies where suitable;
 - publish the DOCSTYLE field-code and sidecar schemas;
 - preserve standard Word, Zotero, Typst and JATS structures;
+- map structured metadata to format-native properties and elements where available;
 - provide mappings rather than replacing established scholarly standards.
 
 ### Reusability
@@ -501,6 +606,8 @@ Docstyle will improve machine actionability and transparency without claiming fo
 - use community standards for scholarly metadata where available.
 
 CSS supports this objective indirectly by keeping styling and document structure inspectable and version-controlled. Semantic lists and tables remain transparent to humans and machines rather than being represented only through visual formatting.
+
+The metadata design extends the Zotero principle beyond references: the visible document can remain readable while the underlying typed record is recoverable and reusable. A PICOS profile, for example, can retain both its structured values and links to the exact document regions that support them.
 
 ## Migration contract
 
@@ -543,6 +650,8 @@ The dual-engine period will end. Legacy retirement requires the acceptance gates
 ### Work package 1: schemas and state model
 
 - specify the semantic document model;
+- specify core scholarly metadata, named regions and the profile mechanism;
+- specify the QMD variable, identifier, class and attribute binding rules;
 - specify field-code types and preservation policies;
 - specify durable sidecar state, cache and reports;
 - define identifiers, hashes, provenance and migration rules;
@@ -553,6 +662,7 @@ The dual-engine period will end. Legacy retirement requires the acceptance gates
 - select or implement the XML layer;
 - implement ZIP package reading and atomic writing;
 - implement namespaces, relationships and content-type helpers;
+- establish the OOXML feature-module interface and ownership registry;
 - verify behaviour against Word and LibreOffice fixtures;
 - establish Lua unit and integration test runners.
 
@@ -562,13 +672,15 @@ The dual-engine period will end. Legacy retirement requires the acceptance gates
 - implement the supported CSS parser and cascade;
 - represent document, page, section and element properties;
 - add backend capability diagnostics;
+- publish the initial cross-format property-equivalence matrix;
 - preserve semantic lists and tables through the filter pipeline.
 
 ### Work package 4: DOCX render vertical slice
 
-- render metadata, prose, lists, one table and one figure;
+- render metadata, a named abstract, prose, lists, one table and one figure;
 - render portrait and landscape sections;
 - emit and validate DOCSTYLE field codes;
+- embed and recover the metadata catalogue;
 - generate headers, footers and page fields;
 - produce a self-describing DOCX without R.
 
@@ -580,17 +692,20 @@ The dual-engine period will end. Legacy retirement requires the acceptance gates
 - produce typed QMD patches and conflict reports;
 - validate render-to-return-to-render fidelity.
 
-### Work package 6: Typst and JATS backends
+### Work package 6: Typst/PDF and JATS backends
 
 - adapt each backend to the shared model;
 - define capability profiles;
 - preserve common scholarly metadata;
 - add cross-format semantic tests;
+- implement metadata transport and capability reporting for PDF;
+- establish visual-correspondence baselines against rendered DOCX fixtures;
 - document backend-specific styling and approximation rules.
 
 ### Work package 7: machine interface and review bundles
 
 - implement inspect, extract, diff, apply and validate commands;
+- expose semantic metadata and named-region queries through stable JSON;
 - define stable JSON outputs and exit states;
 - generate optional DOCX, PDF, QMD, JSON and page-image review bundles;
 - document how agent integrations can call the local interface safely.
@@ -613,6 +728,8 @@ Each work package will receive a bounded design specification and implementation
 - field-code schema and migration rules;
 - CSS parsing, cascade and unit conversion;
 - sidecar reconciliation;
+- metadata-profile validation and format mappings;
+- OOXML feature registration and conflicting-ownership detection;
 - backend capability decisions;
 - semantic patch generation.
 
@@ -625,7 +742,9 @@ Each work package will receive a bounded design specification and implementation
 - comments, revisions and Zotero fields;
 - adjacent and nested semantic regions;
 - repeated and mixed section properties;
-- list and table semantic preservation.
+- list and table semantic preservation;
+- named-region and profile preservation across QMD, DOCX and PDF, including recovery of the PDF's attached metadata envelope;
+- addition of a fixture feature module without changes across the package core.
 
 ### Interoperability tests
 
@@ -633,7 +752,8 @@ Each work package will receive a bounded design specification and implementation
 - LibreOffice open, edit and save;
 - Google Docs import and export if retained in the capability contract;
 - generic DOCX text extraction;
-- field and sidecar survival across supported workflows.
+- field and sidecar survival across supported workflows;
+- paired DOCX-rendered PDF and Typst/PDF visual comparisons under documented tolerances.
 
 ### Real-project fixtures
 
@@ -655,9 +775,11 @@ vNext will not replace the legacy engine until:
 - supported legacy field codes and sidecars can be migrated;
 - authored content is never lost silently;
 - sidecars can be reconstructed from a self-describing DOCX to the declared cold-import level;
+- core metadata, named regions and at least one domain profile can be embedded and recovered from QMD, DOCX and the default portable PDF profile;
 - warm round trips detect conflicts among source, sidecars and returned DOCX;
 - DemPoRT, POPCORN and an independent fixture pass;
-- DOCX, Typst and JATS preserve the shared semantic model within their capability contracts;
+- DOCX, Typst/PDF and JATS preserve the shared semantic model within their capability contracts;
+- DOCX and Typst/PDF meet the supported-property matrix and fixture-specific visual-correspondence thresholds;
 - supported CSS document, page, section and element properties are documented;
 - semantic lists and tables remain inspectable and round-trippable;
 - validation failures block unsafe source updates;
@@ -673,7 +795,9 @@ The rebuild succeeds when:
 - a collaborator can edit a supported DOCX without destroying portable semantics;
 - a returned DOCX produces a reviewable patch rather than an unexplained source rewrite;
 - a machine can inspect document structure, metadata, provenance and validation state through local JSON commands;
-- the same QMD produces semantically consistent DOCX, Typst and JATS outputs;
+- a machine can identify the abstract and retrieve versioned profile data such as PICOS without relying on visual inference;
+- the same QMD produces semantically consistent DOCX, Typst/PDF and JATS outputs;
+- the DOCX and Typst/PDF outputs retain equivalent supported style properties and pass declared visual-correspondence tolerances;
 - unsupported behaviour is explicit;
 - legacy code can be removed without losing the tested product contract.
 
@@ -695,6 +819,14 @@ Redundant embedded and local state can diverge. Stable identifiers, hashes, expl
 
 A shared model can become too broad if it attempts to encode every backend detail. The model will contain shared scholarly meaning and declared presentation intent. Backend-only implementation detail remains inside the backend.
 
+### Metadata-profile scope
+
+An unrestricted metadata graph could reproduce the complexity of a general knowledge-management system. The core will define stable identifiers, typed regions, qualified relationships and profile registration. Domain profiles will own their vocabularies and validation rules. New profiles must show a concrete round-trip or interoperability need.
+
+### Visual-fidelity scope
+
+Visual comparison can become unstable across operating systems, fonts and renderers. Tests will pin fonts and supported rendering environments, compare resolved properties before pixels and use fixture-specific tolerances. Visual diagnostics will supplement rather than replace semantic validation.
+
 ### CSS scope
 
 CSS is useful because it is transparent and familiar, but browser-level compatibility is neither feasible nor necessary. The supported subset must remain small, documented and tested.
@@ -712,7 +844,10 @@ The programme direction is approved. The following implementation decisions belo
 - the final field-code vNext key names;
 - identifier generation and collision handling;
 - the serialized semantic-model API;
+- the embedded DOCX metadata-catalogue carrier and PDF metadata profile;
+- the initial core metadata vocabulary and PICOS profile schema;
 - the exact CSS grammar and backend property matrix;
+- visual-comparison metrics, tolerances and release-reference renderers;
 - the command-line syntax;
 - the migration support window for each legacy schema;
 - the precise set of reversible DOCX edits;
@@ -755,10 +890,10 @@ They will become inputs to vNext subsystem specifications rather than normative 
 
 ## Immediate next actions
 
-1. Review and approve this programme specification.
+1. Complete final review of this approved programme specification.
 2. Create a vNext programme issue and milestone structure.
 3. Write the work package 0 characterization plan.
-4. Write the work package 1 field-code, semantic-model and sidecar specification.
+4. Write the work package 1 field-code, semantic-model, metadata-profile and sidecar specification.
 5. Run the work package 2 Lua XML feasibility spike before expanding implementation.
 6. Freeze new legacy features unless they address data loss, security or an active project blocker.
 
@@ -767,5 +902,9 @@ They will become inputs to vNext subsystem specifications rather than normative 
 - Wilkinson MD, Dumontier M, Aalbersberg IJ, et al. The FAIR Guiding Principles for scientific data management and stewardship. *Scientific Data*. 2016;3:160018. https://doi.org/10.1038/sdata.2016.18
 - [Quarto project scripts](https://quarto.org/docs/projects/scripts.html)
 - [Quarto Lua filters](https://quarto.org/docs/extensions/filters.html)
+- [Quarto variables](https://quarto.org/docs/authoring/variables.html)
+- [Quarto Markdown Divs, Spans, identifiers and attributes](https://quarto.org/docs/authoring/markdown-basics.html#divs-and-spans)
 - [Pandoc Lua filters and `pandoc.zip`](https://pandoc.org/lua-filters.html#module-pandoc.zip)
+- [Typst PDF attachments](https://typst.app/docs/reference/pdf/attach/)
+- [Typst PDF standards and tagged PDF](https://typst.app/docs/reference/pdf/)
 - ECMA-376, Office Open XML File Formats, Part 1: Fundamentals and Markup Language Reference.
