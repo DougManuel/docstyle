@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="180"
+     viewBox="0 0 600 180" role="img"
+     aria-labelledby="title description">
+  <title id="title">Three-step document workflow</title>
+  <desc id="description">Source flows to semantic model and then output.</desc>
+  <rect x="20" y="55" width="150" height="70" fill="#d9eaf7"/>
+  <rect x="225" y="55" width="150" height="70" fill="#d9ead3"/>
+  <rect x="430" y="55" width="150" height="70" fill="#fce5cd"/>
+  <path d="M170 90 H225 M375 90 H430" stroke="#222" stroke-width="4"/>
+  <text x="95" y="96" text-anchor="middle" font-family="Arial">Source</text>
+  <text x="300" y="96" text-anchor="middle" font-family="Arial">Model</text>
+  <text x="505" y="96" text-anchor="middle" font-family="Arial">Output</text>
+</svg>

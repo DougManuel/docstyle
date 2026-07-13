@@ -1,0 +1,40 @@
+@page {
+  size: letter;
+  margin: 0.85in;
+}
+
+@page landscape {
+  size: letter landscape;
+  margin: 0.6in;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  font-size: 10pt;
+  line-height: 1.25;
+  color: #111111;
+}
+
+h1 {
+  font-family: "Arial", sans-serif;
+  font-size: 15pt;
+  font-weight: bold;
+  color: #1f4e79;
+}
+
+h2 {
+  font-family: "Arial", sans-serif;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #1f4e79;
+}
+
+.abstract {
+  font-size: 9pt;
+  margin-bottom: 6pt;
+}
+
+table {
+  font-size: 9pt;
+  border-collapse: collapse;
+}

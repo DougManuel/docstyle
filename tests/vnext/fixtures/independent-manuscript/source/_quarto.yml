@@ -1,0 +1,22 @@
+project:
+  type: default
+  output-dir: output
+  pre-render: _extensions/docstyle/generate-reference.R
+  post-render: _extensions/docstyle/update-field-codes.R
+
+bibliography: assets/references.bib
+csl: assets/fixture.csl
+
+docstyle:
+  css: assets/fixture.css
+  footer:
+    enabled: true
+    right: "Page {page}"
+
+format:
+  docstyle-docx:
+    toc: true
+  docstyle-typst:
+    toc: true
+  docstyle-jats:
+    citeproc: true

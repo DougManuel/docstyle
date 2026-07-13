@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "fixture": "popcorn-protocol",
+  "expectations": [
+    {
+      "feature": "author-plate",
+      "format": "docstyle-docx",
+      "status": "observed",
+      "evidence": "DOCSTYLE author-plate field wraps visible content.",
+      "reference": "legacy v0.19.0"
+    },
+    {
+      "feature": "version-history",
+      "format": "docstyle-docx",
+      "status": "observed",
+      "evidence": "Generated version-history field and table are present.",
+      "reference": "legacy v0.19.0"
+    },
+    {
+      "feature": "structured-abstract",
+      "format": "docstyle-jats",
+      "status": "observed",
+      "evidence": "The JATS front matter contains an abstract.",
+      "reference": "legacy v0.19.0"
+    },
+    {
+      "feature": "cross-format-visual-correspondence",
+      "format": "docstyle-docx,docstyle-typst",
+      "status": "approximated",
+      "evidence": "Legacy backends share some source styles but no property matrix.",
+      "reference": "vNext work packages 3 and 6"
+    }
+  ]
+}

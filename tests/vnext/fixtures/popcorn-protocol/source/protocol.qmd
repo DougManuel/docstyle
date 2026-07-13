@@ -1,0 +1,58 @@
+---
+title: "Scoping Review Protocol Fixture"
+version-summary:
+  version: "0.2"
+  date: "2026-07-13"
+version-history:
+  - version: "0.1"
+    date: "2026-06-01"
+    description: "Initial fixture."
+  - version: "0.2"
+    date: "2026-07-13"
+    description: "Added structured metadata."
+author:
+  - name: Review Author
+    affiliations: [{ref: network}]
+    roles: [conceptualization, methodology]
+affiliations:
+  - id: network
+    name: Open Review Network
+abstract: |
+  **Introduction:** Reporting varies across modelling studies.
+
+  **Methods:** This synthetic review uses a structured protocol.
+
+  **Dissemination:** Outputs will be openly available.
+keywords: [scoping review, reporting guideline, modelling]
+---
+
+[{{< meta version-summary.date >}}]{.date} |
+Version: [{{< meta version-summary.version >}}]{.version}
+
+::: author-plate
+:::
+
+::: {.section-body line-numbers="continuous"}
+
+# Introduction
+
+The protocol examines transparent reporting [@fixture2025].
+
+# Eligibility
+
+- Population models
+  - Cohort models
+  - Microsimulation models
+- Applied policy questions
+
+:::
+
+# Version history
+
+::: version-history
+:::
+
+# References
+
+::: {#refs}
+:::

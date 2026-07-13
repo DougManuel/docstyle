@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "fixture": "demport-protocol",
+  "expectations": [
+    {
+      "feature": "structured-abstract",
+      "format": "docstyle-docx",
+      "status": "observed",
+      "evidence": "DOCSTYLE abstract field and Abstract paragraphs",
+      "reference": "legacy v0.19.0"
+    },
+    {
+      "feature": "section-geometry",
+      "format": "docstyle-docx",
+      "status": "known-bug",
+      "evidence": "Legacy section geometry may be assigned to the preceding section.",
+      "reference": "GitHub issue #18"
+    },
+    {
+      "feature": "cross-format-page-size",
+      "format": "docstyle-typst",
+      "status": "approximated",
+      "evidence": "Legacy Typst uses the preprint template page size rather than the CSS @page size.",
+      "reference": "vNext work packages 3 and 6"
+    },
+    {
+      "feature": "picos-profile",
+      "format": "all",
+      "status": "unsupported",
+      "evidence": "The legacy engine has no domain metadata profile contract.",
+      "reference": "vNext work package 1"
+    },
+    {
+      "feature": "embedded-metadata-envelope",
+      "format": "docstyle-typst",
+      "status": "unsupported",
+      "evidence": "The legacy PDF has no attached Docstyle metadata envelope.",
+      "reference": "vNext work package 6"
+    }
+  ]
+}

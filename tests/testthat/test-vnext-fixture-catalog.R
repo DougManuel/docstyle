@@ -55,3 +55,19 @@ test_that("fixture catalogue checks source files when requested", {
     "source directory does not exist"
   )
 })
+
+test_that("repository fixture catalogue resolves all three projects", {
+  catalog_path <- testthat::test_path("../vnext/fixtures/catalog.json")
+  catalog <- read_fixture_catalog(catalog_path, check_files = TRUE)
+  ids <- vapply(catalog$fixtures, function(x) x$id, character(1))
+
+  expect_setequal(
+    ids,
+    c("demport-protocol", "popcorn-protocol", "independent-manuscript")
+  )
+  expect_true(all(vapply(
+    catalog$fixtures,
+    function(x) length(x$features) >= 5L,
+    logical(1)
+  )))
+})
