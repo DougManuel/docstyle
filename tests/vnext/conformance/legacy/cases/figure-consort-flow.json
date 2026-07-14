@@ -1,0 +1,11 @@
+{
+  "source": "tests/testthat/test-docx-to-qmd.R:2387-2398 (build_figure_field_code_docx(): payload_fields <- list(type=\"figure\", id=fig_id, version=2L); if (!is.null(original_path)) payload_fields$original_path <- original_path) and :2480-2486 (test 'figure field code restores original_path on re-harvest (#79)', literal values fig_id=\"fig-consort-flow\", orig=\"figures/fig-consort-flow.png\"), combined verbatim -- the legacy writer's v2 figure field-code shape. This case also exercises id-from-figure's-own-'id'-key (as opposed to div's 'name'), so no placeholder id is generated.",
+  "legacy": { "type": "figure", "id": "fig-consort-flow", "version": 2, "original_path": "figures/fig-consort-flow.png" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "fig-consort-flow",
+    "kind": "figure",
+    "policy": "authored-preserve",
+    "hash": "sha256:3fb2b0fae50d71b04a18db560ecbce3cd18475501e249298296eb92394de7bdd"
+  }
+}

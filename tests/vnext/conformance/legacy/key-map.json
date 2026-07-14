@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "description": "Disposition inventory for legacy ADDIN DOCSTYLE field-code payload keys (writer v3, readers 1-3; see inst/schema/docstyle-field-codes.json and the docstyle_schemas required/optional lists in R/field_codes.R). lib.migrate consumes this file to decide, for every key on a legacy payload, whether it is written into the v4 field envelope (mapped), preserved in the migration record body (record), or discarded with a documented reason (dropped). Any legacy key not listed here is an unmapped-legacy-key error finding, by design -- this file must stay in lockstep with the legacy schema.",
+
+  "payloadTypes": {
+    "char":    { "kind": "span",    "policy": "authored-preserve" },
+    "div":     { "kind": "section", "policy": "authored-preserve" },
+    "list":    { "kind": "list",    "policy": "authored-preserve" },
+    "section": { "kind": "section", "policy": "structural" },
+    "table":   { "kind": "table",   "policy": "authored-preserve" },
+    "figure":  { "kind": "figure",  "policy": "authored-preserve" },
+    "float":   { "kind": "anchor",  "policy": "structural" },
+    "anchor":  { "kind": "anchor",  "policy": "structural" }
+  },
+
+  "policyDefaultRule": "Legacy field codes carry no explicit policy field, so migrate.lua derives field-envelope.v4's required 'policy' purely from payload type (see payloadTypes[type].policy above, applied by migrate.payload as a default after the per-key walk). section, float and anchor payloads are layout/structural regions the renderer regenerates each time (policy=structural); char, div, list, table and figure payloads carry author-authored content the tool must preserve verbatim across regenerations (policy=authored-preserve). 'float' is a legacy alias of 'anchor' (see R/field_codes.R: dispatch table comment 'backward compat', and test-field-codes.R 'float type dispatches to anchor handler (backward compat)'), which is why both share kind=anchor and policy=structural.",
+
+  "idResolutionRule": "field-envelope.v4's 'id' is populated by whichever key in this file is disposition=mapped with target='id' (currently 'name', used by div payloads, and 'id', used by figure payloads -- both are the legacy payload's own identity key, just named differently per type). When no such key is present on the legacy payload, migrate.payload assigns a deterministic placeholder 'g-<kind>-migr01' (kind = the payload's translated envelope kind, not the raw legacy type; ordinal is always the fixed literal '01' because migrate.payload is a single-input/single-output pure function with no cross-call counter to thread -- see the comment in lib/migrate.lua). The 'g-' prefix intentionally mirrors lib/ids.lua's reserved generated-id prefix (ids.lua's check_explicit() rejects author-supplied ids starting with 'g-') so a placeholder id is recognizable as tool-generated, not authored, without migrate.lua depending on ids.lua's random generation (which would make migration non-reproducible).",
+
+  "keys": {
+    "type": {
+      "disposition": "mapped",
+      "target": "kind",
+      "appliesTo": ["char", "div", "list", "section", "table", "figure", "float", "anchor"],
+      "note": "Handled by a dedicated pre-check in migrate.payload (payloadTypes lookup; unknown type -> unknown-payload-type error, envelope nil), not by the generic per-key writer -- envelope.kind is the translated payloadTypes[type].kind, never a verbatim copy of the raw legacy 'type' string. Listed here only so every observed legacy key has a recorded disposition (completeness check)."
+    },
+    "version": {
+      "disposition": "mapped",
+      "target": "v",
+      "appliesTo": ["char", "div", "list", "section", "table", "figure", "float", "anchor"],
+      "note": "Handled by a dedicated pre-check in migrate.payload: missing version defaults to 1 (mirrors R/field_codes.R:520 `payload$version %||% 1L`), then version < 1 or > 3 is rejected with unsupported-version (envelope nil). The envelope's 'v' is always the literal constant 4 (field-envelope.v4 requires v=4 for every migrated record; 'v' and legacy 'version' are conceptually analogous fields, not the same value) -- target='v' documents that correspondence, it is not a verbatim value copy. Listed here only for key-inventory completeness."
+    },
+    "name": {
+      "disposition": "mapped",
+      "target": "id",
+      "appliesTo": ["div"],
+      "note": "Author-assigned identity for div payloads (e.g. name='abstract', name='version-history'). Generic walk: when present, becomes envelope.id verbatim. See idResolutionRule."
+    },
+    "id": {
+      "disposition": "mapped",
+      "target": "id",
+      "appliesTo": ["figure"],
+      "note": "Author-assigned QMD figure id (e.g. id='fig-consort-flow'). Figures use 'id' instead of 'name' for the same identity role; generic walk treats it the same way. See idResolutionRule."
+    },
+    "class": {
+      "disposition": "record",
+      "appliesTo": ["char", "list", "section", "table", "float", "anchor"],
+      "note": "CSS class hook selecting the payload's style/positioning rules (e.g. 'date', 'list-alpha', 'section-body', 'table-formal', 'column-margin'). Not an envelope property; needed to reconstruct rendering, so it lands in the migration record body."
+    },
+    "source": {
+      "disposition": "record",
+      "appliesTo": ["char"],
+      "note": "Literal QMD shortcode source the char span expands from (e.g. '[{{< meta version-summary.date >}}]{.date}'). CONCERN: hashes.content_hash() strips any key literally named 'hash' or 'source' at every depth (lib/hashes.lua STRIP table) -- that convention exists for *provenance pointers* (e.g. {file, start} in test-hashes.lua), but here 'source' is semantic content, not provenance. Because migrate.payload computes the envelope hash over the record via hashes.content_hash(record) exactly as specified, a char payload's hash is currently blind to changes in its 'source' value. Recorded here rather than silently worked around, since lib/hashes.lua is out of scope for this task (see task-8-report.md concerns)."
+    },
+    "start": {
+      "disposition": "record",
+      "appliesTo": ["list"],
+      "note": "Starting number for an ordered list continuation."
+    },
+    "page-break": {
+      "disposition": "record",
+      "appliesTo": ["section"],
+      "note": "Whether the section opens on a new page."
+    },
+    "line-numbers": {
+      "disposition": "record",
+      "appliesTo": ["section"],
+      "note": "Line-numbering mode for the section ('continuous', 'restart-page', etc.)."
+    },
+    "widths": {
+      "disposition": "record",
+      "appliesTo": ["table"],
+      "note": "Comma-separated column width percentages (e.g. '30,70'). Explicitly required to land in the migration record, not the envelope (task brief Step 2)."
+    },
+    "width": {
+      "disposition": "record",
+      "appliesTo": ["table", "figure"],
+      "note": "Overall table width (table) or image width (figure) as a CSS length/percentage. Same key name, related-but-distinct meaning per type; disposition is identical either way."
+    },
+    "font-size": {
+      "disposition": "record",
+      "appliesTo": ["table"],
+      "note": "Table font size override."
+    },
+    "header-bold": {
+      "disposition": "record",
+      "appliesTo": ["table"],
+      "note": "Whether the table header row is bold."
+    },
+    "header-shading": {
+      "disposition": "record",
+      "appliesTo": ["table"],
+      "note": "Table header row shading colour."
+    },
+    "label": {
+      "disposition": "record",
+      "appliesTo": ["table"],
+      "note": "Table caption label override."
+    },
+    "docpr_id": {
+      "disposition": "record",
+      "appliesTo": ["figure"],
+      "note": "Word wp:docPr/@id integer; stable OOXML identity anchor for the figure's drawing element."
+    },
+    "align": {
+      "disposition": "record",
+      "appliesTo": ["figure"],
+      "note": "Figure alignment (left | center | right)."
+    },
+    "wrap": {
+      "disposition": "record",
+      "appliesTo": ["figure"],
+      "note": "Figure text-wrap mode (none | left | right)."
+    },
+    "original_path": {
+      "disposition": "record",
+      "appliesTo": ["figure"],
+      "note": "Source image path at render time, restored on re-harvest (#79)."
+    },
+    "alt": {
+      "disposition": "record",
+      "appliesTo": ["figure"],
+      "note": "Accessibility alt text for the figure image."
+    },
+    "vertical_anchor": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Vertical anchor reference: text | margin | page | section."
+    },
+    "horizontal_anchor": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Horizontal anchor reference: text | margin | page."
+    },
+    "position_y": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Vertical offset from anchor (CSS length or dxa)."
+    },
+    "position_x": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Horizontal offset from anchor (CSS length or dxa)."
+    },
+    "float_width": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Width of the anchored element (CSS length or dxa)."
+    },
+    "wrap_style": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Text wrap type: none | square | tight | top-and-bottom."
+    },
+    "wrap_side": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Text wrap side: both | left | right | largest."
+    },
+    "wrap_distance": {
+      "disposition": "record",
+      "appliesTo": ["float", "anchor"],
+      "note": "Wrap spacing, 1-4 value CSS shorthand (top right bottom left)."
+    },
+    "adjacent": {
+      "disposition": "dropped",
+      "appliesTo": ["float", "anchor"],
+      "rationale": "Anchor-target-adjacency is documented as deferred and unimplemented upstream (inst/schema/docstyle-field-codes.json anchor_payload_fields.adjacent: 'Anchor target element ID (deferred, #117)'). No consumer of this value exists yet, so migration discards it with an info finding rather than carrying dead data forward into the v4 record. Revisit -- change disposition to record or mapped -- once #117 lands and something actually reads it."
+    },
+    "content_hint": {
+      "disposition": "record",
+      "appliesTo": ["anchor"],
+      "note": "Advisory content type for the anchored region: table | image | text | mixed."
+    },
+    "z_layer": {
+      "disposition": "record",
+      "appliesTo": ["anchor"],
+      "note": "Stacking layer: front | behind (maps to behindDoc on wp:anchor)."
+    },
+    "content_mode": {
+      "disposition": "record",
+      "appliesTo": ["anchor"],
+      "note": "Assembly mechanism for the anchored content: auto | textbox."
+    },
+    "caption_y": {
+      "disposition": "record",
+      "appliesTo": ["anchor"],
+      "note": "Vertical offset of the caption within the anchor's group coordinate space (DXA)."
+    },
+    "image_height": {
+      "disposition": "record",
+      "appliesTo": ["anchor"],
+      "note": "Height of the image member within the anchor's group (DXA)."
+    }
+  }
+}

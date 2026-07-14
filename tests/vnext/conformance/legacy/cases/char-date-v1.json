@@ -1,0 +1,11 @@
+{
+  "source": "tests/testthat/test-field-codes.R:127 (raw docx fixture instrText, XML-entity-decoded: 'ADDIN DOCSTYLE {\"type\":\"char\",\"version\":1,\"class\":\"date\",\"source\":\"[{{< meta version-summary.date >}}]{.date}\"}'), copied verbatim -- the legacy writer's v1 char field-code shape for the built-in 'date' shortcode class.",
+  "legacy": { "type": "char", "version": 1, "class": "date", "source": "[{{< meta version-summary.date >}}]{.date}" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "g-span-migr01",
+    "kind": "span",
+    "policy": "authored-preserve",
+    "hash": "sha256:f54bce38d35133e1869d52f70887f2ab6d96f5b1dbc1ffb82d61d334af815724"
+  }
+}

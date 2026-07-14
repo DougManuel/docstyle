@@ -1,0 +1,20 @@
+{
+  "source": "tests/testthat/test-field-codes.R:673-683 (test 'anchor schema accepts all optional fields'), transcribed verbatim from the R list literal (list(type=\"anchor\", version=3L, class=\"column-margin\", content_hint=\"image\", vertical_anchor=\"text\", horizontal_anchor=\"margin\", position_y=\"0\", position_x=\"0\", float_width=\"250pt\", wrap_style=\"square\", wrap_side=\"both\", wrap_distance=\"0 198dxa 0 198dxa\", z_layer=\"front\")) to the equivalent JSON payload -- exercises the full anchor optional-key vocabulary in one case.",
+  "legacy": {
+    "type": "anchor", "version": 3, "class": "column-margin",
+    "content_hint": "image",
+    "vertical_anchor": "text", "horizontal_anchor": "margin",
+    "position_y": "0", "position_x": "0",
+    "float_width": "250pt",
+    "wrap_style": "square", "wrap_side": "both",
+    "wrap_distance": "0 198dxa 0 198dxa",
+    "z_layer": "front"
+  },
+  "expected_envelope": {
+    "v": 4,
+    "id": "g-anchor-migr01",
+    "kind": "anchor",
+    "policy": "structural",
+    "hash": "sha256:9593f25f53495640bf9daacf4077474f518650ba6d4a1ca99e9c1212179beabe"
+  }
+}

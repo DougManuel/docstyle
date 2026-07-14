@@ -1,0 +1,11 @@
+{
+  "source": "tests/testthat/test-docstyle-fieldcodes.R:531 (div_instr literal 'ADDIN DOCSTYLE {\"type\":\"div\",\"version\":1,\"name\":\"version-history\"}' pattern, here with name='toc' as also used by make_field_code_docx_xml()'s toc fixture in tests/testthat/test-field-codes.R, e.g. around line 463) -- the legacy writer's oldest (v1) div field-code shape, copied verbatim.",
+  "legacy": { "type": "div", "version": 1, "name": "toc" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "toc",
+    "kind": "section",
+    "policy": "authored-preserve",
+    "hash": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  }
+}

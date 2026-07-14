@@ -1,0 +1,11 @@
+{
+  "source": "tests/vnext/fixtures/demport-protocol/baseline/legacy/docstyle-docx.docx, word/document.xml (WP0 frozen baseline, real render output from docstyle 0.19.0). Extracted with: unzip -o docstyle-docx.docx -d <dir>; then a small Python pass that unescapes XML entities, strips tags, and regexes for 'ADDIN DOCSTYLE (\\{[^}]*\\})' -- reported literal: {\"type\":\"div\",\"version\":3,\"name\":\"abstract\"}. Copied verbatim -- the current (v3) writer's div field-code shape.",
+  "legacy": { "type": "div", "version": 3, "name": "abstract" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "abstract",
+    "kind": "section",
+    "policy": "authored-preserve",
+    "hash": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  }
+}

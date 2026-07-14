@@ -1,0 +1,11 @@
+{
+  "source": "tests/testthat/test-docstyle-fieldcodes.R:537 (list_instr literal: 'ADDIN DOCSTYLE {\"type\":\"list\",\"version\":1,\"class\":\"list-alpha\"}'), copied verbatim -- the legacy writer's v1 list field-code shape for the built-in alphabetic list class.",
+  "legacy": { "type": "list", "version": 1, "class": "list-alpha" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "g-list-migr01",
+    "kind": "list",
+    "policy": "authored-preserve",
+    "hash": "sha256:4ec8c13605ef74000a664a8bf25d9d5ca0e41006f748a01ea3254bb504623f50"
+  }
+}

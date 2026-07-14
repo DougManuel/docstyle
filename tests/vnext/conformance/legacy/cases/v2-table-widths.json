@@ -1,0 +1,11 @@
+{
+  "source": "tests/testthat/test-docstyle-fieldcodes.R:642 (test 'full parse flow works for table type': instr = 'ADDIN DOCSTYLE {\"type\":\"table\",\"version\":2,\"class\":\"table-formal\",\"widths\":\"30,70\",\"font-size\":\"9\"}'), copied verbatim -- the legacy writer's v2 table field-code shape, including column widths. Serves as both the required v2 case and the required table-with-widths case (widths land in the migration record, not the envelope).",
+  "legacy": { "type": "table", "version": 2, "class": "table-formal", "widths": "30,70", "font-size": "9" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "g-table-migr01",
+    "kind": "table",
+    "policy": "authored-preserve",
+    "hash": "sha256:61afcb73ef92028817e555ff8c6d15a1e9f540e475fadb770ab7e2533a0da23a"
+  }
+}
