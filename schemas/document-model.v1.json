@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/document-model.v1.json",
+  "title": "Docstyle serialized semantic document model, version 1",
+  "type": "object",
+  "required": ["schemaVersion", "content", "registries"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "content": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+    "registries": {
+      "type": "object",
+      "required": ["metadata", "profiles", "relationships", "assets"],
+      "properties": {
+        "metadata": { "type": "array", "items": { "$ref": "#/$defs/record" } },
+        "profiles": { "type": "object" },
+        "relationships": { "type": "array", "items": { "$ref": "#/$defs/relationship" } },
+        "assets": { "type": "array", "items": { "$ref": "#/$defs/asset" } }
+      }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "classification", "policy", "hash"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "type": { "enum": ["section", "heading", "paragraph", "list", "list-item",
+          "table", "table-row", "table-cell", "figure", "caption", "equation",
+          "code-block", "footnote", "citation", "span", "raw", "anchor"] },
+        "role": { "type": "string" },
+        "classification": { "enum": ["authored", "generated", "structural", "external-managed"] },
+        "policy": { "enum": ["authored-preserve", "generated-replace",
+          "structural", "external-managed"] },
+        "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "attrs": { "type": "object" },
+        "text": { "type": "string" },
+        "source": { "type": "object", "properties": {
+          "file": { "type": "string" }, "start": { "type": "integer", "minimum": 1 },
+          "end": { "type": "integer", "minimum": 1 } } }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "type": "string", "minLength": 1 },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "profile": { "type": "string" },
+        "privacy": { "enum": ["public", "restricted"] }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["id", "subject", "predicate", "object"],
+      "properties": {
+        "id": { "type": "string" }, "subject": { "type": "string" },
+        "predicate": { "type": "string" }, "object": { "type": "string" }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "required": ["id", "path", "mediaType", "hash"],
+      "properties": {
+        "id": { "type": "string" }, "path": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

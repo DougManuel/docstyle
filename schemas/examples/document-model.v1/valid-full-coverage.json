@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "content": [
+    {
+      "id": "abstract",
+      "type": "section",
+      "role": "abstract",
+      "classification": "authored",
+      "policy": "authored-preserve",
+      "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "children": [
+        {
+          "id": "g-paragraph-b3f6h2",
+          "type": "paragraph",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+          "children": [
+            {
+              "id": "g-span-a2c4e6",
+              "type": "span",
+              "classification": "authored",
+              "policy": "authored-preserve",
+              "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            },
+            {
+              "id": "g-citation-c3d5f7",
+              "type": "citation",
+              "classification": "external-managed",
+              "policy": "external-managed",
+              "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "g-section-d4e6f2",
+      "type": "section",
+      "classification": "generated",
+      "policy": "generated-replace",
+      "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "children": [
+        {
+          "id": "g-heading-e5f7g3",
+          "type": "heading",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        },
+        {
+          "id": "g-list-f6g2h4",
+          "type": "list",
+          "classification": "structural",
+          "policy": "structural",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+          "children": [
+            {
+              "id": "g-list-item-g2h4c6",
+              "type": "list-item",
+              "classification": "structural",
+              "policy": "structural",
+              "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            },
+            {
+              "id": "g-list-item-h3c5d7",
+              "type": "list-item",
+              "classification": "structural",
+              "policy": "structural",
+              "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            }
+          ]
+        },
+        {
+          "id": "g-table-i4d6e2",
+          "type": "table",
+          "classification": "structural",
+          "policy": "structural",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+          "children": [
+            {
+              "id": "g-table-row-j5e7f3",
+              "type": "table-row",
+              "classification": "structural",
+              "policy": "structural",
+              "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+              "children": [
+                {
+                  "id": "g-table-cell-k6f2g4",
+                  "type": "table-cell",
+                  "classification": "structural",
+                  "policy": "structural",
+                  "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-figure-l7g3h5",
+          "type": "figure",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+          "children": [
+            {
+              "id": "g-caption-m2h4c6",
+              "type": "caption",
+              "classification": "authored",
+              "policy": "authored-preserve",
+              "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            }
+          ]
+        },
+        {
+          "id": "g-equation-n3c5d7",
+          "type": "equation",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        },
+        {
+          "id": "g-code-block-o4d6e2",
+          "type": "code-block",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        },
+        {
+          "id": "g-footnote-p5e7f3",
+          "type": "footnote",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        },
+        {
+          "id": "g-raw-q6f2g4",
+          "type": "raw",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+          "attrs": { "format": "openxml" }
+        },
+        {
+          "id": "g-anchor-r7g3h5",
+          "type": "anchor",
+          "classification": "structural",
+          "policy": "structural",
+          "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      ]
+    },
+    {
+      "id": "g-paragraph-s2h4c6",
+      "type": "paragraph",
+      "classification": "generated",
+      "policy": "generated-replace",
+      "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+    }
+  ],
+  "registries": {
+    "metadata": [
+      { "id": "rec-doc", "recordType": "document", "schemaVersion": 1 }
+    ],
+    "profiles": {},
+    "relationships": [
+      { "id": "g-relationship-aaaaaa", "subject": "rec-doc", "predicate": "describes", "object": "abstract" }
+    ],
+    "assets": [
+      { "id": "g-asset-t3c5d7", "path": "media/figure1.png", "mediaType": "image/png",
+        "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" }
+    ]
+  }
+}
