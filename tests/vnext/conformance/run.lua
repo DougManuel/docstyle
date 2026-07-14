@@ -31,30 +31,34 @@ local schemas_dir = pandoc.path.join({ root, "schemas" })
 local okdir, names = pcall(pandoc.system.list_directory, schemas_dir)
 if okdir then
   local loaded = {}
-  local function load_dir(dir)
+  local function load_dir(dir, key_prefix)
     for _, f in ipairs(pandoc.system.list_directory(dir)) do
       if f:match("%.json$") then
         local s = json.read(pandoc.path.join({ dir, f }))
         js.register(s["$id"], s)
-        loaded[f:gsub("%.json$", "")] = s
+        loaded[key_prefix .. f:gsub("%.json$", "")] = s
       end
     end
   end
-  load_dir(schemas_dir)
+  load_dir(schemas_dir, "")
   local pd = pandoc.path.join({ schemas_dir, "profiles" })
-  if pcall(pandoc.system.list_directory, pd) then load_dir(pd) end
+  if pcall(pandoc.system.list_directory, pd) then load_dir(pd, "profiles/") end
   local exdir = pandoc.path.join({ schemas_dir, "examples" })
   if pcall(pandoc.system.list_directory, exdir) then
     for _, name in ipairs(pandoc.system.list_directory(exdir)) do
       local schema = loaded[name] or loaded["profiles/" .. name]
       for _, ex in ipairs(pandoc.system.list_directory(pandoc.path.join({ exdir, name }))) do
-        local inst = json.read(pandoc.path.join({ exdir, name, ex }))
-        local v, errs = js.validate(schema, inst)
-        local want_valid = ex:match("^valid") ~= nil
-        local okflag = (v == want_valid)
-        local msg = want_valid and (errs and errs[1] and (errs[1].path .. " " .. errs[1].message))
-          or "invalid example validated"
-        report("examples/" .. name .. "/" .. ex, okflag, msg)
+        if schema == nil then
+          report("examples/" .. name .. "/" .. ex, false, "no schema registered for " .. name)
+        else
+          local inst = json.read(pandoc.path.join({ exdir, name, ex }))
+          local v, errs = js.validate(schema, inst)
+          local want_valid = ex:match("^valid") ~= nil
+          local okflag = (v == want_valid)
+          local msg = want_valid and (errs and errs[1] and (errs[1].path .. " " .. errs[1].message))
+            or "invalid example validated"
+          report("examples/" .. name .. "/" .. ex, okflag, msg)
+        end
       end
     end
   end
