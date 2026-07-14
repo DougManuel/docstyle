@@ -1,6 +1,8 @@
 -- tests/vnext/conformance/lib/canonical.lua
 -- Canonical JSON encoder (RFC 8785-style): sorted object keys, no
--- whitespace, minimal string escaping. Integers only for numbers.
+-- whitespace, minimal string escaping. Integral numbers encode as integers
+-- regardless of Lua subtype (pandoc.json.decode yields floats for all JSON
+-- numbers); fractional values raise.
 local M = {}
 
 local ESCAPES = {
@@ -46,8 +48,8 @@ local function encode_value(v)
   elseif t == "string" then
     return encode_string(v)
   elseif t == "number" then
-    if math.type(v) == "integer" then
-      return ("%d"):format(v)
+    if math.type(v) == "integer" or math.tointeger(v) ~= nil then
+      return ("%d"):format(math.tointeger(v) or v)
     end
     error("non-integer number in canonical content")
   elseif t == "table" then

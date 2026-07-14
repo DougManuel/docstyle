@@ -16,4 +16,7 @@ return {
   { name = "non-integer number raises", fn = function()
       assert(not pcall(c.encode, { x = 1.5 }))
     end },
+  { name = "decoded-JSON integral float encodes as integer", fn = function()
+      assert(c.encode(require("lib.json").decode('{"n":1}')) == '{"n":1}')
+    end },
 }
