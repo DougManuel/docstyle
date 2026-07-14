@@ -1,5 +1,5 @@
 {
-  "source": "tests/testthat/test-docstyle-fieldcodes.R:537 (list_instr literal: 'ADDIN DOCSTYLE {\"type\":\"list\",\"version\":1,\"class\":\"list-alpha\"}'), copied verbatim -- the legacy writer's v1 list field-code shape for the built-in alphabetic list class.",
+  "source": "tests/testthat/test-field-codes.R:537 (list_instr literal: 'ADDIN DOCSTYLE {\"type\":\"list\",\"version\":1,\"class\":\"list-alpha\"}'), copied verbatim -- the legacy writer's v1 list field-code shape for the built-in alphabetic list class.",
   "legacy": { "type": "list", "version": 1, "class": "list-alpha" },
   "expected_envelope": {
     "v": 4,

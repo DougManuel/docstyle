@@ -49,8 +49,9 @@
     },
     "source": {
       "disposition": "record",
+      "recordKey": "legacySource",
       "appliesTo": ["char"],
-      "note": "Literal QMD shortcode source the char span expands from (e.g. '[{{< meta version-summary.date >}}]{.date}'). CONCERN: hashes.content_hash() strips any key literally named 'hash' or 'source' at every depth (lib/hashes.lua STRIP table) -- that convention exists for *provenance pointers* (e.g. {file, start} in test-hashes.lua), but here 'source' is semantic content, not provenance. Because migrate.payload computes the envelope hash over the record via hashes.content_hash(record) exactly as specified, a char payload's hash is currently blind to changes in its 'source' value. Recorded here rather than silently worked around, since lib/hashes.lua is out of scope for this task (see task-8-report.md concerns)."
+      "note": "Literal QMD shortcode source the char span expands from (e.g. '[{{< meta version-summary.date >}}]{.date}'). RENAMED IN THE RECORD: migrate.payload stores this value under 'legacySource', not 'source', because hashes.content_hash() strips any key literally named 'hash' or 'source' at every depth (lib/hashes.lua STRIP table). That strip convention exists for *provenance pointers* (e.g. {file, start} in test-hashes.lua), but here 'source' is semantic content, not provenance -- keeping the legacy key name would silently exclude the shortcode text from the envelope hash, so an edit to the char's source text would never change its content hash. The rename keeps the value inside the hash without touching lib/hashes.lua (out of scope for this task). This is the only record key whose name differs from its legacy key."
     },
     "start": {
       "disposition": "record",

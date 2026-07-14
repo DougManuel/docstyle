@@ -112,7 +112,19 @@ function M.payload(legacy)
       elseif key_entry.disposition == "mapped" then
         envelope[key_entry.target] = value
       elseif key_entry.disposition == "record" then
-        record[key] = value
+        -- The char payload's "source" key is semantic content (the literal
+        -- QMD shortcode text), but lib/hashes.lua's content_hash strips any
+        -- key literally named "source" (or "hash") at every depth -- a
+        -- convention meant for provenance pointers, not content. Stored
+        -- under the legacy name, the shortcode text would silently drop out
+        -- of the envelope hash. Renaming it to "legacySource" in the record
+        -- keeps it inside the hash without touching lib/hashes.lua. See
+        -- key-map.json's "source" entry (recordKey: legacySource).
+        if key == "source" then
+          record.legacySource = value
+        else
+          record[key] = value
+        end
       elseif key_entry.disposition == "dropped" then
         findings[#findings + 1] = { level = "info", code = "dropped-legacy-key",
           message = "legacy key '" .. key .. "' dropped: "

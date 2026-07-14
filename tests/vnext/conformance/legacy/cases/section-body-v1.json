@@ -1,5 +1,5 @@
 {
-  "source": "tests/testthat/test-docstyle-fieldcodes.R:543 (section_instr literal: 'ADDIN DOCSTYLE {\"type\":\"section\",\"version\":1,\"class\":\"section-body\",\"page-break\":true,\"line-numbers\":\"continuous\"}'), copied verbatim -- the required section case, sourced from the v1 shape so it also exercises the boolean-valued 'page-break' key.",
+  "source": "tests/testthat/test-field-codes.R:543 (section_instr literal: 'ADDIN DOCSTYLE {\"type\":\"section\",\"version\":1,\"class\":\"section-body\",\"page-break\":true,\"line-numbers\":\"continuous\"}'), copied verbatim -- the required section case, sourced from the v1 shape so it also exercises the boolean-valued 'page-break' key.",
   "legacy": { "type": "section", "version": 1, "class": "section-body", "page-break": true, "line-numbers": "continuous" },
   "expected_envelope": {
     "v": 4,
