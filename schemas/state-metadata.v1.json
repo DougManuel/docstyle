@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/state-metadata.v1.json",
+  "title": "Docstyle vNext state metadata, version 1",
+  "type": "object",
+  "required": ["schemaVersion", "records", "profiles", "relationships"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "profiles": { "type": "object" },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json" }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "subject", "predicate", "object"],
+        "properties": {
+          "id": { "type": "string" },
+          "subject": { "type": "string" },
+          "predicate": { "type": "string" },
+          "object": { "type": "string" }
+        }
+      }
+    }
+  }
+}

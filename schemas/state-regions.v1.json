@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/state-regions.v1.json",
+  "title": "Docstyle vNext state regions, version 1",
+  "type": "object",
+  "required": ["schemaVersion", "regions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "policy", "hash"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "kind": { "enum": ["section", "heading", "paragraph", "list", "list-item",
+            "table", "table-row", "table-cell", "figure", "caption", "equation",
+            "code-block", "footnote", "citation", "span", "raw", "anchor"] },
+          "role": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "policy": { "enum": ["authored-preserve", "generated-replace",
+            "structural", "external-managed"] },
+          "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "parent": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "source": {
+            "type": "object",
+            "properties": {
+              "file": { "type": "string" },
+              "start": { "type": "integer", "minimum": 1 },
+              "end": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
