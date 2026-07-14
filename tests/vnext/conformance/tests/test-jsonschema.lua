@@ -43,6 +43,19 @@ return {
           b = { ["$ref"] = "https://example.org/leaf.v1.json" } } }
       ok(s, { a = 1, b = "x" }); bad(s, { a = "no", b = "x" })
     end },
+  { name = "absolute ref switches resolution root to target document", fn = function()
+      js.register("https://example.org/record.v1.json", {
+        ["$id"] = "https://example.org/record.v1.json",
+        oneOf = { { ["$ref"] = "#/$defs/rec" } },
+        ["$defs"] = { rec = { type = "object", required = { "id" },
+          properties = { id = { type = "string" },
+            privacy = { enum = { "public", "restricted" } } } } } })
+      local outer = { type = "object", properties = {
+        records = { type = "array",
+          items = { ["$ref"] = "https://example.org/record.v1.json" } } } }
+      ok(outer, { records = { { id = "a", privacy = "public" } } })
+      bad(outer, { records = { { id = "a", privacy = "secret" } } })
+    end },
   { name = "errors carry instance paths", fn = function()
       local s = { type = "object", properties = { a = { type = "string" } } }
       local v, errs = js.validate(s, { a = 5 })

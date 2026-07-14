@@ -133,7 +133,11 @@ local validate_node -- forward declaration
 
 --- Resolves a $ref string against `root` (the top-level schema document,
 --- for `#/$defs/...` fragments) and the module registry (for absolute
---- ids). Returns the resolved schema, or nil plus an error message.
+--- ids). On success returns the resolved schema plus the root to use when
+--- resolving refs *inside* it: fragment refs keep the current root, while
+--- an absolute id switches the root to the referenced schema document, so
+--- that document's own `#/$defs/...` refs resolve against its `$defs`.
+--- On failure returns nil plus an error message.
 local function resolve_ref(ref, root)
   local frag = ref:match("^#(/.*)$")
   if frag then
@@ -144,12 +148,12 @@ local function resolve_ref(ref, root)
       node = node[seg]
     end
     if node == nil then return nil, "unresolved $ref " .. ref end
-    return node
+    return node, root
   end
 
   local target = registry[ref]
   if target == nil then return nil, "unresolved $ref " .. ref end
-  return target
+  return target, target
 end
 
 local function check_type(t, v, errors, path)
@@ -237,12 +241,12 @@ validate_node = function(schema, v, errors, path, root)
   if schema == nil then return true end
 
   if schema["$ref"] then
-    local resolved, err = resolve_ref(schema["$ref"], root)
+    local resolved, root_or_err = resolve_ref(schema["$ref"], root)
     if not resolved then
-      errors[#errors + 1] = { path = path, message = err }
+      errors[#errors + 1] = { path = path, message = root_or_err }
       return false
     end
-    return validate_node(resolved, v, errors, path, root)
+    return validate_node(resolved, v, errors, path, root_or_err)
   end
 
   local node_ok = true
