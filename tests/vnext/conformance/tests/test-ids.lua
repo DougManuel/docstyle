@@ -28,4 +28,8 @@ return {
       local reused = state["g-figure-qqqqqq"] and "g-figure-qqqqqq"
       assert(reused == id)
     end },
+  { name = "exhausted char source raises instead of hanging", fn = function()
+      -- a finite source shorter than six chars returns "" past its end
+      assert(not pcall(ids.generate, "table", {}, charsource("abc")))
+    end },
 }

@@ -75,10 +75,14 @@ function M.commit(dir, files, opts)
     error("injected failure")
   end
 
+  -- os.rename returns nil+err on failure; a failed rename must raise, not
+  -- fall through and report the generation as committed.
   for _, name in ipairs(names) do
-    os.rename(dir .. "/" .. name .. ".tmp", dir .. "/" .. name)
+    assert(os.rename(dir .. "/" .. name .. ".tmp", dir .. "/" .. name),
+      "rename failed: " .. dir .. "/" .. name)
   end
-  os.rename(dir .. "/manifest.json.tmp", dir .. "/manifest.json")
+  assert(os.rename(dir .. "/manifest.json.tmp", dir .. "/manifest.json"),
+    "rename failed: " .. dir .. "/manifest.json")
 
   return generation
 end
