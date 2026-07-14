@@ -1,0 +1,6 @@
+{ "id": "rec-fx1", "recordType": "fixture-record", "schemaVersion": 1,
+  "profile": "docstyle:fixture",
+  "label": "Example fixture record",
+  "notes": ["first note", "second note"],
+  "category": "beta",
+  "region": "abstract" }

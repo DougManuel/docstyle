@@ -1,0 +1,6 @@
+{ "id": "rec-p1", "recordType": "person", "schemaVersion": 1,
+  "name": { "given": "Doug", "family": "Manuel" },
+  "orcid": "0000-0003-0000-0000",
+  "roles": ["conceptualization", "methodology"],
+  "corresponding": true,
+  "affiliations": ["rec-org1"] }

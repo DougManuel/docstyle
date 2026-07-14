@@ -1,0 +1,2 @@
+{ "id": "Docstyle:Fixture", "version": "1.0.0",
+  "schema": "profiles/fixture.v1.json", "recordTypes": ["fixture-record"] }

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json",
+  "title": "Docstyle core metadata records, version 1",
+  "oneOf": [
+    { "$ref": "#/$defs/document" },
+    { "$ref": "#/$defs/person" },
+    { "$ref": "#/$defs/organization" },
+    { "$ref": "#/$defs/funding" }
+  ],
+  "$defs": {
+    "document": {
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "type", "title"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "const": "document" },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "privacy": { "enum": ["public", "restricted"] },
+        "type": { "enum": ["research-article", "review-article", "protocol",
+          "brief-report", "case-report", "editorial", "letter", "other"] },
+        "title": { "type": "string" },
+        "shortTitle": { "type": "string" },
+        "licence": {
+          "type": "object",
+          "properties": {
+            "spdx": { "type": "string" },
+            "url": { "type": "string" },
+            "statement": { "type": "string" }
+          },
+          "anyOf": [
+            { "required": ["spdx"] },
+            { "required": ["url"] },
+            { "required": ["statement"] }
+          ]
+        },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "version": { "type": "string" },
+        "versionHistory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["version", "date", "description"],
+            "properties": {
+              "version": { "type": "string" },
+              "date": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "status": { "enum": ["draft", "submitted", "preprint", "accepted", "published"] },
+        "dates": {
+          "type": "object",
+          "properties": {
+            "created": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" },
+            "modified": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" },
+            "published": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" }
+          }
+        },
+        "identifiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["scheme", "value"],
+            "properties": {
+              "scheme": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        },
+        "language": { "type": "string" },
+        "abstract": { "type": "string" }
+      }
+    },
+    "person": {
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "const": "person" },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "privacy": { "enum": ["public", "restricted"] },
+        "name": {
+          "type": "object",
+          "required": ["family"],
+          "properties": {
+            "given": { "type": "string" },
+            "family": { "type": "string" }
+          }
+        },
+        "orcid": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%d%d%-%d%d%d%d%-%d%d%d[%dX]$" },
+        "roles": {
+          "type": "array",
+          "items": { "enum": ["conceptualization", "data-curation", "formal-analysis",
+            "funding-acquisition", "investigation", "methodology",
+            "project-administration", "resources", "software", "supervision",
+            "validation", "visualization", "writing-original-draft",
+            "writing-review-editing"] }
+        },
+        "corresponding": { "type": "boolean" },
+        "affiliations": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "organization": {
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "const": "organization" },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "privacy": { "enum": ["public", "restricted"] },
+        "name": { "type": "string" },
+        "ror": { "type": "string" }
+      }
+    },
+    "funding": {
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "funder"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "const": "funding" },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "privacy": { "enum": ["public", "restricted"] },
+        "funder": { "type": "string" },
+        "grant": { "type": "string" }
+      }
+    }
+  }
+}
