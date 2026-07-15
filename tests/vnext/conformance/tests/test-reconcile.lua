@@ -105,4 +105,16 @@ cases[#cases + 1] = { name = "rule 6: blocking is exactly the conflict outcomes 
   end
 end }
 
+-- Authority guard: an unrecognized authority string (e.g. a typo like
+-- "strucural") must raise immediately rather than silently falling through
+-- the routing logic to whatever outcome the missing branches happen to
+-- produce (previously: a coincidental "conflict", indistinguishable from a
+-- genuine blocking disagreement).
+cases[#cases + 1] = { name = "authority guard: unrecognized authority raises rather than silently routing", fn = function()
+  local okflag = pcall(reconcile.decide, { authority = "bogus-authority" })
+  assert(not okflag, "expected reconcile.decide to raise for an unrecognized authority")
+  local okflag2 = pcall(reconcile.decide, {})
+  assert(not okflag2, "expected reconcile.decide to raise when authority is absent entirely")
+end }
+
 return cases

@@ -308,6 +308,23 @@ Row count: 92. 29 mapped, 60 assigned, 3 dropped.
    a genuine evidence gap in the WP0 characterization rather than a defect
    in the migration logic, and is worth closing if a v1- or v2-authored
    document ever surfaces in the field.
+7. **Atomic state publication (acceptance test 6) -- a design description,
+   not a limitation.** `lib/manifest.lua`'s commit protocol publishes typed
+   state files under generation-qualified immutable physical names
+   (`<logical-base>.<generation>.json`, e.g. `regions.2.json`), never a
+   name any existing manifest already references. A manifest entry carries
+   both the logical name (`regions.json`, stable across generations) and
+   the physical name (generation-specific). Every typed-file rename during
+   a commit lands on a name the current manifest does not yet reference;
+   the rename of `manifest.json.tmp` over `manifest.json` is the sole
+   commit point, so a reader only ever sees the complete previous
+   generation or the complete next one. `test-manifest.lua` injects
+   failure both before any rename and after the typed-file renames but
+   before the manifest rename -- the window a shared-filename design's own
+   test could miss -- and asserts `read()` still returns the prior
+   generation cleanly in both cases. This is recorded here, alongside the
+   other bounds, as the mechanism by which acceptance test 6 is met, not
+   as a deferral.
 
 ## Completion statement
 

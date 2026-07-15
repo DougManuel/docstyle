@@ -41,6 +41,21 @@
 
 local M = {}
 
+-- The six-value authority enum named in the header comment above. Checked
+-- at entry (see M.decide) so an unrecognized or misspelled authority string
+-- (e.g. "strucural") raises immediately, rather than silently falling
+-- through the routing logic below to whatever outcome the missing branches
+-- happen to produce -- previously a coincidental "conflict", indistinguishable
+-- from a genuine blocking disagreement.
+local VALID_AUTHORITIES = {
+  authored = true,
+  generated = true,
+  structural = true,
+  ["external-managed"] = true,
+  annotation = true,
+  metadata = true,
+}
+
 local function finish(outcome, warning)
   return { outcome = outcome, blocking = (outcome == "conflict"), warning = warning }
 end
@@ -81,6 +96,11 @@ end
 
 function M.decide(entry)
   entry = entry or {}
+
+  if not VALID_AUTHORITIES[entry.authority] then
+    error("reconcile.decide: unrecognized authority " .. tostring(entry.authority) ..
+      " (must be one of authored, generated, structural, external-managed, annotation, metadata)")
+  end
 
   -- Unavailable-profile case (metadata-profile mechanism section): preserved
   -- as opaque data with a warning, never a conflict -- checked first because

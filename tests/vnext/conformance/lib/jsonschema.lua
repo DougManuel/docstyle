@@ -8,22 +8,22 @@
 -- Object vs. array distinction: pandoc.json.decode(s, false) (see lib/json.lua)
 -- decodes JSON without converting to pandoc AST types, so both `{}` and `[]`
 -- become an empty Lua table -- there is no way to distinguish them from the
--- decoded value alone. Our rule: a Lua table is treated as a JSON *object*
--- when it has at least one string key (i.e. `next(t)` yields a string key,
--- or `t["$ref"]`/schema-keyword-style access makes sense); it is treated as
--- an *array* when it is empty OR all of its keys are a contiguous 1..n
--- integer sequence (Lua's normal array convention, as produced by `{1,2,3}`
--- literals and pandoc.json.decode for JSON arrays). Because an empty table
--- is ambiguous, callers that need "object" semantics for an empty value
--- (e.g. `properties = {}`) get object treatment by context: `is_object()`
--- treats an empty table as an object only when the caller explicitly asks
--- for object semantics (see `is_object_context`); `validate_type("object", ...)`
--- and `validate_type("array", ...)` special-case the empty table so that
--- `{}` satisfies `type=object` and `type=array` alike (both are valid
--- against an untyped/ambiguous empty collection), while structural
--- keywords (properties/required/additionalProperties vs items/minItems)
--- decide behaviour from the *schema*, not the instance, so the ambiguity
--- never needs to be resolved for validation purposes.
+-- decoded value alone. Our rule lives entirely in `has_string_key(v)`,
+-- below: it reports true only when `v` is a table with at least one string
+-- key, which can only happen for a decoded JSON object (a JSON array always
+-- decodes to a contiguous 1..n-integer-keyed table). An empty table is
+-- genuinely ambiguous -- it could be `{}` or `[]` -- so `has_string_key`
+-- reports false for it (there is no string key to find either way); callers
+-- that need to treat an empty table as satisfying *either* interpretation
+-- do that explicitly rather than asking `has_string_key` to decide:
+-- `check_type`'s "object" branch accepts a value when `next(v) == nil`
+-- (empty) OR `has_string_key(v)` (has at least one string key); its "array"
+-- branch accepts a value when `next(v) == nil` (empty) OR
+-- `not has_string_key(v)` (no string key, i.e. Lua's normal array
+-- convention). Structural keywords (properties/required/additionalProperties
+-- vs items/minItems) decide their own applicability from the *schema*, not
+-- the instance, so the empty-table ambiguity never needs to be resolved
+-- beyond "type is satisfied either way."
 
 local M = {}
 
@@ -386,7 +386,20 @@ end
 
 --- Validates `instance` against `schema`. Returns ok:boolean,
 --- errors:{ {path, message}, ... }.
+---
+--- `schema` must not be nil. A nil schema almost always means a caller took
+--- `M.resolve()`'s return value straight into `M.validate()` without
+--- checking it -- and an unregistered schema id is a usage error, not the
+--- same thing as a legitimately unconstrained `{}` schema (which still
+--- validates everything and is not an error). Raising here, at this entry
+--- boundary, distinguishes "unregistered" (nil, raises) from "unconstrained"
+--- (an actual empty schema object, still passes) without changing
+--- `validate_node`'s own recursive nil-tolerance, which exists for
+--- subschemas legitimately reached with no constraints during traversal.
 function M.validate(schema, instance)
+  if schema == nil then
+    error("jsonschema.validate: schema is nil -- did M.resolve() return nil for an unregistered $id?")
+  end
   local errors = {}
   local okflag = validate_node(schema, instance, errors, "", schema)
   return okflag and #errors == 0, errors

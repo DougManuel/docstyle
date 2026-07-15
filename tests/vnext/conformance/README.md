@@ -21,6 +21,19 @@ JSON or filesystem library. There is also a `devtools::test()` bridge
 command so the R test suite exercises the runner during the migration
 period; it skips (rather than fails) when `quarto` is not on `PATH`.
 
+Run the full R suite with `devtools::test(stop_on_failure = TRUE)`, not
+bare `devtools::test()`:
+
+```bash
+env R_PROFILE_USER=/dev/null Rscript -e 'devtools::test(stop_on_failure = TRUE)'
+```
+
+`devtools::test()`'s default `stop_on_failure = FALSE` means
+`Rscript -e 'devtools::test()'` exits `0` even when this bridge (or any
+other test) fails -- a broken runner would pass silently in CI or a
+pre-commit check. `stop_on_failure = TRUE` makes a test failure raise a
+condition that propagates to a non-zero process exit.
+
 ## PASS/FAIL semantics
 
 The runner does two things in one pass:
@@ -135,3 +148,18 @@ constrain what conformance here does and does not establish; see
    field-code payloads -- only writer-v3. The v1/v2 cases under
    `legacy/cases/` come from `tests/testthat/` fixture strings instead,
    each cited by file and line.
+7. **Atomic state publication (acceptance test 6) -- a design description,
+   not a limitation.** `lib/manifest.lua`'s commit protocol publishes typed
+   state files under generation-qualified immutable physical names
+   (`<logical-base>.<generation>.json`, e.g. `regions.2.json`), never a
+   name any existing manifest already references. A manifest entry carries
+   both the logical name (`regions.json`, stable across generations) and
+   the physical name (generation-specific). Every typed-file rename during
+   a commit lands on a name the current manifest does not yet reference;
+   the rename of `manifest.json.tmp` over `manifest.json` is the sole
+   commit point. `test-manifest.lua` injects failure both before any
+   rename and -- the window a shared-filename design's own test could
+   miss -- after the typed-file renames but before the manifest rename,
+   and asserts `read()` still returns the prior generation cleanly in both
+   cases. This is recorded here, alongside the other bounds, as the
+   mechanism by which acceptance test 6 is met, not as a deferral.

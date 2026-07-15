@@ -60,6 +60,17 @@ local cases = {
         revisions = { { author = "A", date = "2026-07-01",
           type = "insert", text = "added" } } })
       local base = "https://dougmanuel.github.io/docstyle/schemas/"
+      -- These schemas must already be registered by the time this case
+      -- runs -- run.lua registers schemas BEFORE the module self-test loop
+      -- precisely so js.resolve() here sees a populated registry. Without
+      -- that ordering, resolve() would return nil and js.validate(nil, ...)
+      -- would either vacuously pass (pre-item-2 semantics) or raise
+      -- (post-item-2 semantics); either way this assert catches a
+      -- regression in the runner's ordering directly, rather than via a
+      -- confusing downstream symptom.
+      assert(js.resolve(base .. "state-citations.v1.json") ~= nil, "state-citations.v1 not registered -- runner ordering regression?")
+      assert(js.resolve(base .. "state-annotations.v1.json") ~= nil, "state-annotations.v1 not registered -- runner ordering regression?")
+      assert(js.resolve(base .. "report-envelope.v1.json") ~= nil, "report-envelope.v1 not registered -- runner ordering regression?")
       assert(js.validate(js.resolve(base .. "state-citations.v1.json"), res.citations))
       assert(js.validate(js.resolve(base .. "state-annotations.v1.json"), res.annotations))
       assert(js.validate(js.resolve(base .. "report-envelope.v1.json"), res.report))
@@ -101,6 +112,10 @@ local cases = {
         },
       })
       local base = "https://dougmanuel.github.io/docstyle/schemas/"
+      -- See the resolve()-non-nil note in the previous case: this pins the
+      -- runner-ordering precondition down for this case's own two ids too.
+      assert(js.resolve(base .. "state-citations.v1.json") ~= nil, "state-citations.v1 not registered -- runner ordering regression?")
+      assert(js.resolve(base .. "state-annotations.v1.json") ~= nil, "state-annotations.v1 not registered -- runner ordering regression?")
       local cit_ok, cit_err = js.validate(js.resolve(base .. "state-citations.v1.json"), res.citations)
       assert(cit_ok, cit_err and cit_err[1] and (cit_err[1].path .. " " .. cit_err[1].message))
       local ann_ok, ann_err = js.validate(js.resolve(base .. "state-annotations.v1.json"), res.annotations)

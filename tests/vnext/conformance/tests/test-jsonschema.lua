@@ -61,4 +61,21 @@ return {
       local v, errs = js.validate(s, { a = 5 })
       assert(not v and errs[1].path == "/a", "path was " .. tostring(errs and errs[1] and errs[1].path))
     end },
+  { name = "validate raises on a nil schema instead of vacuously passing", fn = function()
+      -- A nil schema means a caller took resolve()'s nil (unregistered id)
+      -- straight into validate() without checking it. That must be a loud
+      -- usage error, not a silent pass -- otherwise an unregistered schema
+      -- id and a legitimately unconstrained `{}` schema are indistinguishable
+      -- from the caller's side (both currently would "validate" everything).
+      local okflag, err = pcall(js.validate, nil, "x")
+      assert(not okflag, "expected js.validate(nil, ...) to raise")
+      assert(tostring(err):match("nil"), "expected the error to mention the nil schema, got " .. tostring(err))
+    end },
+  { name = "validate still passes an unconstrained (empty) schema", fn = function()
+      -- Distinguishes "unregistered" (nil, above) from "unconstrained"
+      -- (an actual empty schema object, which legitimately matches anything).
+      ok({}, "anything at all")
+      ok({}, 42)
+      ok({}, { nested = { 1, 2, 3 } })
+    end },
 }
