@@ -12,9 +12,10 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "schema", "hash"],
+        "required": ["name", "file", "schema", "hash"],
         "properties": {
           "name": { "type": "string", "minLength": 1 },
+          "file": { "type": "string", "pattern": "^[a-z][a-z0-9-]*[.][0-9]+[.]json$" },
           "schema": { "type": "string", "minLength": 1 },
           "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
         }

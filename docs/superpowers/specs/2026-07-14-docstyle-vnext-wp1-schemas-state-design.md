@@ -62,7 +62,7 @@ The remaining sections resolve the ten bounded decisions listed in issue #28. Ea
 The serialized model is one JSON document with two parts:
 
 - `content`: an ordered tree of typed nodes carrying document order, nesting and authored structure;
-- `registries`: identifier-keyed collections for `metadata`, `profiles`, `relationships` and `assets`.
+- `registries`: `metadata`, `relationships` and `assets` are each a JSON object keyed by the contained record's, relationship's or asset's own `id` (`profiles` is keyed by profile identifier, unchanged); JSON object-key semantics make id uniqueness within a registry structural rather than a rule enforced separately.
 
 Content nodes reference registry records by identifier. Registry records reference content nodes by identifier. Neither side embeds the other.
 
@@ -86,10 +86,12 @@ Lists and tables remain structured nodes with items, rows and cells as children.
 
 ### Registries
 
-- `metadata`: typed records (see core vocabulary). Each record has `id`, `recordType`, `schemaVersion`, optional `profile`, optional `privacy` and its typed body.
+- `metadata`: a JSON object keyed by record id. Each value is a typed record (see core vocabulary) with `id`, `recordType`, `schemaVersion`, optional `profile`, optional `privacy` and its typed body.
 - `profiles`: the profile manifests active in this document, keyed by profile identifier.
-- `relationships`: qualified links `{id, subject, predicate, object}` where subject and object are record or node identifiers and predicates come from the core relationship set or a registered profile.
-- `assets`: files the document references (images, CSL, bibliography), with path, media type and hash.
+- `relationships`: a JSON object keyed by relationship id. Each value is a qualified link `{id, subject, predicate, object}` where subject and object are record or node identifiers and predicates come from the core relationship set or a registered profile.
+- `assets`: a JSON object keyed by asset id. Each value describes a file the document references (images, CSL, bibliography), with path, media type and hash.
+
+Each registry's key and its value's own `id` field must agree. The body keeps its own `id` for round-trip fidelity and explicitness even though the key already identifies the entry.
 
 **Decision (model API):** the serialized model is the public contract; internal Lua object behaviour is unspecified. The model schema is `document-model.v1`.
 

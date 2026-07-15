@@ -159,16 +159,16 @@
     }
   ],
   "registries": {
-    "metadata": [
-      { "id": "rec-doc", "recordType": "document", "schemaVersion": 1 }
-    ],
+    "metadata": {
+      "rec-doc": { "id": "rec-doc", "recordType": "document", "schemaVersion": 1 }
+    },
     "profiles": {},
-    "relationships": [
-      { "id": "g-relationship-aaaaaa", "subject": "rec-doc", "predicate": "describes", "object": "abstract" }
-    ],
-    "assets": [
-      { "id": "g-asset-t3c5d7", "path": "media/figure1.png", "mediaType": "image/png",
+    "relationships": {
+      "g-relationship-aaaaaa": { "id": "g-relationship-aaaaaa", "subject": "rec-doc", "predicate": "describes", "object": "abstract" }
+    },
+    "assets": {
+      "g-asset-t3c5d7": { "id": "g-asset-t3c5d7", "path": "media/figure1.png", "mediaType": "image/png",
         "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" }
-    ]
+    }
   }
 }

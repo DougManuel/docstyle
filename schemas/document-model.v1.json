@@ -11,10 +11,10 @@
       "type": "object",
       "required": ["metadata", "profiles", "relationships", "assets"],
       "properties": {
-        "metadata": { "type": "array", "items": { "$ref": "#/$defs/record" } },
+        "metadata": { "type": "object", "additionalProperties": { "$ref": "#/$defs/record" } },
         "profiles": { "type": "object" },
-        "relationships": { "type": "array", "items": { "$ref": "#/$defs/relationship" } },
-        "assets": { "type": "array", "items": { "$ref": "#/$defs/asset" } }
+        "relationships": { "type": "object", "additionalProperties": { "$ref": "#/$defs/relationship" } },
+        "assets": { "type": "object", "additionalProperties": { "$ref": "#/$defs/asset" } }
       }
     }
   },
@@ -55,16 +55,16 @@
       "type": "object",
       "required": ["id", "subject", "predicate", "object"],
       "properties": {
-        "id": { "type": "string" }, "subject": { "type": "string" },
-        "predicate": { "type": "string" }, "object": { "type": "string" }
+        "id": { "type": "string", "minLength": 1 }, "subject": { "type": "string", "minLength": 1 },
+        "predicate": { "type": "string", "minLength": 1 }, "object": { "type": "string", "minLength": 1 }
       }
     },
     "asset": {
       "type": "object",
       "required": ["id", "path", "mediaType", "hash"],
       "properties": {
-        "id": { "type": "string" }, "path": { "type": "string" },
-        "mediaType": { "type": "string" },
+        "id": { "type": "string", "minLength": 1 }, "path": { "type": "string", "minLength": 1 },
+        "mediaType": { "type": "string", "minLength": 1 },
         "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
       }
     }

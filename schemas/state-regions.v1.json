@@ -23,8 +23,9 @@
           "parent": { "type": "string", "minLength": 1, "maxLength": 128 },
           "source": {
             "type": "object",
+            "required": ["file", "start", "end"],
             "properties": {
-              "file": { "type": "string" },
+              "file": { "type": "string", "minLength": 1 },
               "start": { "type": "integer", "minimum": 1 },
               "end": { "type": "integer", "minimum": 1 }
             }

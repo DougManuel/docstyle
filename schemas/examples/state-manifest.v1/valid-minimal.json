@@ -2,5 +2,6 @@
   "stateId": "3f7a1c9e0b2d4f6a8c1e3a5b7d9f0e2c",
   "generation": 7,
   "files": [
-    { "name": "regions.json", "schema": "https://dougmanuel.github.io/docstyle/schemas/state-regions.v1.json",
+    { "name": "regions.json", "file": "regions.7.json",
+      "schema": "https://dougmanuel.github.io/docstyle/schemas/state-regions.v1.json",
       "hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" } ] }
