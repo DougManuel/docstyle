@@ -254,7 +254,8 @@ Row count: 92. 29 mapped, 60 assigned, 3 dropped.
    already Unicode NFC; Pandoc Lua exposes no normalizer. The contract in
    the spec stands as written; NFD-input normalization lands with the
    production model builder (WP3) or the WP2 text layer. Acceptance test 4
-   runs on NFC fixtures only.
+   runs on NFC fixtures only; LF line-ending normalization is implemented
+   in the hash input preparation.
 2. **Regex dialect subset (Task 1; narrowed at the pre-merge review).**
    Schema `pattern` strings now use a documented dual-dialect subset --
    bracket character classes (`[0-9]`, `[0-9a-f]`, `[a-z]`), single-literal
@@ -301,14 +302,6 @@ Row count: 92. 29 mapped, 60 assigned, 3 dropped.
    a genuine evidence gap in the WP0 characterization rather than a defect
    in the migration logic, and is worth closing if a v1- or v2-authored
    document ever surfaces in the field.
-7. **`test-hashes.lua` coverage gap.** The brief-verbatim test for
-   `hashes.content_hash()` exercises stripping `hash` and `source` at the
-   top level of a node and one level of nesting; it does not exercise the
-   strip-at-every-depth behaviour the function actually implements (for
-   example, a `source` key nested two or more levels deep inside `attrs`).
-   The behaviour is implemented correctly -- bound 5 above depends on
-   it -- but the existing test does not check the "every depth" part of
-   the contract.
 
 ## Completion statement
 

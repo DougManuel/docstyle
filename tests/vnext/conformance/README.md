@@ -95,14 +95,15 @@ to catch it.
 
 ## Declared bounds
 
-Seven bounds accumulated over the course of building this harness. They
+Six bounds accumulated over the course of building this harness. They
 constrain what conformance here does and does not establish; see
 `dev/vnext/wp1-legacy-coverage.md` for the fuller discussion of each.
 
 1. **NFC assumption.** Canonicalization assumes input text is already
    Unicode NFC; Pandoc Lua exposes no normalizer. NFD-input normalization
    is a later work package's job (the WP3 production model builder or the
-   WP2 text layer), not this harness's.
+   WP2 text layer), not this harness's; LF line-ending normalization is
+   implemented in the hash input preparation.
 2. **Regex dialect subset.** Schema `pattern` strings use a documented
    dual-dialect subset -- bracket character classes, single-literal
    brackets for characters that are metacharacters in only one dialect
@@ -129,7 +130,3 @@ constrain what conformance here does and does not establish; see
    field-code payloads -- only writer-v3. The v1/v2 cases under
    `legacy/cases/` come from `tests/testthat/` fixture strings instead,
    each cited by file and line.
-7. **`test-hashes.lua` coverage gap.** The existing test for
-   `hashes.content_hash()` exercises stripping at the top level and one
-   level of nesting; it does not exercise stripping at arbitrary depth,
-   which the function implements and bound 5 depends on.
