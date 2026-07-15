@@ -103,10 +103,14 @@ constrain what conformance here does and does not establish; see
    Unicode NFC; Pandoc Lua exposes no normalizer. NFD-input normalization
    is a later work package's job (the WP3 production model builder or the
    WP2 text layer), not this harness's.
-2. **Lua pattern dialect.** Schema `pattern` strings are Lua patterns, with
-   `{n}`/`{n,m}` brace-repetition expansion added by `lib/jsonschema.lua`,
-   not ECMA regular expressions. They are not portable to a standard JSON
-   Schema validator as written.
+2. **Regex dialect subset.** Schema `pattern` strings use a documented
+   dual-dialect subset -- bracket character classes, single-literal
+   brackets for characters that are metacharacters in only one dialect
+   (`[-]`, `[.]`), `^`/`$` anchors, and `{n}`/`{n,m}` brace repetition
+   (expanded by `lib/jsonschema.lua`) -- so the same pattern string is valid
+   under both this harness's Lua-pattern validator and a standard ECMA-regex
+   engine. The validator itself still implements only that subset, not full
+   ECMA regular expressions.
 3. **`anchor` node-type addition.** The 17th node type, `anchor`, was
    added to the `document-model.v1` and `field-envelope.v4` enums beyond
    the approved specification's illustrative list, to give the legacy

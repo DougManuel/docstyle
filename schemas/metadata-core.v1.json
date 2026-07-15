@@ -43,7 +43,7 @@
             "required": ["version", "date", "description"],
             "properties": {
               "version": { "type": "string" },
-              "date": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" },
+              "date": { "type": "string", "pattern": "^[0-9]{4}[-][0-9]{2}[-][0-9]{2}$" },
               "description": { "type": "string" }
             }
           }
@@ -52,9 +52,9 @@
         "dates": {
           "type": "object",
           "properties": {
-            "created": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" },
-            "modified": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" },
-            "published": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%-%d%d$" }
+            "created": { "type": "string", "pattern": "^[0-9]{4}[-][0-9]{2}[-][0-9]{2}$" },
+            "modified": { "type": "string", "pattern": "^[0-9]{4}[-][0-9]{2}[-][0-9]{2}$" },
+            "published": { "type": "string", "pattern": "^[0-9]{4}[-][0-9]{2}[-][0-9]{2}$" }
           }
         },
         "identifiers": {
@@ -88,7 +88,7 @@
             "family": { "type": "string" }
           }
         },
-        "orcid": { "type": "string", "pattern": "^%d%d%d%d%-%d%d%d%d%-%d%d%d%d%-%d%d%d[%dX]$" },
+        "orcid": { "type": "string", "pattern": "^[0-9]{4}[-][0-9]{4}[-][0-9]{4}[-][0-9]{3}[0-9X]$" },
         "roles": {
           "type": "array",
           "items": { "enum": ["conceptualization", "data-curation", "formal-analysis",

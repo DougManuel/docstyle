@@ -255,12 +255,22 @@ Row count: 92. 29 mapped, 60 assigned, 3 dropped.
    the spec stands as written; NFD-input normalization lands with the
    production model builder (WP3) or the WP2 text layer. Acceptance test 4
    runs on NFC fixtures only.
-2. **Lua pattern dialect (Task 1).** Schema `pattern` strings are written
-   in the Lua pattern dialect, with `{n}`/`{n,m}` brace-repetition
-   expansion layered on top by `lib/jsonschema.lua`, not ECMA regular
-   expressions. They are not portable to a standard JSON Schema validator
-   as written; a future consumer outside this Lua harness would need to
-   translate them first.
+2. **Regex dialect subset (Task 1; narrowed at the pre-merge review).**
+   Schema `pattern` strings now use a documented dual-dialect subset --
+   bracket character classes (`[0-9]`, `[0-9a-f]`, `[a-z]`), single-literal
+   brackets for characters that are metacharacters in one dialect or the
+   other (`[-]`, `[.]`), the `^`/`$` anchors, and `{n}`/`{n,m}` brace
+   repetition (expanded by `lib/jsonschema.lua` before matching, and native
+   to ECMA regular expressions) -- so the same literal pattern string
+   validates identically under this harness's Lua-pattern validator and a
+   standard ECMA-regex engine. Verified empirically for every date, ORCID
+   and semver pattern in `schemas/`, both against `lib/jsonschema.lua`
+   directly and cross-checked against Python's `re` module as an ECMA-regex
+   stand-in. The remaining bound is narrower than before: `lib/jsonschema.lua`
+   itself still implements only this subset, not full ECMA regular
+   expressions (no alternation, lookaround, non-capturing groups or
+   backreferences), so a schema author must stay inside the documented
+   subset for a `pattern` to validate correctly in this harness.
 3. **`anchor` node-type addition.** The 17th node type, `anchor`, was added
    to the `document-model.v1` and `field-envelope.v4` type/kind enums
    beyond the approved specification's illustrative list, because the
