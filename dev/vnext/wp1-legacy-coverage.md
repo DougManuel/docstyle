@@ -278,13 +278,19 @@ Row count: 92. 29 mapped, 60 assigned, 3 dropped.
    legacy `float` and `anchor` field-code payload types need a
    positioned-content kind. This is a spec revision and is flagged here for
    review.
-4. **Acceptance-test-8 reading.** The reconciliation rules named in
-   acceptance test 8 are spec contracts consumed by WP5, not something WP1
-   executes. WP1's scope is verifying their data preconditions: that ids,
-   hashes and policies are present in every schema the rules will operate
-   over. `tests/vnext/conformance/tests/test-migrate.lua` exercises the
-   migration primitives those preconditions depend on; it does not
-   exercise the six reconciliation rules themselves.
+4. **Acceptance-test-8 reading (narrowed at the pre-merge review).**
+   Acceptance test 8 ("Reconciliation rules produce the specified outcome
+   for each disagreement class, including the fail-closed cases") is now
+   backed by an executable decision table: `lib/reconcile.lua`'s
+   `reconcile.decide()`, covered end to end by
+   `tests/vnext/conformance/tests/test-reconcile.lua` against all six
+   numbered rules, every blocking case and the unavailable-profile row.
+   WP1 does not itself apply these outcomes during a real render or
+   return -- that remains WP5's job -- but WP5 is expected to call
+   `reconcile.decide()` directly rather than re-derive the routing logic
+   from spec prose each time. `tests/vnext/conformance/tests/test-migrate.lua`
+   continues to exercise the migration primitives (ids, hashes, policies)
+   the rules operate over.
 5. **`source` payload-key rename.** The legacy `char` payload's `source`
    key (literal QMD shortcode text, for example
    `[{{< meta version-summary.date >}}]{.date}`) is stored under

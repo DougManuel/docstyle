@@ -2,8 +2,9 @@
 
 This directory is the conformance harness for Docstyle vNext work package 1
 (WP1): the JSON Schema subset validator, the canonical-JSON/hashing/identifier
-/manifest library modules, the legacy-to-vNext migration primitives, and the
-schema and example files those modules validate against.
+/manifest library modules, the legacy-to-vNext migration primitives, the
+reconciliation decision table, and the schema and example files those
+modules validate against.
 
 ## Running the suite
 
@@ -117,10 +118,14 @@ constrain what conformance here does and does not establish; see
    the approved specification's illustrative list, to give the legacy
    `float`/`anchor` field-code payloads a positioned-content kind. This is
    a spec revision, flagged for review.
-4. **Acceptance-test-8 reading.** The six reconciliation rules are spec
-   contracts for WP5 to execute, not something this harness runs. What
-   this harness verifies is their data preconditions: that every schema
-   the rules will operate over carries ids, hashes and policies.
+4. **Acceptance-test-8 reading.** The six reconciliation rules are now
+   backed by an executable decision table, `lib/reconcile.lua`'s
+   `reconcile.decide()`, covered end to end by `tests/test-reconcile.lua`
+   against every rule, every blocking case and the unavailable-profile
+   row. WP1 does not apply these outcomes during a real render or return
+   -- that remains WP5's job, which is expected to call
+   `reconcile.decide()` directly rather than re-derive the routing from
+   spec prose.
 5. **`source` payload-key rename.** The legacy `char` payload's `source`
    key is stored as `legacySource` in the migration record, because
    `hashes.content_hash()` strips any key literally named `hash` or
