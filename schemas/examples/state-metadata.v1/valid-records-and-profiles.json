@@ -13,5 +13,11 @@
       "status": "draft",
       "dates": { "modified": "2026-06-16" },
       "language": "en-CA",
-      "identifiers": [ { "scheme": "doi", "value": "10.0000/example" } ] } ],
+      "identifiers": [ { "scheme": "doi", "value": "10.0000/example" } ] },
+    { "id": "rec-fx1", "recordType": "fixture-record", "schemaVersion": 1,
+      "profile": "docstyle:fixture",
+      "label": "Example fixture record",
+      "notes": ["first note", "second note"],
+      "category": "beta",
+      "region": "abstract" } ],
   "relationships": [ { "id": "g-relationship-aaaaaa", "subject": "rec-fx1", "predicate": "fixture-supports", "object": "abstract" } ] }

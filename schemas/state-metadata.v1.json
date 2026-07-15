@@ -9,7 +9,22 @@
     "profiles": { "type": "object" },
     "records": {
       "type": "array",
-      "items": { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json" }
+      "items": {
+        "anyOf": [
+          { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json" },
+          {
+            "type": "object",
+            "required": ["id", "recordType", "schemaVersion", "profile"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "recordType": { "type": "string" },
+              "schemaVersion": { "type": "integer", "minimum": 1 },
+              "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$" },
+              "privacy": { "enum": ["public", "restricted"] }
+            }
+          }
+        ]
+      }
     },
     "relationships": {
       "type": "array",

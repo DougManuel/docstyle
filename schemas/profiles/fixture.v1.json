@@ -9,7 +9,7 @@
     "recordType": { "const": "fixture-record" },
     "schemaVersion": { "type": "integer", "minimum": 1 },
     "privacy": { "enum": ["public", "restricted"] },
-    "profile": { "type": "string" },
+    "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$" },
     "label": { "type": "string" },
     "notes": { "type": "array", "items": { "type": "string" } },
     "category": { "enum": ["alpha", "beta"] },
