@@ -2,8 +2,12 @@
 -- Minimal JSON Schema (2020-12 subset) validator for the Docstyle vNext
 -- conformance suite. Implements exactly the keyword subset the vNext
 -- schemas and tests use: type, properties, required, additionalProperties
--- (boolean false only), enum, const, pattern, minLength/maxLength,
--- minimum/maximum, items, minItems/maxItems, oneOf, anyOf, $ref, $defs.
+-- (both the boolean `false` form, which rejects undeclared properties, and
+-- the schema form, which validates every undeclared property's value
+-- against the given subschema -- the id-keyed registries in
+-- document-model.v1 depend on the latter), enum, const, pattern,
+-- minLength/maxLength, minimum/maximum, items, minItems/maxItems, oneOf,
+-- anyOf, $ref, $defs.
 --
 -- Object vs. array distinction: pandoc.json.decode(s, false) (see lib/json.lua)
 -- decodes JSON without converting to pandoc AST types, so both `{}` and `[]`
@@ -327,6 +331,22 @@ validate_node = function(schema, v, errors, path, root)
         if allowed[key] == nil then
           errors[#errors + 1] = { path = push(path, key), message = "additional property not allowed" }
           node_ok = false
+        end
+      end
+    elseif type(schema.additionalProperties) == "table" then
+      -- additionalProperties as a *schema* (not the boolean false): every
+      -- instance property not covered by `properties` must validate against
+      -- it. The id-keyed registries in document-model.v1 rely on this --
+      -- they declare no `properties`, so every entry is "additional" and is
+      -- validated by the value schema. Mirrors the `items` array-loop
+      -- below: recurse per property, push each error at the property's
+      -- JSON-Pointer path, and clear node_ok on any failure.
+      local allowed = schema.properties or {}
+      for key, val in pairs(v) do
+        if allowed[key] == nil then
+          if not validate_node(schema.additionalProperties, val, errors, push(path, key), root) then
+            node_ok = false
+          end
         end
       end
     end

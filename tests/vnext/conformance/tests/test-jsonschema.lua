@@ -17,6 +17,41 @@ return {
         additionalProperties = false }
       ok(s, { a = "x" }); bad(s, { a = "x", b = 1 })
     end },
+  { name = "additionalProperties as a schema validates every extra property value", fn = function()
+      -- The id-keyed registry shape (document-model.v1): no `properties`
+      -- declared, so EVERY property is an "additional" property and must
+      -- match the value schema. A value missing a required field, or
+      -- violating one of its constraints, must fail -- this is exactly the
+      -- per-entry validation the array+items shape used to provide and the
+      -- keyed reshape lost when additionalProperties-as-schema went
+      -- unenforced.
+      local s = { type = "object", additionalProperties = {
+        type = "object", required = { "id" },
+        properties = { id = { type = "string", minLength = 1 } } } }
+      ok(s, { k1 = { id = "a" }, k2 = { id = "b" } })
+      bad(s, { k1 = { id = "a" }, k2 = {} })      -- k2 missing required id
+      bad(s, { k1 = { id = "" } })                -- k1 violates minLength
+    end },
+  { name = "additionalProperties schema reports the offending property path", fn = function()
+      local s = { type = "object", additionalProperties = {
+        type = "object", required = { "id" },
+        properties = { id = { type = "string", minLength = 1 } } } }
+      local v, errs = js.validate(s, { k2 = { id = "" } })
+      assert(not v, "expected invalid")
+      local found = false
+      for _, e in ipairs(errs) do if e.path:match("^/k2") then found = true end end
+      assert(found, "expected an error at path /k2, got " .. tostring(errs[1] and errs[1].path))
+    end },
+  { name = "additionalProperties schema does not apply to declared properties", fn = function()
+      -- Only keys NOT in `properties` are "additional"; declared ones use
+      -- their own subschema, mirroring the == false branch's allowlist.
+      local s = { type = "object",
+        properties = { name = { type = "string" } },
+        additionalProperties = { type = "integer" } }
+      ok(s, { name = "x", count = 3 })      -- name declared (string); count additional (integer)
+      bad(s, { name = "x", count = "no" })  -- count additional must be integer
+      ok(s, { name = "x" })                 -- only the declared property
+    end },
   { name = "enum, const, pattern", fn = function()
       ok({ enum = { "a", "b" } }, "b"); bad({ enum = { "a" } }, "c")
       ok({ const = 4 }, 4); bad({ const = 4 }, 5)
