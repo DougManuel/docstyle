@@ -107,6 +107,32 @@ a schema edited without a corresponding example change can silently drift
 from what it is meant to accept or reject, with nothing in this suite able
 to catch it.
 
+## Metadata-profile validation: two layers
+
+Profile-typed metadata records are validated in two layers that compose
+rather than duplicate each other:
+
+- **Structural gate -- `state-metadata.v1.json`'s `records[]` `anyOf`.**
+  Branch 1 validates a core `metadata-core.v1` record; branch 2 accepts any
+  object that merely carries `id`/`recordType`/`schemaVersion`/`profile`,
+  because state-metadata.v1 has no way to know what any given profile's
+  record shape actually requires. This is deliberately permissive -- a
+  record can satisfy branch 2 while still violating its own profile's real
+  schema (for example, a `docstyle:fixture` record missing the profile's
+  required `label`). Left unchecked, this is the "anyOf branch-2 bypass".
+- **Semantic gate -- `lib/profile.lua`'s `validate_metadata()`.** For every
+  record naming an active, available profile, this composes that profile's
+  own schema (`schemas/profiles/<name>.v1.json`) and validates the record
+  against it, closing the gap branch 2 leaves open. A record whose profile
+  is inactive or unavailable is preserved as opaque data with a `warning`
+  finding, never blocking; activating a profile whose schema is
+  unavailable is its own blocking `error` finding, independent of whether
+  any record currently references it.
+
+See `lib/profile.lua`'s header comment for the full dispatch table and the
+profile-id-to-schema mapping convention, and `tests/test-profile.lua` for
+the adversarial cases, including the missing-`label` bypass case.
+
 ## Declared bounds
 
 Six bounds accumulated over the course of building this harness. They
