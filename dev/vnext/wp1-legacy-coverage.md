@@ -77,6 +77,18 @@ sidecars are each recorded as one row, with their top-level fields listed
 in the Notes column, because within each of those files every field shares
 the same classification and target.
 
+None of these three durable sidecars appear among the WP0 characterization
+baselines (`tests/vnext/fixtures/*/baseline/legacy/`, which capture only
+the rendered `docstyle-docx`/`-typst`/`-jats` outputs plus their inventory
+and manifest JSON; every editing-session-only sidecar is absent from those
+captures). The real-shape
+evidence this audit and `lib/migrate.lua`'s real-shape sidecar test case
+rely on -- id-keyed JSON objects rather than arrays, `content` instead of
+`text`, `citationGroups`'s `citekeys`/`instrText` rather than
+`keys`/`instruction` -- is read directly from the R writer functions
+(`R/comments.R`, `R/revisions.R`, `R/extract_citations.R`), not from a
+captured baseline file.
+
 The `rg '"[a-z-]+"\s*='` command against `R/field_codes.R` and
 `R/generated_content.R` returned only the eight payload-type dispatch
 strings (the type-to-handler switch); the deeper per-type key lists live in
@@ -183,16 +195,16 @@ audit's definitions.
 | Field-code payload key `content_mode` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
 | Field-code payload key `caption_y` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
 | Field-code payload key `image_height` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
-| Sidecar `field-codes.json` fields `citations`/`citationGroups` | `R/extract_citations.R` | mapped | state-citations.v1 `citations[]` (`id`, `keys`, `instruction`, `privacy`) via `migrate.sidecars` | Real per-citekey shape (`itemData`/`uris`) and `citationGroups` shape (`citekeys`/`instrText`) both differ from the `{keys, instruction}` shape `migrate.sidecars` currently normalizes; a small adapter is needed before a real `field-codes.json` can be fed through as-is (Task 8 concern) |
+| Sidecar `field-codes.json` fields `citations`/`citationGroups` | `R/extract_citations.R` | mapped | state-citations.v1 `citations[]` (`id`, `keys`, `instruction`, `privacy`) via `migrate.sidecars` | The real per-citekey `citations` shape (`itemData`/`uris`) is a separate item catalogue, out of scope here (WP4); the real `citationGroups` shape (`citekeys`/`instrText`, `R/extract_citations.R:306-312`) is what `migrate.sidecars` normalizes into `citations[]`, preferring `citationGroups` when present and falling back to a `citations` container of `{keys, instruction}` entries for the synthetic test shape |
 | Sidecar `field-codes.json` field `zotero_pref` | `R/extract_citations.R` | mapped | state-citations.v1 `zoteroPref` | |
 | Sidecar `field-codes.json` field `zotero_bibl` | `R/extract_citations.R` | assigned | WP4 (bibliography rendering) | Not read by the current `migrate.sidecars` |
 | Sidecar `field-codes.json` bookkeeping fields `docstyle_version`, `source`, `references_hash`, `extracted_from`, `extracted_at` | `R/extract_citations.R` | mapped | report-envelope.v1 (`operation`, `toolVersion`, `inputs[].hash`) | `migrate.sidecars` currently hardcodes `toolVersion` rather than reading these legacy stamps (Task 8 deferred minor); report-envelope.v1 carries no timestamp property, so `extracted_at` specifically has no counterpart field yet |
-| Sidecar `comments.json` fields `id`, `author`, `date`, `content` | `R/comments.R` | mapped | state-annotations.v1 comment (`id`, `author`, `date`, `text`) | Legacy `content` becomes schema `text` |
+| Sidecar `comments.json` fields `id`, `author`, `date`, `content` | `R/comments.R` | mapped | state-annotations.v1 comment (`id`, `author`, `date`, `text`) | Legacy `content` becomes schema `text`; `migrate.sidecars` normalizes the real id-keyed object container (`comments[[id]] <- ...`, `R/comments.R:87`) to the schema's array shape by iterating a sorted key list, so a real object-keyed `comments.json` migrates the same way as the synthetic array fixture |
 | Sidecar `comments.json` field `parent_id` | `R/comments.R` | assigned | WP5 (reply-threading reconstruction into the nested `replies[]` shape) | Current `migrate.sidecars` does not build `replies`; flat legacy threading is dropped on the floor until a real driver exists |
 | Sidecar `comments.json` field `para_id` | `R/comments.R` | assigned | WP5 anchor resolution | Word's paragraph-threading id (the last `w:p` paraId inside the comment's content); this is the anchor-identity data the WP5 reconciliation driver needs to replace `migrate.sidecars`'s placeholder `legacy-anchor-*` values with real anchors |
 | Sidecar `comments.json` field `initials` | `R/comments.R` | dropped | Derivable from `author` at render time; not persisted separately | |
 | Sidecar `comments.json` field `done` | `R/comments.R` | assigned | WP5 migration driver | state-annotations.v1's comment shape has no resolved-status field yet; flagged as an open question in the task report |
-| Sidecar `revisions.json` fields `id`, `author`, `date`, `content` | `R/revisions.R` | mapped | state-annotations.v1 revision (`id`, `author`, `date`, `text`) | Legacy `content` becomes schema `text` |
+| Sidecar `revisions.json` fields `id`, `author`, `date`, `content` | `R/revisions.R` | mapped | state-annotations.v1 revision (`id`, `author`, `date`, `text`) | Legacy `content` becomes schema `text`; `migrate.sidecars` normalizes the real id-keyed object container (`revisions[[rev_id]] <- ...`, `R/revisions.R:61`) to the schema's array shape the same way as `comments.json` above |
 | Sidecar `revisions.json` field `type` | `R/revisions.R` | mapped | state-annotations.v1 revision `op` | `insertion`/`deletion` normalized to `insert`/`delete` by `migrate.lua`'s `normalize_op` |
 | Sidecar `revisions.json` field `initials` | `R/revisions.R` | dropped | Derivable from `author` at render time; not persisted separately | |
 | Sidecar `references.json` | `R/extract_citations.R` | assigned | WP4 (CSL-JSON bibliography cache) | Array of CSL-JSON records keyed by citekey |

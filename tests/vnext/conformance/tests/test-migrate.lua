@@ -65,5 +65,76 @@ local cases = {
       assert(js.validate(js.resolve(base .. "report-envelope.v1.json"), res.report))
       assert(res.report.result ~= "FAIL")
     end },
+  -- Real-shape sidecars: comments.json/revisions.json are id-keyed JSON
+  -- OBJECTS whose entries carry "content" (R/comments.R:87-92,169;
+  -- R/revisions.R:61-66,144), and field-codes.json's citation data is an
+  -- object-of-groups carrying "citekeys"/"instrText"
+  -- (R/extract_citations.R:306-312) -- not the {keys, instruction} array
+  -- the case above uses. This case feeds those real shapes straight through
+  -- (no field renaming by the caller) and checks migrate.sidecars performs
+  -- the container normalization and content->text / citekeys->keys /
+  -- instrText->instruction renames itself.
+  { name = "real-shape sidecars (object-keyed, content/citekeys/instrText) migrate and validate", fn = function()
+      local js = require("lib.jsonschema")
+      local res = mg.sidecars({
+        field_codes = {
+          citationGroups = {
+            grp_abc123 = { citationID = "abc123",
+              instrText = "ADDIN ZOTERO_ITEM CSL_CITATION {\"citationItems\":[]}",
+              citekeys = { "jones2020" } },
+          },
+          zotero_pref = "<data/>",
+        },
+        comments = {
+          ["0"] = { id = "0", author = "R", date = "2026-07-02",
+            content = "please clarify", initials = "R",
+            para_id = "00AA11BB", done = false },
+          ["1"] = { id = "1", author = "S", date = "2026-07-03",
+            content = "looks good", initials = "S",
+            para_id = "00AA22CC", done = true },
+        },
+        revisions = {
+          rev_12 = { id = "rev_12", type = "insertion", author = "R",
+            date = "2026-07-02", content = "new text", initials = "R" },
+          rev_del_3 = { id = "rev_del_3", type = "deletion", author = "S",
+            date = "2026-07-03", content = "old text", initials = "S" },
+        },
+      })
+      local base = "https://dougmanuel.github.io/docstyle/schemas/"
+      local cit_ok, cit_err = js.validate(js.resolve(base .. "state-citations.v1.json"), res.citations)
+      assert(cit_ok, cit_err and cit_err[1] and (cit_err[1].path .. " " .. cit_err[1].message))
+      local ann_ok, ann_err = js.validate(js.resolve(base .. "state-annotations.v1.json"), res.annotations)
+      assert(ann_ok, ann_err and ann_err[1] and (ann_err[1].path .. " " .. ann_err[1].message))
+
+      -- every entry preserved: assert counts...
+      assert(#res.citations.citations == 1, "expected 1 migrated citation group")
+      assert(#res.annotations.comments == 2, "expected 2 migrated comments")
+      assert(#res.annotations.revisions == 2, "expected 2 migrated revisions")
+
+      -- ...and one field value per type, proving the real-shape key
+      -- renames actually ran (citekeys->keys, instrText->instruction,
+      -- content->text) rather than silently producing empty/nil fields.
+      assert(res.citations.citations[1].keys[1] == "jones2020")
+      assert(res.citations.citations[1].instruction:match("^ADDIN ZOTERO_ITEM"))
+      local comment_texts = {}
+      for _, c in ipairs(res.annotations.comments) do comment_texts[c.text] = true end
+      assert(comment_texts["please clarify"] and comment_texts["looks good"])
+      local revision_texts, revision_ops = {}, {}
+      for _, r in ipairs(res.annotations.revisions) do
+        revision_texts[r.text] = true
+        revision_ops[r.op] = true
+      end
+      assert(revision_texts["new text"] and revision_texts["old text"])
+      assert(revision_ops.insert and revision_ops.delete)
+    end },
+  { name = "unknown payload type yields nil envelope and an error finding", fn = function()
+      local out = mg.payload({ version = 2, type = "bogus-payload-type" })
+      assert(out.envelope == nil, "expected nil envelope for unknown payload type")
+      local found = false
+      for _, fd in ipairs(out.findings) do
+        if fd.code == "unknown-payload-type" and fd.level == "error" then found = true end
+      end
+      assert(found, "expected unknown-payload-type error finding")
+    end },
 }
 return cases

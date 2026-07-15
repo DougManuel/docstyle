@@ -112,23 +112,33 @@ function M.payload(legacy)
       elseif key_entry.disposition == "mapped" then
         envelope[key_entry.target] = value
       elseif key_entry.disposition == "record" then
-        -- The char payload's "source" key is semantic content (the literal
+        -- Most "record" keys land under their own legacy name. A few --
+        -- currently only the char payload's "source" key -- need a
+        -- different record key: "source" is semantic content (the literal
         -- QMD shortcode text), but lib/hashes.lua's content_hash strips any
         -- key literally named "source" (or "hash") at every depth -- a
         -- convention meant for provenance pointers, not content. Stored
         -- under the legacy name, the shortcode text would silently drop out
-        -- of the envelope hash. Renaming it to "legacySource" in the record
-        -- keeps it inside the hash without touching lib/hashes.lua. See
-        -- key-map.json's "source" entry (recordKey: legacySource).
-        if key == "source" then
-          record.legacySource = value
-        else
-          record[key] = value
-        end
+        -- of the envelope hash. key-map.json's optional per-key "recordKey"
+        -- says what to call it instead ("legacySource" for "source").
+        -- Honouring it generically here (rather than hardcoding
+        -- `if key == "source"`) means a future key-map.json entry can
+        -- request the same rename for any other key with no code change.
+        record[key_entry.recordKey or key] = value
       elseif key_entry.disposition == "dropped" then
         findings[#findings + 1] = { level = "info", code = "dropped-legacy-key",
           message = "legacy key '" .. key .. "' dropped: "
             .. (key_entry.rationale or "no rationale recorded") }
+      else
+        -- Defensive: key-map.json itself must stay a closed, valid
+        -- disposition vocabulary (mapped/record/dropped). A typo or a new
+        -- disposition string introduced there without a matching code path
+        -- must not be silently ignored -- that would drop the key on the
+        -- floor with no trace, exactly the failure mode this module exists
+        -- to prevent for unmapped keys.
+        findings[#findings + 1] = { level = "error", code = "invalid-key-map-disposition",
+          message = "legacy key '" .. key .. "' has unrecognized key-map.json disposition '"
+            .. tostring(key_entry.disposition) .. "'" }
       end
     end
   end
@@ -157,19 +167,20 @@ end
 -- sidecar migration
 -- ---------------------------------------------------------------------
 
--- Legacy field-codes.json represents "a citation with keys and an
--- instruction field code" as either a plain list of { keys, instruction }
--- tables (one per Zotero field-code occurrence), or as a table keyed by an
--- arbitrary marker string whose values have that same per-item shape --
--- mirroring the real docstyle field-codes.json "citationGroups" map (each
--- entry keyed by a group id, e.g. fc$citations[[ck]] / fc$citationGroups in
--- R/add_citations.R and R/extract_citations.R). Detect which container shape
--- we were handed with the same has-a-string-key heuristic lib/jsonschema.lua
--- uses to tell JSON objects from arrays after pandoc.json.decode's
--- object/array ambiguity, then normalize to a plain 1..n list. When
--- object-keyed, the markers are sorted before iterating so the normalized
--- order is deterministic (Lua pairs() order over string keys is not).
-local function normalize_citations(raw)
+-- Every real legacy sidecar this module reads keys its entries by an id or
+-- marker string rather than storing a plain 1..n array: comments.json
+-- (`comments[[id]] <- ...`, R/comments.R:87), revisions.json
+-- (`revisions[[rev_id]] <- ...`, R/revisions.R:61) and field-codes.json's
+-- citationGroups (`citation_groups[[group_key]] <- ...`,
+-- R/extract_citations.R:306). pandoc.json.decode reads a JSON object as
+-- that same has-a-string-key shape (see lib/jsonschema.lua's own
+-- object/array disambiguation), so detect that shape and normalize it to a
+-- plain 1..n list. When object-keyed, the markers are sorted before
+-- iterating so the normalized order is deterministic (Lua pairs() order
+-- over string keys is not) and migration stays reproducible run to run.
+-- Arrays (the synthetic shape some tests and the fixture-style callers use)
+-- pass through unchanged.
+local function normalize_container(raw)
   if raw == nil then return {} end
   local has_string_key = false
   for k in pairs(raw) do
@@ -210,16 +221,28 @@ function M.sidecars(inputs)
   inputs = inputs or {}
   local findings = {}
 
-  -- citations (state-citations.v1)
+  -- citations (state-citations.v1). The real field-codes.json carries two
+  -- different citation-shaped containers: "citations" is the per-citekey
+  -- item catalog (itemData/uris -- a different shape, out of scope here,
+  -- see key-map.json/audit notes) and "citationGroups" is the per-field-code
+  -- group list this function actually migrates (citekeys/instrText, see
+  -- R/extract_citations.R:306-312). Synthetic/test fixtures instead use a
+  -- "citations" container whose items are already {keys, instruction}.
+  -- Prefer the real "citationGroups" container when present; fall back to
+  -- "citations" for the synthetic shape. Either way, normalize per-entry
+  -- field names so both the real (citekeys/instrText) and synthetic
+  -- (keys/instruction) spellings land the same way.
   local citations = { schemaVersion = 1, citations = {} }
   local field_codes = inputs.field_codes
   if field_codes then
-    local list = normalize_citations(field_codes.citations)
+    local list = normalize_container(field_codes.citationGroups or field_codes.citations)
     for _, c in ipairs(list) do
+      local keys = c.keys or c.citekeys
+      local instruction = c.instruction or c.instrText
       citations.citations[#citations.citations + 1] = {
-        id = "cite-" .. c.keys[1],
-        keys = c.keys,
-        instruction = c.instruction,
+        id = "cite-" .. keys[1],
+        keys = keys,
+        instruction = instruction,
         privacy = "public",
       }
     end
@@ -228,33 +251,42 @@ function M.sidecars(inputs)
     end
   end
 
-  -- annotations (state-annotations.v1)
+  -- annotations (state-annotations.v1). Real comments.json/revisions.json
+  -- are id-keyed JSON objects whose entries carry "content", not "text"
+  -- (R/comments.R:87-92,169; R/revisions.R:61-66,144); synthetic/test
+  -- fixtures use a plain array already spelled "text". normalize_container
+  -- handles the array-vs-object-container difference; the `item.text or
+  -- item.content` fallback handles the field-name difference.
   local annotations = { schemaVersion = 1 }
   if inputs.comments then
+    local list = normalize_container(inputs.comments)
     annotations.comments = {}
-    for i, item in ipairs(inputs.comments) do
+    for i, item in ipairs(list) do
+      local text = item.text or item.content
       annotations.comments[i] = {
         id = "c" .. i,
-        anchor = anchor_placeholder(item.anchor_text or item.text),
+        anchor = anchor_placeholder(item.anchor_text or text),
         author = item.author,
         date = item.date,
-        text = item.text,
+        text = text,
       }
       findings[#findings + 1] = { level = "warning", code = "anchor-unresolved",
         message = "comment c" .. i .. " anchor is a placeholder pending WP5 anchor resolution" }
     end
   end
   if inputs.revisions then
+    local list = normalize_container(inputs.revisions)
     annotations.revisions = {}
-    for i, item in ipairs(inputs.revisions) do
+    for i, item in ipairs(list) do
+      local text = item.text or item.content
       local entry = {
         id = "r" .. i,
-        anchor = anchor_placeholder(item.anchor_text or item.text),
+        anchor = anchor_placeholder(item.anchor_text or text),
         op = normalize_op(item.type),
         author = item.author,
         date = item.date,
       }
-      if item.text ~= nil then entry.text = item.text end
+      if text ~= nil then entry.text = text end
       annotations.revisions[i] = entry
       findings[#findings + 1] = { level = "warning", code = "anchor-unresolved",
         message = "revision r" .. i .. " anchor is a placeholder pending WP5 anchor resolution" }
