@@ -56,8 +56,11 @@ an exact match with no gaps -- confirming `key-map.json` (Task 8's own
 disposition inventory, built from the authoritative
 `docstyle_schemas` list in `R/field_codes.R`) already accounts for every
 payload key named in the JSON schema glossary. Payload types and keys
-below reuse `key-map.json`'s dispositions rather than re-deriving them, as
-instructed.
+below take `key-map.json`'s dispositions as the authoritative account of
+migration behaviour rather than re-deriving them, as instructed.
+Disposition and audit classification are related but distinct: `mapped`
+and `dropped` dispositions carry over directly, while `record`-disposition
+keys are classified under the ruling stated ahead of the inventory table.
 
 The `rg 'DOCSTYLE_'` command found nine marker names; all nine are the
 intra-render text-marker vocabulary described above and are out of scope
@@ -119,6 +122,23 @@ table below.
 
 ## Element inventory
 
+One ruling applies to 29 payload-key rows at once and is stated here
+rather than repeated in each row's Notes. Keys whose only WP1 handling is
+the migration record -- exactly the 29 keys carrying `key-map.json`'s
+`record` disposition -- are classified assigned, target WP3 property
+model, because the definition of mapped requires a WP1 schema and field
+and no WP1 schema types these values. Today's migration folds them into
+the migration record, whose canonical encoding feeds the field-envelope
+`hash`: that gives change detection, and nothing more -- the hash is
+one-way, so the values are carried for comparison rather than stored in a
+typed, recoverable form. Their intended vNext carrier is the
+document-model node's `attrs` object, which WP1 deliberately leaves
+untyped; WP3's property matrix is where each value gets a typed field.
+`key-map.json` itself is unchanged by this ruling: its `record`
+disposition accurately describes what `migrate.lua` does with these keys,
+and the correction here is to how that behaviour is classified under the
+audit's definitions.
+
 | Element | Source | Classification | Target | Notes |
 |---|---|---|---|---|
 | Field-code payload type `char` | `key-map.json` (`R/field_codes.R` `docstyle_schemas`) | mapped | field-envelope.v4 kind `span`, policy `authored-preserve` | |
@@ -133,42 +153,43 @@ table below.
 | Field-code payload key `version` | `key-map.json` | mapped | field-envelope.v4 `v` (constant 4; legacy value only gates the 1--3 support range) | |
 | Field-code payload key `name` (div) | `key-map.json` | mapped | field-envelope.v4 `id` | |
 | Field-code payload key `id` (figure) | `key-map.json` | mapped | field-envelope.v4 `id` | |
-| Field-code payload key `class` | `key-map.json` | mapped | migration record body (hashed into field-envelope.v4 `hash`) | |
-| Field-code payload key `source` (char) | `key-map.json` | mapped | migration record body, key `legacySource` | Renamed on migration -- declared bound 5 |
-| Field-code payload key `start` (list) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `page-break` (section) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `line-numbers` (section) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `widths` (table) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `width` (table, figure) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `font-size` (table) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `header-bold` (table) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `header-shading` (table) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `label` (table) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `docpr_id` (figure) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `align` (figure) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `wrap` (figure) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `original_path` (figure) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `alt` (figure) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `vertical_anchor` (float, anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `horizontal_anchor` (float, anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `position_y` (float, anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `position_x` (float, anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `float_width` (float, anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `wrap_style` (float, anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `wrap_side` (float, anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `wrap_distance` (float, anchor) | `key-map.json` | mapped | migration record body | |
+| Field-code payload key `class` | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `source` (char) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above; carried in the record as `legacySource` -- declared bound 5 |
+| Field-code payload key `start` (list) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `page-break` (section) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `line-numbers` (section) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `widths` (table) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `width` (table, figure) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `font-size` (table) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `header-bold` (table) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `header-shading` (table) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `label` (table) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `docpr_id` (figure) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `align` (figure) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `wrap` (figure) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `original_path` (figure) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `alt` (figure) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `vertical_anchor` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `horizontal_anchor` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `position_y` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `position_x` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `float_width` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `wrap_style` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `wrap_side` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `wrap_distance` (float, anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
 | Field-code payload key `adjacent` (float, anchor) | `key-map.json` | dropped | No consumer exists; documented upstream as deferred (`inst/schema/docstyle-field-codes.json`, issue #117) | |
-| Field-code payload key `content_hint` (anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `z_layer` (anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `content_mode` (anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `caption_y` (anchor) | `key-map.json` | mapped | migration record body | |
-| Field-code payload key `image_height` (anchor) | `key-map.json` | mapped | migration record body | |
+| Field-code payload key `content_hint` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `z_layer` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `content_mode` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `caption_y` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
+| Field-code payload key `image_height` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
 | Sidecar `field-codes.json` fields `citations`/`citationGroups` | `R/extract_citations.R` | mapped | state-citations.v1 `citations[]` (`id`, `keys`, `instruction`, `privacy`) via `migrate.sidecars` | Real per-citekey shape (`itemData`/`uris`) and `citationGroups` shape (`citekeys`/`instrText`) both differ from the `{keys, instruction}` shape `migrate.sidecars` currently normalizes; a small adapter is needed before a real `field-codes.json` can be fed through as-is (Task 8 concern) |
 | Sidecar `field-codes.json` field `zotero_pref` | `R/extract_citations.R` | mapped | state-citations.v1 `zoteroPref` | |
 | Sidecar `field-codes.json` field `zotero_bibl` | `R/extract_citations.R` | assigned | WP4 (bibliography rendering) | Not read by the current `migrate.sidecars` |
-| Sidecar `field-codes.json` bookkeeping fields `docstyle_version`, `source`, `references_hash`, `extracted_from`, `extracted_at` | `R/extract_citations.R` | mapped | report-envelope.v1 (`operation`, `toolVersion`, `inputs[].hash`) | `migrate.sidecars` currently hardcodes `toolVersion` rather than reading these legacy stamps (Task 8 deferred minor) |
+| Sidecar `field-codes.json` bookkeeping fields `docstyle_version`, `source`, `references_hash`, `extracted_from`, `extracted_at` | `R/extract_citations.R` | mapped | report-envelope.v1 (`operation`, `toolVersion`, `inputs[].hash`) | `migrate.sidecars` currently hardcodes `toolVersion` rather than reading these legacy stamps (Task 8 deferred minor); report-envelope.v1 carries no timestamp property, so `extracted_at` specifically has no counterpart field yet |
 | Sidecar `comments.json` fields `id`, `author`, `date`, `content` | `R/comments.R` | mapped | state-annotations.v1 comment (`id`, `author`, `date`, `text`) | Legacy `content` becomes schema `text` |
 | Sidecar `comments.json` field `parent_id` | `R/comments.R` | assigned | WP5 (reply-threading reconstruction into the nested `replies[]` shape) | Current `migrate.sidecars` does not build `replies`; flat legacy threading is dropped on the floor until a real driver exists |
+| Sidecar `comments.json` field `para_id` | `R/comments.R` | assigned | WP5 anchor resolution | Word's paragraph-threading id (the last `w:p` paraId inside the comment's content); this is the anchor-identity data the WP5 reconciliation driver needs to replace `migrate.sidecars`'s placeholder `legacy-anchor-*` values with real anchors |
 | Sidecar `comments.json` field `initials` | `R/comments.R` | dropped | Derivable from `author` at render time; not persisted separately | |
 | Sidecar `comments.json` field `done` | `R/comments.R` | assigned | WP5 migration driver | state-annotations.v1's comment shape has no resolved-status field yet; flagged as an open question in the task report |
 | Sidecar `revisions.json` fields `id`, `author`, `date`, `content` | `R/revisions.R` | mapped | state-annotations.v1 revision (`id`, `author`, `date`, `text`) | Legacy `content` becomes schema `text` |
@@ -213,7 +234,7 @@ table below.
 | YAML `docstyle.authors`/`docstyle.affiliations` (deprecated) | CLAUDE.md; `R/metadata_inject.R`; `_extensions/docstyle/author-plate.lua` | mapped | Same target as `author:`/`affiliations:` above | Deprecated in favour of standard Quarto `author:` per CLAUDE.md's common-mistakes list |
 | YAML keys `docstyle.date`/`docstyle.version` (preferred-over-plain override) | `R/metadata_inject.R` | mapped | metadata-core.v1 document `dates`/`version` | Same target as char classes `date`/`version` and `version-summary` above; an alternate override path for the same document properties |
 
-Row count: 91. 58 mapped, 30 assigned, 3 dropped.
+Row count: 92. 29 mapped, 60 assigned, 3 dropped.
 
 ## Declared bounds
 
