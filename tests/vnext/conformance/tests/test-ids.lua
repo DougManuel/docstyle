@@ -126,4 +126,34 @@ return {
       assert(not pcall(function() alloc:claim({ explicit_id = "abstract" }) end),
         "second claim of the same explicit id must raise")
     end },
+  { name = "allocator: an explicit claim reserves the matching durable id from later reuse", fn = function()
+      -- An authored id can already be present in durable state. Claiming it
+      -- explicitly must also make that durable identity unavailable to a
+      -- later source/hash candidate in the same render.
+      local durable = {
+        { id = "abstract", source = { file = "d.qmd", start = 1, ["end"] = 5 }, hash = "H" },
+      }
+      local alloc = ids.allocator(durable, { next_char = charsource("aaaaaa") })
+      local id1, o1 = alloc:claim({ explicit_id = "abstract" })
+      local id2, o2 = alloc:claim({ type = "paragraph",
+        source = { file = "d.qmd", start = 20, ["end"] = 21 }, hash = "H" })
+      assert(id1 == "abstract" and o1 == "explicit")
+      assert(id2 == "g-paragraph-aaaaaa" and o2 == "minted",
+        "later durable matching must not duplicate the explicit id; got " .. id2 .. "/" .. o2)
+    end },
+  { name = "allocator: generated matching cannot claim an authored durable id before its explicit owner", fn = function()
+      -- Explicit ids are authoritative independent of traversal order. A
+      -- non-explicit candidate must not take a durable authored id through
+      -- source/hash matching before the explicit region is encountered.
+      local durable = {
+        { id = "abstract", source = { file = "d.qmd", start = 1, ["end"] = 5 }, hash = "H" },
+      }
+      local alloc = ids.allocator(durable, { next_char = charsource("bbbbbb") })
+      local generated_id, generated_origin = alloc:claim({ type = "paragraph",
+        source = { file = "d.qmd", start = 20, ["end"] = 21 }, hash = "H" })
+      local explicit_id, explicit_origin = alloc:claim({ explicit_id = "abstract" })
+      assert(generated_id == "g-paragraph-bbbbbb" and generated_origin == "minted",
+        "a generated candidate must not claim an authored durable id")
+      assert(explicit_id == "abstract" and explicit_origin == "explicit")
+    end },
 }

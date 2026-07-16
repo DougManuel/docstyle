@@ -130,6 +130,24 @@ return {
       end)
     end },
 
+  { name = "manifest open errors are not treated as an absent fresh store", fn = function()
+      pandoc.system.with_temporary_directory("wp1state", function(dir)
+        local real_open = io.open
+        io.open = function(path, mode)
+          if path == dir .. "/manifest.json" and mode == "rb" then
+            return nil, "simulated permission denied", 13
+          end
+          return real_open(path, mode)
+        end
+        local read_ok = pcall(m.read, dir)
+        local commit_ok = pcall(m.commit, dir,
+          { ["regions.json"] = { schemaVersion = 1, regions = {} } })
+        io.open = real_open
+        assert(not read_ok, "read must raise when manifest existence cannot be ruled out")
+        assert(not commit_ok, "commit must not start a fresh lineage after a manifest open error")
+      end)
+    end },
+
   { name = "manifest.json present but missing stateId/generation fails closed", fn = function()
       pandoc.system.with_temporary_directory("wp1state", function(dir)
         local f = assert(io.open(dir .. "/manifest.json", "wb"))
@@ -197,6 +215,24 @@ return {
         assert(not pcall(m.commit, dir, { ["regions.json"] = { schemaVersion = 1 } }),
           "commit must raise on the same generation/file mismatch")
       end)
+    end },
+  { name = "manifest integer fields reject numeric strings on read and commit", fn = function()
+      local function assert_rejected(field, value)
+        pandoc.system.with_temporary_directory("wp1state", function(dir)
+          m.commit(dir, { ["regions.json"] = { schemaVersion = 1, regions = {} } })
+          local raw = assert(io.open(dir .. "/manifest.json", "rb"))
+          local manifest = json.decode(raw:read("a")); raw:close()
+          manifest[field] = value
+          local out = assert(io.open(dir .. "/manifest.json", "wb"))
+          out:write(json.encode(manifest)); out:close()
+          assert(not pcall(m.read, dir),
+            field .. " must retain its JSON number type on read")
+          assert(not pcall(m.commit, dir, { ["regions.json"] = { schemaVersion = 1 } }),
+            field .. " must retain its JSON number type when establishing commit lineage")
+        end)
+      end
+      assert_rejected("schemaVersion", "1")
+      assert_rejected("generation", "1")
     end },
   { name = "manifest with duplicate logical names fails closed", fn = function()
       pandoc.system.with_temporary_directory("wp1state", function(dir)

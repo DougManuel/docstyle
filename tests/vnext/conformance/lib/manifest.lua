@@ -117,14 +117,16 @@ local function validate_manifest(manifest, dir)
     error("manifest.json fails the state-manifest.v1 contract (" .. dir .. "): " .. msg)
   end
   if type(manifest) ~= "table" then bad("not a JSON object") end
-  if math.tointeger(manifest.schemaVersion) ~= 1 then
+  if type(manifest.schemaVersion) ~= "number"
+    or math.tointeger(manifest.schemaVersion) ~= 1 then
     bad("schemaVersion must be 1, got " .. tostring(manifest.schemaVersion))
   end
   if type(manifest.stateId) ~= "string" or #manifest.stateId ~= 32
     or not manifest.stateId:match("^[0-9a-f]+$") then
     bad("stateId must be 32 lowercase hex characters")
   end
-  local generation = math.tointeger(manifest.generation)
+  local generation = type(manifest.generation) == "number"
+    and math.tointeger(manifest.generation) or nil
   if generation == nil or generation < 1 then
     bad("generation must be an integer >= 1, got " .. tostring(manifest.generation))
   end
@@ -162,8 +164,9 @@ end
 -- Parse manifest.json with no hash verification of the referenced typed
 -- files (used internally to recover stateId/generation before writing the
 -- next generation, and by M.read before it hash-checks the files).
--- Distinguishes three states: the file does not exist at all (nil -- a
--- genuinely fresh store, fine for commit() to start a new lineage); the
+-- Distinguishes three states: the operating system reports that the file
+-- does not exist (nil -- a genuinely fresh store, fine for commit() to
+-- start a new lineage); the
 -- file exists and satisfies the full state-manifest.v1 contract
 -- (returned); or the file exists but is corrupt -- unparseable JSON or any
 -- contract violation. The third case raises rather than being folded into
@@ -173,8 +176,11 @@ end
 -- real prior generation -- silently orphaning or shadowing them instead of
 -- surfacing the corruption for a person to resolve.
 local function read_raw(dir)
-  local f = io.open(dir .. "/manifest.json", "rb")
-  if not f then return nil end
+  local f, open_err, open_code = io.open(dir .. "/manifest.json", "rb")
+  if not f then
+    if open_code == 2 then return nil end
+    error("manifest.json cannot be opened (" .. dir .. "): " .. tostring(open_err))
+  end
   local bytes = f:read("a"); f:close()
   local okflag, manifest = pcall(json.decode, bytes)
   if not okflag then

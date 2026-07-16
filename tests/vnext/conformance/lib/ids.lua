@@ -61,6 +61,10 @@ local function source_equal(a, b)
   return a.file == b.file and a.start == b.start and a["end"] == b["end"]
 end
 
+local function is_generated_id(id)
+  return type(id) == "string" and id:match("^g%-") ~= nil
+end
+
 -- reuse(region, durable_regions, kind) -> id, origin
 -- Implements the WP1 spec's "Decision (stability)" (Identifiers section):
 -- a generated identifier is assigned once and persisted in durable state
@@ -118,7 +122,9 @@ end
 --   * explicit: validated via check_explicit against `assigned` -- a
 --     duplicate explicit id (or one colliding with an id already reused
 --     this render) raises rather than silently duplicating.
---   * source/hash: only UNCLAIMED durable entries are eligible.
+--   * source/hash: only UNCLAIMED generated durable entries are eligible;
+--     authored ids remain reserved for explicit claims regardless of
+--     traversal order.
 --   * hash additionally requires the match to be UNIQUE among unclaimed
 --     durable entries: hashes recognize a moved region, they do not define
 --     identity, so an ambiguous match (two identical-content durable
@@ -141,13 +147,18 @@ function M.allocator(durable_regions, opts)
       if not ok then
         error("explicit id '" .. tostring(region.explicit_id) .. "' rejected: " .. err)
       end
+      -- The explicit id may already identify a durable region. Reserve that
+      -- durable identity as well as the current-render namespace so a later
+      -- source/hash candidate cannot claim it a second time.
+      self.claimed[region.explicit_id] = true
       self.assigned[region.explicit_id] = true
       return region.explicit_id, "explicit"
     end
 
     if region.source ~= nil then
       for _, durable in ipairs(self.durable) do
-        if not self.claimed[durable.id] and source_equal(durable.source, region.source) then
+        if is_generated_id(durable.id) and not self.claimed[durable.id]
+          and source_equal(durable.source, region.source) then
           self.claimed[durable.id] = true
           self.assigned[durable.id] = true
           return durable.id, "source"
@@ -159,7 +170,8 @@ function M.allocator(durable_regions, opts)
       local match = nil
       local ambiguous = false
       for _, durable in ipairs(self.durable) do
-        if not self.claimed[durable.id] and durable.hash ~= nil and durable.hash == region.hash then
+        if is_generated_id(durable.id) and not self.claimed[durable.id]
+          and durable.hash ~= nil and durable.hash == region.hash then
           if match ~= nil then ambiguous = true break end
           match = durable
         end
