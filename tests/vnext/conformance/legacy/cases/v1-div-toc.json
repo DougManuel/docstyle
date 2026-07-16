@@ -1,0 +1,11 @@
+{
+  "source": "tests/testthat/test-docstyle-fieldcodes.R:463 (raw docx-fixture instrText line; XML-entity-decoded it reads 'ADDIN DOCSTYLE {\"type\":\"div\",\"version\":1,\"name\":\"toc\"}'), copied verbatim -- the legacy writer's oldest (v1) div field-code shape.",
+  "legacy": { "type": "div", "version": 1, "name": "toc" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "toc",
+    "kind": "section",
+    "policy": "authored-preserve",
+    "hash": null
+  }
+}

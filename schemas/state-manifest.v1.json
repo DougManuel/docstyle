@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/state-manifest.v1.json",
+  "title": "Docstyle vNext state manifest, version 1",
+  "type": "object",
+  "required": ["schemaVersion", "stateId", "generation", "files"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "stateId": { "type": "string", "pattern": "^[0-9a-f]+$", "minLength": 32, "maxLength": 32 },
+    "generation": { "type": "integer", "minimum": 1 },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "file", "schema", "hash"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "file": { "type": "string", "pattern": "^[a-z][a-z0-9-]*[.][0-9]+[.]json$" },
+          "schema": { "type": "string", "minLength": 1 },
+          "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        }
+      }
+    }
+  }
+}

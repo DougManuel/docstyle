@@ -1,0 +1,9 @@
+{ "schemaVersion": 1,
+  "comments": [
+    { "id": "c1", "anchor": "abstract", "author": "Reviewer A",
+      "date": "2026-07-01", "text": "Consider shortening.", "privacy": "restricted",
+      "replies": [ { "id": "c1r1", "author": "Doug Manuel",
+        "date": "2026-07-02", "text": "Agreed." } ] } ],
+  "revisions": [
+    { "id": "r1", "anchor": "g-paragraph-aaaaaa", "op": "moved",
+      "author": "Reviewer A", "date": "2026-07-01", "text": "newly inserted words" } ] }

@@ -1,0 +1,11 @@
+{
+  "source": "tests/testthat/test-field-codes.R:689 (test 'float type dispatches to anchor handler (backward compat)': payload <- list(type = \"float\", class = \"column-margin\")), copied verbatim -- the required float case (kind anchor). Deliberately has no 'version' key, so this case also exercises the missing-version-defaults-to-1 rule (mirrors R/field_codes.R:520 payload$version %||% 1L).",
+  "legacy": { "type": "float", "class": "column-margin" },
+  "expected_envelope": {
+    "v": 4,
+    "id": "g-anchor-migr01",
+    "kind": "anchor",
+    "policy": "structural",
+    "hash": null
+  }
+}

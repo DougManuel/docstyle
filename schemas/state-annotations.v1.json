@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/state-annotations.v1.json",
+  "title": "Docstyle vNext state annotations, version 1",
+  "type": "object",
+  "required": ["schemaVersion"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "comments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/comment" }
+    },
+    "revisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "anchor", "op", "author", "date"],
+        "properties": {
+          "id": { "type": "string" },
+          "anchor": { "type": "string" },
+          "op": { "enum": ["insert", "delete"] },
+          "author": { "type": "string" },
+          "date": { "type": "string" },
+          "text": { "type": "string" },
+          "privacy": { "enum": ["public", "restricted"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "comment": {
+      "type": "object",
+      "required": ["id", "anchor", "author", "date", "text"],
+      "properties": {
+        "id": { "type": "string" },
+        "anchor": { "type": "string" },
+        "author": { "type": "string" },
+        "date": { "type": "string" },
+        "text": { "type": "string" },
+        "privacy": { "enum": ["public", "restricted"] },
+        "replies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reply" }
+        }
+      }
+    },
+    "reply": {
+      "type": "object",
+      "required": ["id", "author", "date", "text"],
+      "properties": {
+        "id": { "type": "string" },
+        "author": { "type": "string" },
+        "date": { "type": "string" },
+        "text": { "type": "string" },
+        "privacy": { "enum": ["public", "restricted"] }
+      }
+    }
+  }
+}

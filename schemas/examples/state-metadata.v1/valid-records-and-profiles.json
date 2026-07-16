@@ -1,0 +1,23 @@
+{ "schemaVersion": 1,
+  "profiles": { "docstyle:fixture": "1.0.0" },
+  "records": [
+    { "id": "rec-doc", "recordType": "document", "schemaVersion": 1,
+      "type": "protocol",
+      "title": "Reporting practices scoping review protocol",
+      "shortTitle": "POPCORN protocol",
+      "licence": { "spdx": "CC-BY-4.0" },
+      "keywords": ["scoping review", "reporting"],
+      "version": "0.2.11",
+      "versionHistory": [
+        { "version": "0.2.11", "date": "2026-06-16", "description": "Criterion 1 synthetic-population nuance." } ],
+      "status": "draft",
+      "dates": { "modified": "2026-06-16" },
+      "language": "en-CA",
+      "identifiers": [ { "scheme": "doi", "value": "10.0000/example" } ] },
+    { "id": "rec-fx1", "recordType": "fixture-record", "schemaVersion": 1,
+      "profile": "docstyle:fixture",
+      "label": "Example fixture record",
+      "notes": ["first note", "second note"],
+      "category": "beta",
+      "region": "abstract" } ],
+  "relationships": [ { "id": "g-relationship-aaaaaa", "subject": "rec-fx1", "predicate": "fixture-supports", "object": "abstract" } ] }

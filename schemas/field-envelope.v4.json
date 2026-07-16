@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/field-envelope.v4.json",
+  "title": "DOCSTYLE field envelope, version 4",
+  "type": "object",
+  "required": ["v", "id", "kind", "policy", "hash"],
+  "properties": {
+    "v": { "const": 4 },
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "kind": { "enum": ["section", "heading", "paragraph", "list", "list-item",
+      "table", "table-row", "table-cell", "figure", "caption", "equation",
+      "code-block", "footnote", "citation", "span", "raw", "anchor"] },
+    "policy": { "enum": ["authored-preserve", "generated-replace",
+      "structural", "external-managed"] },
+    "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "role": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "parent": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$" }
+  }
+}
