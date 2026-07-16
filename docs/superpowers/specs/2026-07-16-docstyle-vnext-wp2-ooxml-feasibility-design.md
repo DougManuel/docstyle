@@ -28,7 +28,7 @@ Existing Microsoft Word fixtures provide useful starting evidence:
 - `inst/extdata/minimal-example/comments-revisions-test-roundtrip.docx` contains comment and revision structures;
 - the frozen WP0 DOCX files provide small Docstyle-generated package baselines.
 
-The repository has no explicit LibreOffice-produced fixture. The spike adds one from a small licensed source and records the generating application and version.
+The repository has no explicit LibreOffice-produced fixture. The spike adds one from a small, openly licensed, repository-owned source and records the generating application and version.
 
 ## Goals
 
@@ -137,9 +137,9 @@ Each XML candidate must implement the same spike-only interface:
 ```lua
 document = adapter.parse(xml_bytes, options)
 nodes = adapter.find_all(document, namespace_uri, local_name)
-value = adapter.get_attribute(node, namespace_uri, local_name)
-adapter.set_attribute(node, namespace_uri, local_name, value)
-adapter.replace_text(node, value)
+value = adapter.get_attribute(nodes[1], namespace_uri, local_name)
+adapter.set_attribute(nodes[1], namespace_uri, local_name, new_value)
+adapter.replace_text(nodes[1], new_text)
 xml_bytes, edit_ranges = adapter.serialize(document)
 ```
 
@@ -148,14 +148,14 @@ xml_bytes, edit_ranges = adapter.serialize(document)
 The package experiment exposes:
 
 ```lua
-package = opc.open_path(docx_path, limits)
-bytes = package:part(part_name)
-package:replace_part(part_name, bytes)
-relationships = package:relationships(source_part)
-package:write_atomic(output_path, options)
+pkg = opc.open_path(docx_path, limits)
+bytes = pkg:part(part_name)
+pkg:replace_part(part_name, bytes)
+relationships = pkg:relationships(source_part)
+pkg:write_atomic(output_path, options)
 ```
 
-The XML experiment performs one mutation per parsed document. Mutation values are Lua strings containing valid XML 1.0 characters. `set_attribute` updates the value bytes inside the existing quote delimiters of one attribute selected by expanded name and fails if it is absent or ambiguous. It does not change the attribute name, prefix, namespace declaration or quote delimiter. `replace_text` updates the complete sole direct ordinary-text token of an element and fails on mixed content, nested elements, multiple text tokens or CDATA. These exact source spans are the only permitted edit ranges. Golden fixture coordinates, maintained independently of candidate code, prevent a candidate from reporting a larger range.
+The XML experiment performs one mutation per parsed document. Mutation values are Lua strings containing valid XML 1.0 characters. `set_attribute` updates the value bytes inside the existing quote delimiters of one attribute selected by expanded name and fails if it is absent; ambiguity cannot arise because parsing already rejects duplicate attributes with the same expanded name. It does not change the attribute name, prefix, namespace declaration or quote delimiter. `replace_text` updates the complete sole direct ordinary-text token of an element and fails on mixed content, nested elements, multiple text tokens or CDATA. These exact source spans are the only permitted edit ranges. Golden fixture coordinates, maintained independently of candidate code, prevent a candidate from reporting a larger range.
 
 `edit_ranges` is a sorted, non-overlapping list of half-open byte offsets, `[start, end)`, into the original encoded input. Replacement lengths may differ from source lengths. The spike uses one range per mutation; multiple-edit coordinate rebasing belongs to production design. An independent oracle is an implementation that does not reuse the selected candidate's tokenizer or offset calculations.
 
@@ -165,7 +165,7 @@ The package interface accepts a path so it can check the compressed file size be
 
 ### Encoding
 
-The adapter detects an optional byte-order mark and the XML declaration before tokenization. The spike must accept UTF-8 and test UTF-16 little- and big-endian conversion through the Pandoc runtime. It rejects declarations that contradict the byte stream and encodings it cannot convert safely. A bounded edit preserves the input encoding, byte-order mark and declaration; offsets refer to the original encoded bytes, and replacement text is encoded back into that source encoding. A candidate must either tokenize raw encoded bytes or maintain a tested reversible mapping from decoded code points to original byte offsets, including surrogate pairs and the byte-order mark. Encoding new XML parts belongs to production WP2 and is outside this spike.
+The adapter detects an optional byte-order mark and the XML declaration before tokenization. The spike must accept UTF-8 and test UTF-16 little- and big-endian conversion through the Pandoc runtime; the verified facility on the recorded runtime is `pandoc.text.fromencoding` and `pandoc.text.toencoding`. `fromencoding` preserves a byte-order mark as U+FEFF in the decoded stream, which the offset mapping must account for, and encoding-name support is platform-dependent, so the report pins the two encoding names tested. It rejects declarations that contradict the byte stream and encodings it cannot convert safely. A bounded edit preserves the input encoding, byte-order mark and declaration; offsets refer to the original encoded bytes, and replacement text is encoded back into that source encoding. A candidate must either tokenize raw encoded bytes or maintain a tested reversible mapping from decoded code points to original byte offsets, including surrogate pairs and the byte-order mark. Encoding new XML parts belongs to production WP2 and is outside this spike.
 
 ### Well-formedness and entities
 
@@ -180,7 +180,7 @@ The accepted language is XML 1.0 Fifth Edition with Namespaces in XML 1.0 Third 
 
 Parse options include maximum input bytes, element depth, total tokens, attributes per element and namespace declarations per element. Zero, negative, non-integral or overflowing limits are invalid options. The runner uses small values to exercise each rejection path; selecting production defaults is deferred.
 
-Only the five predefined XML entities and valid numeric character references are decoded. Untouched source spans retain their original entity spelling. Attribute replacement preserves the existing quote delimiter; it escapes `&`, `<` and that delimiter, and writes tab, line feed and carriage return as `&#x9;`, `&#xA;` and `&#xD;` so XML attribute-value normalization does not change the requested value. Ordinary text replacement escapes `&`, `<` and any `>` needed to avoid forming `]]>`, while otherwise retaining valid Unicode characters literally. Replacement bytes are therefore deterministic and escaped exactly once.
+Only the five predefined XML entities and valid numeric character references are decoded. Untouched source spans retain their original entity spelling. Attribute replacement preserves the existing quote delimiter; it escapes `&`, `<` and that delimiter, and writes tab, line feed and carriage return as `&#x9;`, `&#xA;` and `&#xD;` so XML attribute-value normalization does not change the requested value. Ordinary text replacement escapes `&`, `<` and any `>` needed to avoid forming `]]>`, writes carriage return as `&#xD;` so XML line-end normalization cannot rewrite the requested value on reparse, and otherwise retains valid Unicode characters literally. Replacement bytes are therefore deterministic and escaped exactly once.
 
 ### Namespace handling
 
@@ -191,7 +191,7 @@ The parser maintains a namespace stack for every element. Queries and ownership 
 Preservation has two levels:
 
 1. An untouched ZIP entry retains identical uncompressed bytes.
-2. In an edited XML part, every byte outside the reported edit ranges remains identical to the input. Within the edited range, reparsing must produce the same expanded element and attribute names and decoded content, except for the requested value change. This is XML-level equivalence; the spike does not claim visual equivalence in Word.
+2. In an edited XML part, every byte outside the reported edit ranges remains identical to the input. Within the edited range, reparsing through an implementation independent of the candidate — the acceptance-test-2 oracle or another candidate's adapter, never the edited candidate's own parser alone — must produce the same expanded element and attribute names and decoded content, except for the requested value change. This is XML-level equivalence; the spike does not claim visual equivalence in Word.
 
 Tests cover unknown elements and attributes, Microsoft compatibility markup, comments, processing instructions, CDATA, entity spellings, whitespace-only text, `xml:space="preserve"` and namespace declarations. The spike records any construct that a candidate normalizes even when it is not edited. Undeclared normalization is a failed preservation gate.
 
@@ -210,13 +210,13 @@ Tests cover unknown elements and attributes, Microsoft compatibility markup, com
 
 Pandoc's documented ZIP entry API exposes paths, contents, modification time and symlink status, but does not document declared compressed and uncompressed sizes or encryption state. The spike must determine whether those values are available safely before `Entry:contents()` decompresses data. If they are not, the candidate must add a bounded central-directory reader or return no-go for untrusted packages.
 
-Central-directory preflight is necessary but does not by itself bound malicious decompression when declared sizes are false. Directory parsing uses checked integer arithmetic, validates ZIP64 records and local-header data ranges, and rejects multi-disk archives. The spike must show that the backend enforces the output cap while decompressing, without allocating or materializing output beyond the configured per-entry or cumulative limit, or add a capped streaming decompression layer that does so. Tests forge inconsistent local-header, central-directory and actual-output sizes. Allocating or decompressing unbounded output and rejecting it afterwards does not satisfy the gate. The decision report recommends candidate production thresholds from measured Word and LibreOffice evidence; approving numeric production defaults remains production design work.
+Central-directory preflight is necessary but does not by itself bound malicious decompression when declared sizes are false. Directory parsing uses checked integer arithmetic, validates ZIP64 records and local-header data ranges, and rejects multi-disk archives. The spike must show that the backend enforces the output cap while decompressing, without allocating or materializing output beyond the configured per-entry or cumulative limit, or add a capped streaming decompression layer that does so. Tests forge inconsistent local-header, central-directory and actual-output sizes, and also forge disagreements between central-directory and local-header entry names: because the spike necessarily runs two parsers over the same archive (the Docstyle preflight reader and the backend that decompresses), the package layer requires the two views to agree on every entry name it reads and fails closed on mismatch, so validation and content retrieval can never act on different names. Central-directory CRC-32 agreement for retrieved parts is recorded as evidence rather than enforced as a gate. Allocating or decompressing unbounded output and rejecting it afterwards does not satisfy the gate. The cumulative output limit is a per-package-handle budget: every `part()` call charges the bytes it newly materializes against the handle's remaining budget before returning them; a repeated read of the same entry either returns cached bytes without a second charge or re-charges the re-materialized output, and the candidate must document which; a call fails closed before output exceeds the remaining budget. The decision report recommends candidate production thresholds from measured Word and LibreOffice evidence; approving numeric production defaults remains production design work.
 
 ### Paths and duplicate entries
 
-Archive entry names use `/` and must be relative OPC part names with non-empty segments. The package layer rejects empty names, absolute paths, drive-letter paths, backslashes, `.` or `..` segments, NUL bytes, undecodable names and duplicate exact names. ZIP entry names are case-sensitive and are neither URI-decoded nor Unicode-normalized. The spike never extracts an archive to caller-selected paths.
+Archive entry names use `/` with non-empty segments. Two name classes are distinguished: the `[Content_Types].xml` content-types stream is a ZIP package item and package metadata rather than an OPC part, and is exempt only from the part-name grammar; every other entry's slash-prefixed form must be a valid OPC part name. The package layer rejects empty names, absolute paths, drive-letter paths, backslashes, `.` or `..` segments, NUL bytes, undecodable names and duplicate exact names. ZIP entry names are case-sensitive and are neither URI-decoded nor Unicode-normalized; because OPC compares part names case-insensitively, two entries whose names differ only by letter case are distinct ZIP items but equivalent OPC part names, and the package layer rejects such case-colliding entries at validation. After that check, lookups match bytes exactly, and a reference whose case does not match the stored entry fails closed — a declared spike restriction relative to OPC's case-insensitive comparison, recorded in the decision report. The spike never extracts an archive to caller-selected paths.
 
-Relationship targets follow different rules. For the spike, an internal target must be a relative path reference with no scheme, authority or query. A fragment may be recorded but is removed before part lookup. URI-encoded path separators or dot segments fail closed. Literal `..` segments are resolved relative to the source part and the normalized result must remain inside the package. Missing `TargetMode` means internal; other values fail closed unless they equal `External`. Relationship IDs must be unique within their relationship part. Package-root relationships use `/` as their source base, and duplicate or ambiguous office-document roots fail closed. A relationship with `TargetMode="External"` is recorded but never resolved as an internal part or fetched. Broader URI-reference support is recorded as deferred work. This closes the failure mode tracked in #21.
+Relationship targets follow different rules. For the spike, an internal target must be a relative path reference with no scheme, authority or query. A fragment may be recorded but is removed before part lookup. A target containing URI-encoded octets is decoded exactly once under RFC 3986 before validation; the decoded result must satisfy every rule in this paragraph without introducing a path separator, dot segment, NUL or other control character, any `%` remaining after that single decode is literal, and a target whose decoding is invalid fails closed. Whether any Word- or LibreOffice-produced fixture actually requires URI decoding is recorded as evidence in the decision report. Literal `..` segments are resolved relative to the source part and the normalized result must remain inside the package. Missing `TargetMode` means internal; other values fail closed unless they equal `External`. Relationship IDs must be unique within their relationship part. Package-root relationships use `/` as their source base, and duplicate or ambiguous office-document roots fail closed. A relationship with `TargetMode="External"` is recorded but never resolved as an internal part or fetched. Broader URI-reference support is recorded as deferred work. This closes the failure mode tracked in #21.
 
 ### Content types and roots
 
@@ -250,7 +250,7 @@ Text fixtures cover valid namespace shadowing and every rejected XML class in th
 
 ### Scaling evidence
 
-The runner generates XML parts of one, five and 10 MiB with representative `w:p`, `w:r`, `w:t`, attributes and namespace declarations. It measures parse, one attribute edit and serialization separately.
+The runner generates XML parts of one, five and 10 MiB with representative `w:p`, `w:r`, `w:t`, attributes and namespace declarations. The generator records the expected byte coordinates of each planted edit target as golden values, independent of any candidate, so scaling edits are range-checked with the same rigour as the authored fixtures. It measures parse, one attribute edit and serialization separately.
 
 ## Performance protocol
 
@@ -322,13 +322,13 @@ A conditional-go prerequisite must be concrete and testable. It cannot change th
 If stage 1 establishes that safe archive handling is impossible on the programme runtime, the spike is complete when the executable evidence and supported no-go report are reviewed. Otherwise, the spike is complete when:
 
 1. At least two candidate adapters run through the same XML fixture table.
-2. A third tokenizer or oracle that shares no tokenizer or offset-calculation code with the selected candidate verifies its edit ranges and expanded names.
+2. A third tokenizer or oracle that shares no tokenizer or offset-calculation code with the selected candidate verifies the exact start and end coordinates of every reported edit range and the expanded names, across every edit case in the fixture table including the generated scaling fixtures, rejecting any range broader or narrower than the golden coordinates before the outside-bytes comparison runs.
 3. Every XML rejection class, legal boundary case and namespace-shadowing case named in this specification has an executable test derived from the cited XML and Namespaces productions.
-4. An attribute edit and a text edit preserve all bytes outside their reported ranges.
+4. Every attribute edit and every text edit in the fixture table preserves all bytes outside its reported range, and each reported range equals its golden coordinates exactly.
 5. Unknown OOXML constructs survive the tested edits in Word and LibreOffice fixtures.
 6. Archive path, duplicate-name, symlink, encryption and limit tests fail closed before publication.
 7. Relationship tests distinguish `TargetMode="External"` and correctly normalize internal `..` targets without package escape.
-8. Ten repeated package writes produce one output hash.
+8. Ten package writes from ten fresh processes, each given identical source bytes including at least one edited XML part, produce identical XML bytes, entry order and whole-archive SHA-256 hashes.
 9. Simulated pre-rename failure leaves the prior destination unchanged.
 10. The scaling fixtures meet the reference performance and heap gates.
 11. The runner passes without network or R and the existing conformance and R suites remain green.
