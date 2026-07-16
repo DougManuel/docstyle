@@ -1,11 +1,11 @@
 {
-  "source": "tests/testthat/test-docstyle-fieldcodes.R:127 (raw docx-fixture instrText line; XML-entity-decoded it reads 'ADDIN DOCSTYLE {\"type\":\"char\",\"version\":1,\"class\":\"date\",\"source\":\"[{{< meta version-summary.date >}}]{.date}\"}'), copied verbatim -- the legacy writer's v1 char field-code shape for the built-in 'date' shortcode class. The identical payload also occurs as a single-quoted R string at tests/testthat/test-field-codes.R:524. Note: migrate.payload stores the legacy 'source' value in the migration record under the renamed key 'legacySource' (see key-map.json's 'source' entry for why), so this case's expected hash covers the shortcode text.",
+  "source": "tests/testthat/test-docstyle-fieldcodes.R:127 (raw docx-fixture instrText line; XML-entity-decoded it reads 'ADDIN DOCSTYLE {\"type\":\"char\",\"version\":1,\"class\":\"date\",\"source\":\"[{{< meta version-summary.date >}}]{.date}\"}'), copied verbatim -- the legacy writer's v1 char field-code shape for the built-in 'date' shortcode class. The identical payload also occurs as a single-quoted R string at tests/testthat/test-field-codes.R:524. Note: migrate.payload stores the legacy 'source' value in the migration record under the renamed key 'legacySource' (see key-map.json's 'source' entry for why); the envelope hash itself is left explicitly unresolved (see the hash-unresolved finding) pending the WP5 migration driver's recovered-content hash.",
   "legacy": { "type": "char", "version": 1, "class": "date", "source": "[{{< meta version-summary.date >}}]{.date}" },
   "expected_envelope": {
     "v": 4,
     "id": "g-span-migr01",
     "kind": "span",
     "policy": "authored-preserve",
-    "hash": "sha256:49ec0fc66c4dbb325b2063ee7e5384c1bccc338069f7097642752feaa8c0272f"
+    "hash": null
   }
 }

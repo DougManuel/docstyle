@@ -14,7 +14,6 @@
 -- notes for the reasoning behind each disposition.
 
 local json = require("lib.json")
-local hashes = require("lib.hashes")
 local sha = require("lib.sha256")
 local canonical = require("lib.canonical")
 
@@ -74,15 +73,32 @@ end
 -- ---------------------------------------------------------------------
 
 function M.payload(legacy)
-  local km = key_map()
   local findings = {}
 
+  -- Malformed-input guards (Wave 4 item 3): a caller passing a non-table
+  -- legacy value, or a payload whose "version" key isn't a number, must
+  -- get a finding back, not a Lua runtime error from indexing a non-table
+  -- or comparing a string/table with 1/3 below.
+  if type(legacy) ~= "table" then
+    findings[#findings + 1] = { level = "error", code = "invalid-legacy-payload",
+      message = "legacy payload must be a table; got " .. type(legacy) }
+    return { envelope = nil, record = nil, findings = findings, provisional = true }
+  end
+
+  local km = key_map()
+
   local version = version_of(legacy)
+  if type(version) ~= "number" then
+    findings[#findings + 1] = { level = "error", code = "non-numeric-version",
+      message = "legacy payload 'version' must be a number; got "
+        .. type(version) .. " (" .. tostring(version) .. ")" }
+    return { envelope = nil, record = nil, findings = findings, provisional = true }
+  end
   if version < 1 or version > 3 then
     findings[#findings + 1] = { level = "error", code = "unsupported-version",
       message = "legacy field code version " .. tostring(version)
         .. " is outside the supported range 1-3" }
-    return { envelope = nil, record = nil, findings = findings }
+    return { envelope = nil, record = nil, findings = findings, provisional = true }
   end
 
   local type_entry = km.payloadTypes[legacy.type]
@@ -90,7 +106,7 @@ function M.payload(legacy)
     findings[#findings + 1] = { level = "error", code = "unknown-payload-type",
       message = "legacy payload type '" .. tostring(legacy.type)
         .. "' is not a recognized docstyle field-code type" }
-    return { envelope = nil, record = nil, findings = findings }
+    return { envelope = nil, record = nil, findings = findings, provisional = true }
   end
 
   local envelope = { v = 4, kind = type_entry.kind, policy = type_entry.policy }
@@ -119,8 +135,13 @@ function M.payload(legacy)
         -- key literally named "source" (or "hash") at every depth -- a
         -- convention meant for provenance pointers, not content. Stored
         -- under the legacy name, the shortcode text would silently drop out
-        -- of the envelope hash. key-map.json's optional per-key "recordKey"
-        -- says what to call it instead ("legacySource" for "source").
+        -- of the record's canonical encoding, were this record ever hashed
+        -- downstream (WP1 itself no longer hashes the record into the
+        -- envelope -- see the hash-unresolved finding below -- but the
+        -- rename still protects whatever real semantic-hash pass a later
+        -- work package runs over this same record shape). key-map.json's
+        -- optional per-key "recordKey" says what to call it instead
+        -- ("legacySource" for "source").
         -- Honouring it generically here (rather than hardcoding
         -- `if key == "source"`) means a future key-map.json entry can
         -- request the same rename for any other key with no code change.
@@ -158,9 +179,50 @@ function M.payload(legacy)
     envelope.id = "g-" .. envelope.kind .. "-migr01"
   end
 
-  envelope.hash = hashes.content_hash(record)
+  -- Typed migration record (Wave 4 item 2): give the record a stable id,
+  -- a recordType and a schemaVersion so it is a typed shape rather than an
+  -- untyped bag of whatever key-map.json "record"-disposition keys
+  -- happened to be present. Still provisional -- WP1 does not own the
+  -- embedded-catalogue carrier this record shape will eventually feed
+  -- (that is WP4's job); this only makes today's ad hoc record
+  -- self-describing while it waits for that carrier to exist.
+  record.id = envelope.id
+  record.recordType = "migration-record"
+  record.schemaVersion = 1
 
-  return { envelope = envelope, record = record, findings = findings }
+  -- Wave 4 item 1 (envelope hash honesty): WP1 has no OOXML parser, so the
+  -- true semantic content hash of the recovered region cannot be computed
+  -- here. The previous implementation hashed the migration record (legacy
+  -- field-code metadata -- CSS classes, widths, anchor offsets, and so on)
+  -- and put that value in the envelope's hash position as though it were
+  -- the region's semantic content hash. That was misleading in a way that
+  -- was easy to miss: two payloads with the same (often empty) record
+  -- body but entirely different authored content -- for example the v1
+  -- div "toc" and the v3 div "abstract" cases in legacy/cases/, whose
+  -- record bodies are both {} because "name" maps to envelope.id, not the
+  -- record -- would collide on an identical "content hash" despite being
+  -- different regions with different content.
+  --
+  -- Mark the hash explicitly UNRESOLVED instead of silently omitting it:
+  -- pandoc.json.null serializes as JSON `null`, present in the envelope
+  -- but structurally impossible to mistake for a real
+  -- `sha256:<64 hex>` value (field-envelope.v4's hash pattern requires
+  -- that shape, and `null` fails it cleanly at /hash rather than via a
+  -- fake-looking string). A finding makes the deferral explicit and
+  -- greppable; WP5's real migration driver has the recovered semantic
+  -- region and computes the real hash there.
+  envelope.hash = pandoc.json.null
+  findings[#findings + 1] = { level = "warning", code = "hash-unresolved",
+    message = "content hash deferred to the WP5 migration driver, which has the recovered semantic region" }
+
+  -- field-envelope.v4 REQUIRES hash to match ^sha256:[0-9a-f]{64}$, so an
+  -- envelope whose hash is null is not -- and must never be presented as
+  -- -- a final, schema-valid v4 envelope: it is a PROVISIONAL mapping.
+  -- provisional=true is the explicit, stable marker callers and tests key
+  -- on, rather than inferring provisionality from envelope shape (which
+  -- would break silently if a future change gave hash a real-looking
+  -- value without also resolving this flag).
+  return { envelope = envelope, record = record, findings = findings, provisional = true }
 end
 
 -- ---------------------------------------------------------------------
@@ -180,20 +242,26 @@ end
 -- over string keys is not) and migration stays reproducible run to run.
 -- Arrays (the synthetic shape some tests and the fixture-style callers use)
 -- pass through unchanged.
+--
+-- Returns list, markers: `markers` is the sorted list of original object
+-- keys aligned position-for-position with `list` (Wave 4 item 4 -- callers
+-- that need to carry the original marker into a migrated id read it from
+-- here), or nil when `raw` was already a plain array (there is no marker
+-- to carry; plain-array inputs' synthesized ids are unchanged).
 local function normalize_container(raw)
-  if raw == nil then return {} end
+  if raw == nil then return {}, nil end
   local has_string_key = false
   for k in pairs(raw) do
     if type(k) == "string" then has_string_key = true break end
   end
-  if not has_string_key then return raw end
+  if not has_string_key then return raw, nil end
 
   local markers = {}
   for k in pairs(raw) do markers[#markers + 1] = k end
   table.sort(markers)
   local list = {}
   for _, marker in ipairs(markers) do list[#list + 1] = raw[marker] end
-  return list
+  return list, markers
 end
 
 -- Real legacy revisions.json uses the full words "insertion"/"deletion" (see
@@ -239,12 +307,22 @@ function M.sidecars(inputs)
     for _, c in ipairs(list) do
       local keys = c.keys or c.citekeys
       local instruction = c.instruction or c.instrText
-      citations.citations[#citations.citations + 1] = {
-        id = "cite-" .. keys[1],
-        keys = keys,
-        instruction = instruction,
-        privacy = "public",
-      }
+      -- Malformed-input guard (Wave 4 item 3): a citation group with no
+      -- keys/citekeys at all, or an empty keys array, would otherwise
+      -- crash below (`keys[1]` on a nil `keys`, or concatenating a nil
+      -- `keys[1]` into the id string). Skip the group with a blocking
+      -- finding instead of guessing an id or letting the crash propagate.
+      if keys == nil or keys[1] == nil then
+        findings[#findings + 1] = { level = "error", code = "malformed-citation-group",
+          message = "citation group has no usable keys/citekeys; skipped" }
+      else
+        citations.citations[#citations.citations + 1] = {
+          id = "cite-" .. keys[1],
+          keys = keys,
+          instruction = instruction,
+          privacy = "public",
+        }
+      end
     end
     if field_codes.zotero_pref ~= nil then
       citations.zoteroPref = field_codes.zotero_pref
@@ -259,28 +337,39 @@ function M.sidecars(inputs)
   -- item.content` fallback handles the field-name difference.
   local annotations = { schemaVersion = 1 }
   if inputs.comments then
-    local list = normalize_container(inputs.comments)
+    local list, markers = normalize_container(inputs.comments)
     annotations.comments = {}
     for i, item in ipairs(list) do
       local text = item.text or item.content
+      -- Marker-preserving ids (Wave 4 item 4): when the input was an
+      -- object keyed by marker (comments.json's real shape,
+      -- `comments[[id]] <- ...`), carry that original key into the
+      -- migrated id instead of synthesizing "c1"/"c2" -- WP5 needs the
+      -- original id for reply-threading reconstruction. Plain-array
+      -- inputs have no marker to carry, so their synthesized ids are
+      -- unchanged.
+      local id = (markers and markers[i]) or ("c" .. i)
       annotations.comments[i] = {
-        id = "c" .. i,
+        id = id,
         anchor = anchor_placeholder(item.anchor_text or text),
         author = item.author,
         date = item.date,
         text = text,
       }
       findings[#findings + 1] = { level = "warning", code = "anchor-unresolved",
-        message = "comment c" .. i .. " anchor is a placeholder pending WP5 anchor resolution" }
+        message = "comment " .. id .. " anchor is a placeholder pending WP5 anchor resolution" }
     end
   end
   if inputs.revisions then
-    local list = normalize_container(inputs.revisions)
+    local list, markers = normalize_container(inputs.revisions)
     annotations.revisions = {}
     for i, item in ipairs(list) do
       local text = item.text or item.content
+      -- See the comments loop above: carry the original marker into the
+      -- id for object-keyed input; plain arrays keep "r1"/"r2".
+      local id = (markers and markers[i]) or ("r" .. i)
       local entry = {
-        id = "r" .. i,
+        id = id,
         anchor = anchor_placeholder(item.anchor_text or text),
         op = normalize_op(item.type),
         author = item.author,
@@ -289,7 +378,7 @@ function M.sidecars(inputs)
       if text ~= nil then entry.text = text end
       annotations.revisions[i] = entry
       findings[#findings + 1] = { level = "warning", code = "anchor-unresolved",
-        message = "revision r" .. i .. " anchor is a placeholder pending WP5 anchor resolution" }
+        message = "revision " .. id .. " anchor is a placeholder pending WP5 anchor resolution" }
     end
   end
 

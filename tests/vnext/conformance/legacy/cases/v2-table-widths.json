@@ -6,6 +6,6 @@
     "id": "g-table-migr01",
     "kind": "table",
     "policy": "authored-preserve",
-    "hash": "sha256:61afcb73ef92028817e555ff8c6d15a1e9f540e475fadb770ab7e2533a0da23a"
+    "hash": null
   }
 }

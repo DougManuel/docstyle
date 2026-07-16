@@ -3,11 +3,17 @@ local M = {}
 local STRIP = { hash = true, source = true }
 
 -- Normalize line endings in every string VALUE before hashing (CRLF -> LF,
--- then any remaining lone CR -> LF), matching the spec's canonical hash
--- input rule ("text values normalized to Unicode NFC with LF line
--- endings"). Keys are never normalized: every key this module ever walks
--- is a schema-controlled field name (e.g. "type", "children"), not
--- authored text, so a key can never contain a line ending to begin with.
+-- then any remaining lone CR -> LF). This module implements the LF half of
+-- the spec's canonical hash input rule ("text values normalized to Unicode
+-- NFC with LF line endings") plainly and only that half: Unicode NFC
+-- normalization is NOT implemented here -- Pandoc Lua exposes no
+-- normalizer, so input text is assumed to already be NFC (declared bound
+-- 1 in dev/vnext/wp1-legacy-coverage.md and tests/vnext/conformance/
+-- README.md; do not add NFC normalization here -- there is nothing in
+-- this runtime to add it with). Keys are never normalized: every key this
+-- module ever walks is a schema-controlled field name (e.g. "type",
+-- "children"), not authored text, so a key can never contain a line
+-- ending to begin with.
 local function normalize_newlines(s)
   return (s:gsub("\r\n", "\n"):gsub("\r", "\n"))
 end
