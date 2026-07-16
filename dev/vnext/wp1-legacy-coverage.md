@@ -139,11 +139,13 @@ rather than repeated in each row's Notes. Keys whose only WP1 handling is
 the migration record -- exactly the 29 keys carrying `key-map.json`'s
 `record` disposition -- are classified assigned, target WP3 property
 model, because the definition of mapped requires a WP1 schema and field
-and no WP1 schema types these values. Today's migration folds them into
-the migration record, whose canonical encoding feeds the field-envelope
-`hash`: that gives change detection, and nothing more -- the hash is
-one-way, so the values are carried for comparison rather than stored in a
-typed, recoverable form. Their intended vNext carrier is the
+and no WP1 schema types these values. Today's migration carries them in
+the typed migration record (`recordType` `migration-record`); WP1 does
+not itself hash that record into the field-envelope, whose content hash
+is left unresolved and deferred to the WP5 driver that has the recovered
+semantic region (see the `source` payload-key bound below). The keys are
+therefore carried for a later work package to place and hash, not stored
+in a typed, recoverable WP1 form. Their intended vNext carrier is the
 document-model node's `attrs` object, which WP1 deliberately leaves
 untyped; WP3's property matrix is where each value gets a typed field.
 `key-map.json` itself is unchanged by this ruling: its `record`
@@ -195,10 +197,12 @@ audit's definitions.
 | Field-code payload key `content_mode` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
 | Field-code payload key `caption_y` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
 | Field-code payload key `image_height` (anchor) | `key-map.json` | assigned | WP3 property model | Migration-record ruling above |
-| Sidecar `field-codes.json` fields `citations`/`citationGroups` | `R/extract_citations.R` | mapped | state-citations.v1 `citations[]` (`id`, `keys`, `instruction`, `privacy`) via `migrate.sidecars` | The real per-citekey `citations` shape (`itemData`/`uris`) is a separate item catalogue, out of scope here (WP4); the real `citationGroups` shape (`citekeys`/`instrText`, `R/extract_citations.R:306-312`) is what `migrate.sidecars` normalizes into `citations[]`, preferring `citationGroups` when present and falling back to a `citations` container of `{keys, instruction}` entries for the synthetic test shape |
+| Sidecar `field-codes.json` group data `citations`/`citationGroups` | `R/extract_citations.R` | mapped | state-citations.v1 `citations[]` (`id`, `keys`, `instruction`, `privacy`) via `migrate.sidecars` | The real `citationGroups` shape (`citekeys`/`instrText`, `R/extract_citations.R:306-312`) is what `migrate.sidecars` normalizes into `citations[]`, preferring `citationGroups` when present and falling back to a `citations` container of `{keys, instruction}` entries for the synthetic test shape |
+| Sidecar `field-codes.json` per-citekey catalogue `itemData`/`uris` | `R/extract_citations.R` | assigned | WP4 (Zotero item catalogue) | The per-citekey CSL item data and Zotero URIs are a separate catalogue from the citation-group instructions above; `migrate.sidecars` does not carry them, and their embedded-carrier home is WP4's concern |
 | Sidecar `field-codes.json` field `zotero_pref` | `R/extract_citations.R` | mapped | state-citations.v1 `zoteroPref` | |
 | Sidecar `field-codes.json` field `zotero_bibl` | `R/extract_citations.R` | assigned | WP4 (bibliography rendering) | Not read by the current `migrate.sidecars` |
-| Sidecar `field-codes.json` bookkeeping fields `docstyle_version`, `source`, `references_hash`, `extracted_from`, `extracted_at` | `R/extract_citations.R` | mapped | report-envelope.v1 (`operation`, `toolVersion`, `inputs[].hash`) | `migrate.sidecars` currently hardcodes `toolVersion` rather than reading these legacy stamps (Task 8 deferred minor); report-envelope.v1 carries no timestamp property, so `extracted_at` specifically has no counterpart field yet |
+| Sidecar `field-codes.json` bookkeeping fields `docstyle_version`, `source`, `references_hash`, `extracted_from` | `R/extract_citations.R` | mapped | report-envelope.v1 (`operation`, `toolVersion`, `inputs[].hash`) | `migrate.sidecars` currently hardcodes `toolVersion` rather than reading these legacy stamps (Task 8 deferred minor) |
+| Sidecar `field-codes.json` field `extracted_at` | `R/extract_citations.R` | dropped | Extraction timestamp regenerated per operation; report-envelope.v1 carries no timestamp property and none is added in WP1, so the legacy stamp is not migrated | |
 | Sidecar `comments.json` fields `id`, `author`, `date`, `content` | `R/comments.R` | mapped | state-annotations.v1 comment (`id`, `author`, `date`, `text`) | Legacy `content` becomes schema `text`; `migrate.sidecars` normalizes the real id-keyed object container (`comments[[id]] <- ...`, `R/comments.R:87`) to the schema's array shape by iterating a sorted key list, so a real object-keyed `comments.json` migrates the same way as the synthetic array fixture |
 | Sidecar `comments.json` field `parent_id` | `R/comments.R` | assigned | WP5 (reply-threading reconstruction into the nested `replies[]` shape) | Current `migrate.sidecars` does not build `replies`; flat legacy threading is dropped on the floor until a real driver exists |
 | Sidecar `comments.json` field `para_id` | `R/comments.R` | assigned | WP5 anchor resolution | Word's paragraph-threading id (the last `w:p` paraId inside the comment's content); this is the anchor-identity data the WP5 reconciliation driver needs to replace `migrate.sidecars`'s placeholder `legacy-anchor-*` values with real anchors |
@@ -242,11 +246,13 @@ audit's definitions.
 | YAML key `docstyle.page` (inline page-layout fallback) | `_extensions/docstyle/page-section.lua` | assigned | WP3 property model | Testing-oriented fallback input (`size`, `orientation`, `margins`) feeding the same internal structure as `page-config.json` above, used when that sidecar is absent |
 | YAML key `docstyle.version-history` (render config) | `_extensions/docstyle/version-history.lua` | assigned | WP3 render config | Controls heading text/level, column `widths` and table style of the rendered table; distinct from the `version-history` entry data above |
 | YAML key `docstyle.author-plate` (render config) | `_extensions/docstyle/author-plate.lua` | assigned | WP3 render config | Controls corresponding/equal-contributor markers, ORCID and email display, affiliation style; distinct from the `author:`/`affiliations:` data below |
-| YAML `author:`/`affiliations:` (standard Quarto, Quarto-normalized `by-author`) | CLAUDE.md; `_extensions/docstyle/author-plate.lua` | mapped | metadata-core.v1 `person` (`name.given`/`name.family`, `orcid`, `roles`, `corresponding`, `affiliations`) and `organization` (`name`, `ror`) | The QMD author block also carries `email` and `equal-contributor`, neither present on metadata-core.v1's `person` shape yet |
+| YAML `author:`/`affiliations:` (standard Quarto, Quarto-normalized `by-author`) | CLAUDE.md; `_extensions/docstyle/author-plate.lua` | mapped | metadata-core.v1 `person` (`name.given`/`name.family`, `orcid`, `roles`, `corresponding`, `affiliations`) and `organization` (`name`, `ror`) | The two author sub-fields with no metadata-core.v1 counterpart yet -- `email` and `equal-contributor` -- are inventoried as their own rows below |
+| YAML author sub-field `email` | CLAUDE.md; `_extensions/docstyle/author-plate.lua` | assigned | WP4 (author metadata carrier) | metadata-core.v1 `person` has no `email` field yet; when added it must be marked restricted-privacy PII per the spec's privacy classification (it is display-gated today by the `docstyle.author-plate` render config above) |
+| YAML author sub-field `equal-contributor` | CLAUDE.md; `_extensions/docstyle/author-plate.lua` | assigned | WP4 (author metadata carrier) | A person-level flag like `corresponding`, absent from metadata-core.v1 `person`; its rendered marker is already covered by the `docstyle.author-plate` render-config row above |
 | YAML `docstyle.authors`/`docstyle.affiliations` (deprecated) | CLAUDE.md; `R/metadata_inject.R`; `_extensions/docstyle/author-plate.lua` | mapped | Same target as `author:`/`affiliations:` above | Deprecated in favour of standard Quarto `author:` per CLAUDE.md's common-mistakes list |
 | YAML keys `docstyle.date`/`docstyle.version` (preferred-over-plain override) | `R/metadata_inject.R` | mapped | metadata-core.v1 document `dates`/`version` | Same target as char classes `date`/`version` and `version-summary` above; an alternate override path for the same document properties |
 
-Row count: 92. 29 mapped, 60 assigned, 3 dropped.
+Row count: 96. 29 mapped, 63 assigned, 4 dropped.
 
 ## Declared bounds
 
@@ -276,8 +282,8 @@ Row count: 92. 29 mapped, 60 assigned, 3 dropped.
    to the `document-model.v1` and `field-envelope.v4` type/kind enums
    beyond the approved specification's illustrative list, because the
    legacy `float` and `anchor` field-code payload types need a
-   positioned-content kind. This is a spec revision and is flagged here for
-   review.
+   positioned-content kind. This spec revision was ratified in the spec's
+   content-node type table at the WP1 pre-merge review.
 4. **Acceptance-test-8 reading (narrowed at the pre-merge review).**
    Acceptance test 8 ("Reconciliation rules produce the specified outcome
    for each disagreement class, including the fail-closed cases") is now
@@ -296,8 +302,15 @@ Row count: 92. 29 mapped, 60 assigned, 3 dropped.
    `[{{< meta version-summary.date >}}]{.date}`) is stored under
    `legacySource` in the migration record, not under its legacy name. This
    is because `hashes.content_hash()`'s provenance strip list removes any
-   key named `hash` or `source` at every depth; keeping the legacy name
-   would silently exclude the shortcode text from the envelope hash. This
+   key named `hash` or `source` at every depth. WP1 migration now leaves
+   the field-envelope content hash unresolved (the migration output is a
+   provisional mapping rather than a final v4 envelope -- `migrate.payload` sets
+   the hash to `null` with a `hash-unresolved` finding, deferring the real
+   hash to the WP5 driver that has the recovered content), so the rename
+   no longer protects a WP1 hash. It is kept because the record still
+   carries the shortcode text, and keeping the legacy name would silently
+   exclude that text from whatever real semantic-hash pass a later work
+   package runs over this same record shape. This
    is the only migration-record key whose name differs from its legacy
    key.
 6. **v1/v2 evidence gap.** The WP0 baseline captures contain no v1 or v2

@@ -537,6 +537,8 @@ Expected: FAIL (example file missing).
 
 - [ ] **Step 3: Write the schema and the example**
 
+> **Superseded (WP1 pre-merge review):** the shipped `document-model.v1.json` makes the `metadata`, `relationships` and `assets` registries id-keyed JSON objects (`{"type":"object","additionalProperties":{"$ref":...}}`), not the arrays shown below, per the approved identifier-keyed decision — JSON object keys enforce id uniqueness structurally. The array shape below is the original plan text, kept for history. The current contract is the spec's "Semantic document model" section and the schema file itself.
+
 `schemas/document-model.v1.json`:
 
 ```json
@@ -1226,7 +1228,7 @@ Closes the WP1 acceptance tests. Relates to #28"
 5. Fixture profile registration, validation, region link, relationship — Tasks 5 and 6 (`fixture.v1` examples; `state-metadata` example carries the profile and relationship).
 6. Atomic manifest under interruption — Task 7 (`test-manifest`).
 7. Legacy fixtures translate v1–v3 payloads and three durable sidecars with a report, inputs untouched — Task 8.
-8. Reconciliation outcomes — the reconciliation *rules* are spec contracts consumed by WP5; WP1 verifies their data preconditions (ids, hashes, policies present in every schema). Record this reading in the audit; if review wants executable reconciliation cases in WP1, add a table-driven `test-reconcile.lua` exercising the six rules over synthetic pairs.
+8. Reconciliation outcomes — the reconciliation *rules* are spec contracts consumed by WP5; WP1 verifies their data preconditions (ids, hashes, policies present in every schema). Record this reading in the audit; if review wants executable reconciliation cases in WP1, add a table-driven `test-reconcile.lua` exercising the six rules over synthetic pairs. **Superseded (pre-merge review):** executable reconciliation cases were adopted — `lib/reconcile.lua` plus `tests/vnext/conformance/tests/test-reconcile.lua` now cover all six rules, every blocking case and the unavailable-profile row (declared bound 4).
 9. Legacy element coverage — Task 9; blocking until no row is unclassified.
 
 After the final commit, flag for review: the `anchor` node-type addition, the NFC bound, the Lua pattern dialect, and the acceptance-test-8 reading above. Do not push; Doug reviews the branch first.

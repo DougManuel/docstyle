@@ -59,6 +59,23 @@ return {
       assert(new_id:match("^g%-list%-[a-z2-7][a-z2-7][a-z2-7][a-z2-7][a-z2-7][a-z2-7]$"),
         "expected format g-list-<6 base32>, got " .. tostring(new_id))
     end },
+  { name = "reuse(): source match wins over a competing hash match on a different region", fn = function()
+      -- A candidate whose source location matches one durable region AND
+      -- whose content hash matches a DIFFERENT durable region must reuse
+      -- the source-matched id: source is checked before hash. If the two
+      -- tiers were swapped, this returns the hash-matched id instead, so
+      -- the ordering is load-bearing here, not merely incidental as in the
+      -- single-tier moved/edited cases above.
+      local durable = {
+        { id = "g-table-source1", source = { file = "d.qmd", start = 10, ["end"] = 15 }, hash = "HA" },
+        { id = "g-table-hash1",   source = { file = "d.qmd", start = 90, ["end"] = 95 }, hash = "HB" },
+      }
+      local candidate = { type = "table", source = { file = "d.qmd", start = 10, ["end"] = 15 }, hash = "HB" }
+      local id, origin = ids.reuse(candidate, durable)
+      assert(id == "g-table-source1" and origin == "source",
+        "source tier must win over a competing hash match; got "
+          .. tostring(id) .. "/" .. tostring(origin))
+    end },
   { name = "exhausted char source raises instead of hanging", fn = function()
       -- a finite source shorter than six chars returns "" past its end
       assert(not pcall(ids.generate, "table", {}, charsource("abc")))

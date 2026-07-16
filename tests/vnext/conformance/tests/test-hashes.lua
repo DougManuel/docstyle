@@ -26,10 +26,13 @@ return {
       assert(h.content_hash(lf) ~= h.content_hash(different), "genuinely different text must still change the hash")
     end },
   { name = "hash/source stripped at every depth, not just top level and one level of nesting", fn = function()
-      -- Closes declared bound 7: hash/source keys nested two levels down,
+      -- Strip-at-every-depth: hash/source keys nested two levels down,
       -- inside a children array element's own nested attrs object and
       -- inside a doubly-nested children array, must strip the same as a
-      -- top-level hash/source key does.
+      -- top-level hash/source key does. (This closed what was an earlier
+      -- test gap; it is not one of the six declared bounds in the README
+      -- or audit (seven at last count) -- those enumerate genuine
+      -- limitations, not tested cases.)
       local nested = {
         id = "sec", type = "section", hash = "sha256:top",
         children = {

@@ -135,7 +135,7 @@ the adversarial cases, including the missing-`label` bypass case.
 
 ## Declared bounds
 
-Six bounds accumulated over the course of building this harness. They
+Seven bounds accumulated over the course of building this harness. They
 constrain what conformance here does and does not establish; see
 `dev/vnext/wp1-legacy-coverage.md` for the fuller discussion of each.
 
@@ -156,7 +156,8 @@ constrain what conformance here does and does not establish; see
    added to the `document-model.v1` and `field-envelope.v4` enums beyond
    the approved specification's illustrative list, to give the legacy
    `float`/`anchor` field-code payloads a positioned-content kind. This is
-   a spec revision, flagged for review.
+   a spec revision, ratified in the spec's content-node type table at the
+   WP1 pre-merge review.
 4. **Acceptance-test-8 reading.** The six reconciliation rules are now
    backed by an executable decision table, `lib/reconcile.lua`'s
    `reconcile.decide()`, covered end to end by `tests/test-reconcile.lua`

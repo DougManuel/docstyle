@@ -73,7 +73,7 @@ Every content node has:
 | Field | Requirement | Meaning |
 |---|---|---|
 | `id` | required | Stable identifier (explicit or generated) |
-| `type` | required | Node type from the model schema (`section`, `heading`, `paragraph`, `list`, `list-item`, `table`, `table-row`, `table-cell`, `figure`, `caption`, `equation`, `code-block`, `footnote`, `citation`, `span`, `raw`) |
+| `type` | required | Node type from the model schema (`section`, `heading`, `paragraph`, `list`, `list-item`, `table`, `table-row`, `table-cell`, `figure`, `caption`, `equation`, `code-block`, `footnote`, `citation`, `span`, `raw`, `anchor`) — `anchor` is the positioned/floating-content kind the legacy `float` and `anchor` field-code payloads map to (ratified at the WP1 pre-merge review) |
 | `role` | optional | Registered semantic role (for example `abstract`, `methods`) |
 | `classification` | required | One of `authored`, `generated`, `structural`, `external-managed` |
 | `policy` | required | Preservation policy (see field-code contract) |
@@ -245,7 +245,7 @@ A DOCSTYLE field instruction is `ADDIN DOCSTYLE ` followed by one compact JSON o
 
 **Decision (size bound):** a serialized envelope must not exceed 1,024 bytes. The writer fails rather than truncating. The bound forces rich data into the catalogue, keeps fields inspectable and protects Word interoperability.
 
-**Decision (unknown keys and future versions):** unknown envelope keys are preserved byte-for-byte on read and re-emit and are never interpreted. A field with `v` greater than 4 is preserved unmodified and reported. Envelope content is untrusted data; no key's value is ever executed or followed as an instruction.
+**Decision (unknown keys and future versions):** unknown envelope keys are preserved semantically on read and re-emit and are never interpreted. Because the envelope is decoded and re-encoded as JSON, key order and insignificant whitespace are not guaranteed to survive, but every unknown key and its value are carried through unchanged. A field with `v` greater than 4 is preserved unmodified and reported. Envelope content is untrusted data; no key's value is ever executed or followed as an instruction.
 
 **Decision (version line):** vNext continues the single DOCSTYLE version line. The legacy engine wrote version 3 and read versions 1 through 3; vNext writes version 4 and reads 1 through 4.
 
@@ -312,7 +312,7 @@ WP1 publishes, under `schemas/` in the repository:
 | Schema | Contract |
 |---|---|
 | `document-model.v1.json` | Serialized semantic model: content tree and registries |
-| `metadata-core.v1.json` | Core record types: document, person, organization, funding, region, relationship |
+| `metadata-core.v1.json` | Core record types: document, person, organization, funding (regions and relationships are not metadata-core record types — they are document-model registries and the `state-regions`/`state-metadata` stores) |
 | `profile-manifest.v1.json` | Profile registration |
 | `field-envelope.v4.json` | DOCSTYLE field envelope |
 | `state-manifest.v1.json` | State manifest and generation |
