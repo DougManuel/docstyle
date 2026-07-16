@@ -103,35 +103,94 @@ end
 -- must fall through to the hash check, while a region that stayed put but
 -- changed content should resolve via its unchanged source without its
 -- now-stale old hash ever being consulted.
-function M.reuse(region, durable_regions, kind)
-  region = region or {}
+-- allocator(durable_regions, opts) -> alloc; alloc:claim(region, kind) -> id, origin
+-- Document-scoped allocation, per the spec's collision decision: an id must
+-- be unused within the DOCUMENT and its durable state, so all claims in one
+-- render share state. `claimed` marks durable ids already selected this
+-- render (a durable id can be reused by at most ONE current region);
+-- `assigned` marks every id handed out this render (explicit, reused or
+-- minted), so mints reserve against one another and duplicate explicit ids
+-- fail closed. opts.next_char threads a deterministic character source to
+-- generate() for tests.
+--
+-- Tier rules (explicit -> source -> hash -> mint, as reuse() documents),
+-- with the document-scoped refinements:
+--   * explicit: validated via check_explicit against `assigned` -- a
+--     duplicate explicit id (or one colliding with an id already reused
+--     this render) raises rather than silently duplicating.
+--   * source/hash: only UNCLAIMED durable entries are eligible.
+--   * hash additionally requires the match to be UNIQUE among unclaimed
+--     durable entries: hashes recognize a moved region, they do not define
+--     identity, so an ambiguous match (two identical-content durable
+--     regions) mints instead of pairing arbitrarily.
+function M.allocator(durable_regions, opts)
   durable_regions = durable_regions or {}
+  opts = opts or {}
+  local alloc = {
+    durable = durable_regions,
+    claimed = {},   -- durable ids selected this render
+    assigned = {},  -- every id handed out this render
+    next_char = opts.next_char,
+  }
 
-  if region.explicit_id ~= nil then
-    return region.explicit_id, "explicit"
-  end
+  function alloc:claim(region, kind)
+    region = region or {}
 
-  if region.source ~= nil then
-    for _, durable in ipairs(durable_regions) do
-      if source_equal(durable.source, region.source) then
-        return durable.id, "source"
+    if region.explicit_id ~= nil then
+      local ok, err = M.check_explicit(region.explicit_id, self.assigned)
+      if not ok then
+        error("explicit id '" .. tostring(region.explicit_id) .. "' rejected: " .. err)
+      end
+      self.assigned[region.explicit_id] = true
+      return region.explicit_id, "explicit"
+    end
+
+    if region.source ~= nil then
+      for _, durable in ipairs(self.durable) do
+        if not self.claimed[durable.id] and source_equal(durable.source, region.source) then
+          self.claimed[durable.id] = true
+          self.assigned[durable.id] = true
+          return durable.id, "source"
+        end
       end
     end
-  end
 
-  if region.hash ~= nil then
-    for _, durable in ipairs(durable_regions) do
-      if durable.hash ~= nil and durable.hash == region.hash then
-        return durable.id, "hash"
+    if region.hash ~= nil then
+      local match = nil
+      local ambiguous = false
+      for _, durable in ipairs(self.durable) do
+        if not self.claimed[durable.id] and durable.hash ~= nil and durable.hash == region.hash then
+          if match ~= nil then ambiguous = true break end
+          match = durable
+        end
+      end
+      if match ~= nil and not ambiguous then
+        self.claimed[match.id] = true
+        self.assigned[match.id] = true
+        return match.id, "hash"
       end
     end
+
+    local used = {}
+    for _, durable in ipairs(self.durable) do
+      used[durable.id] = true
+    end
+    for id in pairs(self.assigned) do
+      used[id] = true
+    end
+    local id = M.generate(region.type or kind or "region", used, self.next_char)
+    self.assigned[id] = true
+    return id, "minted"
   end
 
-  local used = {}
-  for _, durable in ipairs(durable_regions) do
-    used[durable.id] = true
-  end
-  return M.generate(region.type or kind or "region", used), "minted"
+  return alloc
+end
+
+-- One-shot convenience over a fresh allocator. Correct only for a SINGLE
+-- claim: it cannot see ids handed to other regions, so multi-region renders
+-- must create one allocator for the whole document and claim() through it.
+function M.reuse(region, durable_regions, kind)
+  return M.allocator(durable_regions):claim(region, kind)
 end
 
 return M

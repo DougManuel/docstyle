@@ -71,7 +71,9 @@ end
 -- require the embedded ".<generation>" segment. Neither pattern can match
 -- an absolute path, a "..", or anything containing "/".
 local LOGICAL_NAME_PATTERN = "^[a-z][a-z0-9%-]*%.json$"
-local PHYSICAL_FILE_PATTERN = "^[a-z][a-z0-9%-]*%.%d+%.json$"
+-- (Physical names need no separate pattern constant: validate_manifest
+-- requires each entry's file to EQUAL physical_name(name, generation),
+-- which is strictly stronger than a shape check and pins the generation.)
 
 local function check_logical_name(name)
   if type(name) ~= "string" or not name:match(LOGICAL_NAME_PATTERN) then
@@ -95,19 +97,81 @@ local function physical_name(logical_name, generation)
   return base .. "." .. string.format("%d", generation) .. ".json"
 end
 
--- Parse manifest.json with no hash verification (used internally to
--- recover stateId/generation before writing the next one, and by M.read
--- before it hash-checks the referenced typed files). Distinguishes three
--- states: the file does not exist at all (nil -- a genuinely fresh store,
--- fine for commit() to start a new lineage); the file exists and parses to
--- a well-formed manifest (returned); or the file exists but is not a valid
--- manifest -- unparseable JSON, or parsed JSON missing stateId/generation.
--- The third case raises rather than being folded into "absent", because
--- treating a corrupt-but-present manifest as "no prior generation" would
--- let commit() start a brand-new random stateId at generation 1 while the
--- directory may still hold real typed files from a real prior generation
--- -- silently orphaning or shadowing them instead of surfacing the
--- corruption for a person to resolve.
+-- Full state-manifest.v1 contract validation, applied to every manifest
+-- read at BOTH boundaries (M.read, and the lineage read commit() performs
+-- before writing the next generation). A manifest that fails any check is
+-- structural corruption and RAISES -- the nil+errors channel that M.read
+-- exposes is reserved for a well-formed manifest whose referenced typed
+-- files are missing or stale ON DISK, which is a different failure class
+-- (the manifest is trustworthy; the world drifted). Checks: schemaVersion
+-- is exactly 1; stateId is 32 lowercase-hex characters; generation is an
+-- integral number >= 1; files is present with at least one entry; every
+-- entry's logical name passes containment, its physical file equals
+-- physical_name(name, generation) exactly (binding each entry to THIS
+-- manifest's generation -- a manifest edited to a different generation
+-- while still pointing at another generation's files fails here), its
+-- schema id agrees with its logical store, and its hash is a well-formed
+-- sha256 value; logical names are unique.
+local function validate_manifest(manifest, dir)
+  local function bad(msg)
+    error("manifest.json fails the state-manifest.v1 contract (" .. dir .. "): " .. msg)
+  end
+  if type(manifest) ~= "table" then bad("not a JSON object") end
+  if math.tointeger(manifest.schemaVersion) ~= 1 then
+    bad("schemaVersion must be 1, got " .. tostring(manifest.schemaVersion))
+  end
+  if type(manifest.stateId) ~= "string" or #manifest.stateId ~= 32
+    or not manifest.stateId:match("^[0-9a-f]+$") then
+    bad("stateId must be 32 lowercase hex characters")
+  end
+  local generation = math.tointeger(manifest.generation)
+  if generation == nil or generation < 1 then
+    bad("generation must be an integer >= 1, got " .. tostring(manifest.generation))
+  end
+  if type(manifest.files) ~= "table" then
+    bad("files collection is missing")
+  end
+  local n = 0
+  local seen = {}
+  for _, entry in ipairs(manifest.files) do
+    n = n + 1
+    if type(entry) ~= "table" then bad("files[" .. n .. "] is not an object") end
+    local name = entry.name
+    if type(name) ~= "string" or not name:match(LOGICAL_NAME_PATTERN) then
+      bad("files[" .. n .. "] logical name fails containment: " .. tostring(name))
+    end
+    if seen[name] then bad("duplicate logical name: " .. name) end
+    seen[name] = true
+    if entry.file ~= physical_name(name, generation) then
+      bad(name .. ": physical file '" .. tostring(entry.file) ..
+        "' does not belong to generation " .. generation ..
+        " (expected '" .. physical_name(name, generation) .. "')")
+    end
+    if entry.schema ~= schema_id_for(name) then
+      bad(name .. ": schema id '" .. tostring(entry.schema) ..
+        "' does not correspond to this logical store")
+    end
+    if type(entry.hash) ~= "string" or #entry.hash ~= 71
+      or not entry.hash:match("^sha256:[0-9a-f]+$") then
+      bad(name .. ": hash is not a well-formed sha256 value")
+    end
+  end
+  if n == 0 then bad("files collection is empty") end
+end
+
+-- Parse manifest.json with no hash verification of the referenced typed
+-- files (used internally to recover stateId/generation before writing the
+-- next generation, and by M.read before it hash-checks the files).
+-- Distinguishes three states: the file does not exist at all (nil -- a
+-- genuinely fresh store, fine for commit() to start a new lineage); the
+-- file exists and satisfies the full state-manifest.v1 contract
+-- (returned); or the file exists but is corrupt -- unparseable JSON or any
+-- contract violation. The third case raises rather than being folded into
+-- "absent", because treating a corrupt-but-present manifest as "no prior
+-- generation" would let commit() start a brand-new random stateId at
+-- generation 1 while the directory may still hold real typed files from a
+-- real prior generation -- silently orphaning or shadowing them instead of
+-- surfacing the corruption for a person to resolve.
 local function read_raw(dir)
   local f = io.open(dir .. "/manifest.json", "rb")
   if not f then return nil end
@@ -116,10 +180,7 @@ local function read_raw(dir)
   if not okflag then
     error("manifest.json exists but is not valid JSON (" .. dir .. "): " .. tostring(manifest))
   end
-  if type(manifest) ~= "table" or manifest.stateId == nil or manifest.generation == nil then
-    error("manifest.json exists but is missing stateId/generation (" .. dir ..
-      ") -- refusing to treat a corrupt manifest as a fresh store")
-  end
+  validate_manifest(manifest, dir)
   return manifest
 end
 
@@ -171,6 +232,9 @@ function M.commit(dir, files, opts)
     names[#names + 1] = name
   end
   table.sort(names)
+  if #names == 0 then
+    error("manifest: commit called with an empty files batch -- nothing to commit")
+  end
 
   -- Phase 1: write every typed file under a FRESH, generation-qualified
   -- physical name that no existing manifest references.
@@ -232,33 +296,27 @@ function M.commit(dir, files, opts)
 end
 
 -- read(dir) -> manifest | nil, errors
--- Validates every entry's logical `name` and physical `file` against the
--- path-containment allowlists, then re-hashes each entry's physical file
--- against the manifest's recorded hash; any containment violation, missing
--- file, or hash mismatch (stale or tampered file) is reported (labeled by
+-- read_raw has already enforced the full state-manifest.v1 contract
+-- (raising on structural corruption, including containment and
+-- generation/file binding), so every entry here is well-formed and its
+-- physical name is safe to open. This function's own job is the ON-DISK
+-- check: re-hash each entry's physical file against the manifest's
+-- recorded hash; a missing or stale/tampered file is reported (labeled by
 -- the entry's logical name) and the manifest is not returned.
 function M.read(dir)
   local manifest = read_raw(dir)
-  if not manifest then return nil, { "manifest.json not found or invalid" } end
+  if not manifest then return nil, { "manifest.json not found" } end
 
   local errors = {}
-  for _, entry in ipairs(manifest.files or {}) do
-    local label = tostring(entry.name)
-    if type(entry.name) ~= "string" or not entry.name:match(LOGICAL_NAME_PATTERN) then
-      errors[#errors + 1] = label .. ": logical name fails containment check"
-    elseif type(entry.file) ~= "string" or not entry.file:match(PHYSICAL_FILE_PATTERN) then
-      errors[#errors + 1] = label .. ": physical file name fails containment check (" ..
-        tostring(entry.file) .. ")"
+  for _, entry in ipairs(manifest.files) do
+    local f = io.open(dir .. "/" .. entry.file, "rb")
+    if not f then
+      errors[#errors + 1] = entry.name .. " (" .. entry.file .. "): file missing"
     else
-      local f = io.open(dir .. "/" .. entry.file, "rb")
-      if not f then
-        errors[#errors + 1] = label .. " (" .. entry.file .. "): file missing"
-      else
-        local bytes = f:read("a"); f:close()
-        local hash = "sha256:" .. sha.hex(bytes)
-        if hash ~= entry.hash then
-          errors[#errors + 1] = label .. ": hash mismatch (stale or tampered file)"
-        end
+      local bytes = f:read("a"); f:close()
+      local hash = "sha256:" .. sha.hex(bytes)
+      if hash ~= entry.hash then
+        errors[#errors + 1] = entry.name .. ": hash mismatch (stale or tampered file)"
       end
     end
   end

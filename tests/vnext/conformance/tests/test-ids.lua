@@ -80,4 +80,50 @@ return {
       -- a finite source shorter than six chars returns "" past its end
       assert(not pcall(ids.generate, "table", {}, charsource("abc")))
     end },
+  -- Document-scoped allocation (spec collision rule: an id must be unused
+  -- within the DOCUMENT and its durable state). allocator() shares
+  -- claimed/assigned sets across claims in one render; reuse() is a
+  -- one-shot wrapper over a fresh allocator and cannot see other regions.
+  { name = "allocator: two same-hash candidates cannot both claim one durable id", fn = function()
+      -- The reproduced defect: one durable entry, two distinct current
+      -- regions at different locations with the same content hash. The
+      -- first claim reuses the durable id; the second must NOT receive the
+      -- same id again -- it mints.
+      local durable = {
+        { id = "g-paragraph-aaaaaa", source = { file = "d.qmd", start = 1, ["end"] = 2 }, hash = "H" },
+      }
+      local alloc = ids.allocator(durable, { next_char = charsource("mmmmmm") })
+      local id1, o1 = alloc:claim({ type = "paragraph", source = { file = "d.qmd", start = 8, ["end"] = 9 }, hash = "H" })
+      local id2, o2 = alloc:claim({ type = "paragraph", source = { file = "d.qmd", start = 20, ["end"] = 21 }, hash = "H" })
+      assert(id1 == "g-paragraph-aaaaaa" and o1 == "hash", id1 .. "/" .. o1)
+      assert(id2 ~= id1 and o2 == "minted", "second claim must mint, got " .. id2 .. "/" .. o2)
+    end },
+  { name = "allocator: ambiguous durable hash matches mint rather than pick arbitrarily", fn = function()
+      -- Two durable entries share a hash; a single moved candidate matches
+      -- both. Identity is not inferable, so the claim mints instead of
+      -- selecting either entry.
+      local durable = {
+        { id = "g-table-first2", source = { file = "d.qmd", start = 1, ["end"] = 2 }, hash = "H" },
+        { id = "g-table-second", source = { file = "d.qmd", start = 5, ["end"] = 6 }, hash = "H" },
+      }
+      local alloc = ids.allocator(durable, { next_char = charsource("nnnnnn") })
+      local id, origin = alloc:claim({ type = "table", source = { file = "d.qmd", start = 30, ["end"] = 31 }, hash = "H" })
+      assert(origin == "minted", "ambiguous hash match must mint, got " .. id .. "/" .. origin)
+    end },
+  { name = "allocator: freshly minted ids reserve against one another", fn = function()
+      -- The injected source offers "aaaaaa" twice; the second mint must
+      -- redraw past the collision with the first mint's id.
+      local alloc = ids.allocator({}, { next_char = charsource("aaaaaaaaaaaabbbbbb") })
+      local id1 = alloc:claim({ type = "list", hash = "H1" })
+      local id2 = alloc:claim({ type = "list", hash = "H2" })
+      assert(id1 == "g-list-aaaaaa", id1)
+      assert(id2 == "g-list-bbbbbb", "second mint must redraw, got " .. id2)
+    end },
+  { name = "allocator: duplicate explicit ids in one document raise", fn = function()
+      local alloc = ids.allocator({})
+      local id = alloc:claim({ explicit_id = "abstract" })
+      assert(id == "abstract")
+      assert(not pcall(function() alloc:claim({ explicit_id = "abstract" }) end),
+        "second claim of the same explicit id must raise")
+    end },
 }

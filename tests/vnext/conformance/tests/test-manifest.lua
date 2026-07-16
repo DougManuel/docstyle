@@ -159,9 +159,71 @@ return {
         manifest.files[1].file = "../../etc/passwd"
         local out = assert(io.open(dir .. "/manifest.json", "wb"))
         out:write(json.encode(manifest)); out:close()
-        local man, errs = m.read(dir)
-        assert(man == nil, "expected read to reject a manifest entry with a path-traversal file name")
-        assert(errs[1]:match("regions.json"), "expected the error to name the offending logical entry")
+        -- A traversal path in an entry is manifest-structure corruption:
+        -- since full contract validation, corrupt structure RAISES (the
+        -- nil+errors channel is reserved for a well-formed manifest whose
+        -- referenced files are missing or stale on disk).
+        assert(not pcall(m.read, dir),
+          "expected read to raise on a manifest entry with a path-traversal file name")
+      end)
+    end },
+
+  -- Full manifest-contract validation at BOTH boundaries (read and the
+  -- read_raw commit() uses to establish lineage): a structurally invalid
+  -- manifest must raise, not be partially accepted.
+  { name = "manifest with its files collection removed fails closed on read and commit", fn = function()
+      pandoc.system.with_temporary_directory("wp1state", function(dir)
+        m.commit(dir, { ["regions.json"] = { schemaVersion = 1, regions = {} } })
+        local raw = assert(io.open(dir .. "/manifest.json", "rb"))
+        local manifest = json.decode(raw:read("a")); raw:close()
+        manifest.files = nil
+        local out = assert(io.open(dir .. "/manifest.json", "wb"))
+        out:write(json.encode(manifest)); out:close()
+        assert(not pcall(m.read, dir), "read must raise on a manifest missing its files collection")
+        assert(not pcall(m.commit, dir, { ["regions.json"] = { schemaVersion = 1 } }),
+          "commit must raise rather than build a new lineage on a files-less manifest")
+      end)
+    end },
+  { name = "manifest whose generation disagrees with its entries' physical files fails closed", fn = function()
+      pandoc.system.with_temporary_directory("wp1state", function(dir)
+        m.commit(dir, { ["regions.json"] = { schemaVersion = 1, regions = {} } })
+        local raw = assert(io.open(dir .. "/manifest.json", "rb"))
+        local manifest = json.decode(raw:read("a")); raw:close()
+        manifest.generation = 2 -- entries still point at regions.1.json
+        local out = assert(io.open(dir .. "/manifest.json", "wb"))
+        out:write(json.encode(manifest)); out:close()
+        assert(not pcall(m.read, dir),
+          "read must raise when entry.file does not equal physical_name(entry.name, generation)")
+        assert(not pcall(m.commit, dir, { ["regions.json"] = { schemaVersion = 1 } }),
+          "commit must raise on the same generation/file mismatch")
+      end)
+    end },
+  { name = "manifest with duplicate logical names fails closed", fn = function()
+      pandoc.system.with_temporary_directory("wp1state", function(dir)
+        m.commit(dir, { ["regions.json"] = { schemaVersion = 1, regions = {} } })
+        local raw = assert(io.open(dir .. "/manifest.json", "rb"))
+        local manifest = json.decode(raw:read("a")); raw:close()
+        manifest.files[2] = manifest.files[1]
+        local out = assert(io.open(dir .. "/manifest.json", "wb"))
+        out:write(json.encode(manifest)); out:close()
+        assert(not pcall(m.read, dir), "read must raise on duplicate logical names")
+      end)
+    end },
+  { name = "manifest entry whose schema id disagrees with its logical store fails closed", fn = function()
+      pandoc.system.with_temporary_directory("wp1state", function(dir)
+        m.commit(dir, { ["regions.json"] = { schemaVersion = 1, regions = {} } })
+        local raw = assert(io.open(dir .. "/manifest.json", "rb"))
+        local manifest = json.decode(raw:read("a")); raw:close()
+        manifest.files[1].schema = "https://dougmanuel.github.io/docstyle/schemas/state-citations.v1.json"
+        local out = assert(io.open(dir .. "/manifest.json", "wb"))
+        out:write(json.encode(manifest)); out:close()
+        assert(not pcall(m.read, dir), "read must raise when an entry's schema id does not match its logical store")
+      end)
+    end },
+  { name = "commit rejects an empty files batch", fn = function()
+      pandoc.system.with_temporary_directory("wp1state", function(dir)
+        assert(not pcall(m.commit, dir, {}),
+          "a commit with nothing to commit is a caller bug and must raise")
       end)
     end },
 
