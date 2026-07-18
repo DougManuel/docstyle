@@ -17,6 +17,7 @@
 - This plan implements the WP2 feasibility spike only. It does not authorize production OOXML integration, rendering, harvesting, CSS compilation or replacement of the legacy R engine.
 - Stage 1 is a hard programme gate. Tasks 4 to 10 must not begin until Tasks 1 to 3 show both metadata preflight and capped actual decompression on the Quarto-only path. If the gate fails, execute the no-go branch in Task 3 and stop.
 - The spike runtime is `quarto run`. It must work offline after checkout and must not load R, LuaRocks, a system Lua interpreter, a native shared library or an external ZIP executable.
+- The development and CI stack may use R, Python, native libraries and system utilities for fixture generation, independent oracles, differential testing, provenance capture and regression tests. Check in any resulting fixture or runtime input; the spike runner and future production path must not invoke or require those development tools.
 - Treat OOXML, ZIP metadata, relationships and field instructions as untrusted data. Never execute package content, follow an external relationship target or extract entries to caller-selected paths.
 - Namespace identity is `(namespace URI, local name)`. Prefixes are preserved lexical data, not identity.
 - Use typed diagnostics with stable codes. Tests assert codes and structured context, not complete prose.
