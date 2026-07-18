@@ -205,6 +205,7 @@ Relates to #31"
 
 **Files:**
 - Create: `dev/vnext/xml-spike/archive/inflate_limited.lua`
+- Create: `dev/vnext/xml-spike/archive/entry_reader.lua`
 - Create: `dev/vnext/xml-spike/archive/vendor/libdeflate/LibDeflate.lua`
 - Create: `dev/vnext/xml-spike/archive/vendor/libdeflate/LICENSE.txt`
 - Create: `dev/vnext/xml-spike/archive/vendor/libdeflate/PROVENANCE.md`
@@ -218,11 +219,11 @@ Relates to #31"
 - It checks `produced + next_chunk_bytes <= limit` before constructing or emitting the next chunk, retains no more than the 32 KiB DEFLATE history window plus bounded output chunks and returns the exact produced byte count.
 - `emit(chunk)` is called only after the budget check. An omitted `emit` collects output for ordinary package reads.
 
-- [ ] **Step 1: Vendor and verify the decompressor candidate**
+- [x] **Step 1: Vendor and verify the decompressor candidate**
 
 Vendor only upstream LibDeflate 1.0.2 source and licence at an immutable commit. Record the upstream and vendored SHA-256 values. The upstream `DecompressDeflate` API materializes a complete string and therefore is not itself acceptable for untrusted package reads; `LOCAL-CHANGES.md` must explain the bounded sink adaptation and link each changed internal routine to its test.
 
-- [ ] **Step 2: Write cap tests before adapting the code**
+- [x] **Step 2: Write cap tests before adapting the code**
 
 Use fixed checked-in hexadecimal vectors for stored, fixed and dynamic blocks, plus malformed Huffman trees, impossible distances, truncated streams and trailing data. Generate a high-ratio stream during the test from a small checked-in vector rather than committing a large expanded artifact.
 
@@ -235,15 +236,15 @@ For every block type, exercise limits `0`, `expected_length - 1`, `expected_leng
 
 Also add a backend probe showing that `pandoc.zip.Entry:contents()` returns the full expanded bytes and cannot accept an enforceable output cap. Record that as evidence, not as the selected read path.
 
-- [ ] **Step 3: Adapt the decoder to a bounded sink**
+- [x] **Step 3: Adapt the decoder to a bounded sink**
 
 Keep a circular 32 KiB history window. Split back-references into chunks no larger than 8 KiB and check budget before copying. Reject a distance greater than produced history and reject output-length arithmetic that cannot remain an exact Lua integer. The wrapper must never call upstream `DecompressDeflate`.
 
-- [ ] **Step 4: Integrate the read gate with preflight metadata**
+- [x] **Step 4: Integrate the read gate with preflight metadata**
 
 For stored entries, compare the compressed length with the declared uncompressed length and budget before slicing bytes. For deflated entries, pass both the per-entry remaining limit and the package-handle remaining limit to `inflate_raw`; use the smaller limit. Verify produced length against the central-directory declaration and record CRC-32 agreement as evidence.
 
-- [ ] **Step 5: Execute the formal gate decision**
+- [x] **Step 5: Execute the formal gate decision**
 
 Run:
 
@@ -255,7 +256,7 @@ Pass requires: safe metadata preflight, no backend call before validation, cappe
 
 If any requirement cannot be supported on the Quarto-only path, stop. Write `dev/vnext/xml-spike/decision-report.md` with runtime evidence, failed gate, attempted bounded layer, residual risk and a `no-go` recommendation; run the style checker and regression commands from Task 10; then request review. Do not execute Tasks 4 to 10 except the no-go verification portions of Task 10.
 
-- [ ] **Step 6: Commit the gate result**
+- [x] **Step 6: Commit the gate result**
 
 ```bash
 git add dev/vnext/xml-spike tests/vnext/xml-spike

@@ -27,7 +27,7 @@ end
 local function descriptor(entry, compressed_size, uncompressed_size)
   if not entry.descriptor then return "" end
   local signature = entry.descriptor_signature == false and "" or le32(0x08074B50)
-  local size_writer = entry.force_zip64 and le64 or le32
+  local size_writer = entry.zip64_sizes and le64 or le32
   return signature .. le32(entry.crc32 or 0) ..
     size_writer(entry.descriptor_compressed_size or compressed_size) ..
     size_writer(entry.descriptor_uncompressed_size or uncompressed_size)
@@ -49,6 +49,13 @@ function M.archive(entries, options)
     entry.method = entry.method or 0
     entry.flags = entry.flags or 0x0800
     if entry.descriptor then entry.flags = entry.flags | 0x0008 end
+    entry.zip64_uncompressed = entry.force_zip64 or
+      entry.zip64_uncompressed == true
+    entry.zip64_compressed = entry.force_zip64 or
+      entry.zip64_compressed == true
+    entry.zip64_offset = entry.force_zip64 or entry.zip64_offset == true
+    entry.zip64_sizes = entry.zip64_uncompressed or entry.zip64_compressed
+    entry.uses_zip64 = entry.zip64_sizes or entry.zip64_offset
     entry.local_flags = entry.local_flags or entry.flags
     entry.declared_compressed_size =
       entry.declared_compressed_size or #entry.compressed
@@ -65,30 +72,40 @@ function M.archive(entries, options)
     entry.comment = entry.comment or ""
     entry.local_offset = local_length
 
-    if entry.force_zip64 and not entry.omit_local_zip64_extra then
-      entry.local_extra = zip64_extra({
-        le64(entry.declared_uncompressed_size),
-        le64(entry.declared_compressed_size),
-      }) .. entry.local_extra
+    if entry.zip64_sizes and not entry.omit_local_zip64_extra then
+      local local_values = {}
+      if entry.zip64_uncompressed then
+        local_values[#local_values + 1] = le64(entry.declared_uncompressed_size)
+      end
+      if entry.zip64_compressed then
+        local_values[#local_values + 1] = le64(entry.declared_compressed_size)
+      end
+      entry.local_extra = zip64_extra(local_values) .. entry.local_extra
     end
-    if entry.force_zip64 and not entry.omit_central_zip64_extra then
-      entry.central_extra = zip64_extra({
-        le64(entry.declared_uncompressed_size),
-        le64(entry.declared_compressed_size),
-        le64(entry.local_offset),
-      }) .. entry.central_extra
+    if entry.uses_zip64 and not entry.omit_central_zip64_extra then
+      local central_values = {}
+      if entry.zip64_uncompressed then
+        central_values[#central_values + 1] = le64(entry.declared_uncompressed_size)
+      end
+      if entry.zip64_compressed then
+        central_values[#central_values + 1] = le64(entry.declared_compressed_size)
+      end
+      if entry.zip64_offset then
+        central_values[#central_values + 1] = le64(entry.local_offset)
+      end
+      entry.central_extra = zip64_extra(central_values) .. entry.central_extra
     end
 
     local local_header = table.concat({
       le32(0x04034B50),
-      le16(entry.version_needed or (entry.force_zip64 and 45 or 20)),
+      le16(entry.version_needed or (entry.uses_zip64 and 45 or 20)),
       le16(entry.local_flags),
       le16(entry.local_method or entry.method),
       le16(entry.mod_time or 0),
       le16(entry.mod_date or 0),
       le32(entry.local_crc32),
-      le32(entry.force_zip64 and 0xFFFFFFFF or entry.local_compressed_size),
-      le32(entry.force_zip64 and 0xFFFFFFFF or entry.local_uncompressed_size),
+      le32(entry.zip64_compressed and 0xFFFFFFFF or entry.local_compressed_size),
+      le32(entry.zip64_uncompressed and 0xFFFFFFFF or entry.local_uncompressed_size),
       le16(#entry.local_name),
       le16(#entry.local_extra),
       entry.local_name,
@@ -111,21 +128,21 @@ function M.archive(entries, options)
     local header = table.concat({
       le32(0x02014B50),
       le16(version_made),
-      le16(entry.version_needed or (entry.force_zip64 and 45 or 20)),
+      le16(entry.version_needed or (entry.uses_zip64 and 45 or 20)),
       le16(entry.flags),
       le16(entry.method),
       le16(entry.mod_time or 0),
       le16(entry.mod_date or 0),
       le32(entry.crc32 or 0),
-      le32(entry.force_zip64 and 0xFFFFFFFF or entry.declared_compressed_size),
-      le32(entry.force_zip64 and 0xFFFFFFFF or entry.declared_uncompressed_size),
+      le32(entry.zip64_compressed and 0xFFFFFFFF or entry.declared_compressed_size),
+      le32(entry.zip64_uncompressed and 0xFFFFFFFF or entry.declared_uncompressed_size),
       le16(#central_name),
       le16(#entry.central_extra),
       le16(#entry.comment),
       le16(entry.disk_start or 0),
       le16(entry.internal_attributes or 0),
       le32(entry.external_attributes or 0),
-      le32(entry.force_zip64 and 0xFFFFFFFF or
+      le32(entry.zip64_offset and 0xFFFFFFFF or
         (entry.central_local_offset or entry.local_offset)),
       central_name,
       entry.central_extra,

@@ -400,6 +400,8 @@ local function parse_central_entries(bytes, eocd, limits)
     local uses_zip64 = zip64_needs.uncompressed_size or
       zip64_needs.compressed_size or zip64_needs.local_header_offset or
       zip64_needs.disk_start
+    local uses_zip64_sizes = zip64_needs.uncompressed_size or
+      zip64_needs.compressed_size
     if uses_zip64 then
       local values = zip64_values(bytes, offset + 46 + name_length,
         extra_length, zip64_needs, context)
@@ -490,6 +492,7 @@ local function parse_central_entries(bytes, eocd, limits)
       modification_date = binary.u16le(bytes, offset + 14, context),
       external_attributes = external_attributes,
       uses_zip64 = uses_zip64,
+      uses_zip64_sizes = uses_zip64_sizes,
       central_span = { start = offset, finish = record_finish },
     }
     offset = record_finish
@@ -513,7 +516,7 @@ local function parse_descriptor(bytes, entry, offset, central_start)
   local cursor = offset + (has_signature and 4 or 0)
   local crc32 = binary.u32le(bytes, cursor, context)
   local compressed_size, uncompressed_size, finish
-  if entry.uses_zip64 then
+  if entry.uses_zip64_sizes then
     compressed_size = binary.u64le(bytes, cursor + 4, context)
     uncompressed_size = binary.u64le(bytes, cursor + 12, context)
     finish = cursor + 20

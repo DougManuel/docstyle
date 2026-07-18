@@ -14,7 +14,78 @@
       "_VERSION, pandoc.system.os, pandoc.system.arch"
     ]
   },
-  "candidates": [],
-  "fixtures": [],
-  "local_modifications": []
+  "candidates": [
+    {
+      "name": "LibDeflate",
+      "version": "1.0.2-release",
+      "upstream_repository": "https://github.com/SafeteeWoW/LibDeflate",
+      "tag_object": "650e91c8000b38a3659c78e871c6d8647e6ac297",
+      "commit": "6831edcaa915154e7769d622e0de72ee5d25a882",
+      "license": "zlib",
+      "upstream_source_sha256": "76f2114e527c2be1ac5cf768a68084946a3e19f63592834640020b7c9b5a450f",
+      "vendored_source_sha256": "910ce3f61f32bc5114085f30175128d64284c4ea49d02d53b97ce6388fe4c0c0",
+      "upstream_license_sha256": "acbecf8578f4febb766a1dd0217336e2e7ec19e66d13c907e38b01b1b727d7df",
+      "vendored_license_sha256": "acbecf8578f4febb766a1dd0217336e2e7ec19e66d13c907e38b01b1b727d7df",
+      "selected_path": "DecompressDeflateLimited via archive.inflate_limited",
+      "excluded_path": "DecompressDeflate full-string API"
+    },
+    {
+      "name": "pandoc.zip.Entry:contents",
+      "version": "Pandoc 3.8.3 bundled with Quarto 1.9.26",
+      "license": "GPL-2.0-or-later",
+      "selected_path": null,
+      "excluded_reason": "Materializes complete expanded entry bytes and exposes no enforceable output-byte cap"
+    }
+  ],
+  "fixtures": [
+    {
+      "name": "raw DEFLATE hexadecimal vectors",
+      "generator": "Python 3.14.5 zlib module",
+      "zlib_build_version": "1.2.12",
+      "zlib_runtime_version": "1.2.12",
+      "modes": [
+        "stored",
+        "fixed Huffman",
+        "dynamic Huffman",
+        "high ratio"
+      ],
+      "location": "tests/vnext/xml-spike/tests/test-inflate-limit.lua"
+    }
+  ],
+  "local_modifications": [
+    {
+      "file": "dev/vnext/xml-spike/archive/vendor/libdeflate/LibDeflate.lua",
+      "description": "Separate bounded raw-DEFLATE sink with exact output accounting and a 32 KiB circular history window",
+      "details": "dev/vnext/xml-spike/archive/vendor/libdeflate/LOCAL-CHANGES.md"
+    },
+    {
+      "file": "dev/vnext/xml-spike/archive/inflate_limited.lua",
+      "description": "Stable diagnostic wrapper for the bounded decoder"
+    },
+    {
+      "file": "dev/vnext/xml-spike/archive/entry_reader.lua",
+      "description": "Budgeted stored/deflated entry reads with length and CRC-32 verification"
+    }
+  ],
+  "stage_1_gate": {
+    "decision": "pass",
+    "date": "2026-07-18",
+    "command": "DOCSTYLE_SPIKE_STAGE=archive quarto run tests/vnext/xml-spike/run.lua",
+    "result": {
+      "pass": 80,
+      "fail": 0,
+      "archive_gate_pass": 37,
+      "safety_gate_pass": 43
+    },
+    "criteria": {
+      "metadata_preflight_before_backend": true,
+      "stored_output_capped_before_slice": true,
+      "deflated_output_capped_before_construction_or_emit": true,
+      "history_window_bytes": 32768,
+      "maximum_output_chunk_bytes": 8192,
+      "declared_length_verified": true,
+      "crc32_verified": true,
+      "pandoc_zip_full_materialization_excluded": true
+    }
+  }
 }

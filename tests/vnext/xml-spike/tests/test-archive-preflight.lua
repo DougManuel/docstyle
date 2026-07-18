@@ -659,6 +659,30 @@ return {
     end,
   },
   {
+    name = "offset-only ZIP64 entries keep 32-bit descriptor sizes",
+    gate = "archive",
+    stage = "archive",
+    fn = function()
+      for _, signed in ipairs({ true, false }) do
+        local bytes = vectors.archive({ {
+          name = "word/document.xml",
+          data = "abcd",
+          zip64_offset = true,
+          descriptor = true,
+          descriptor_signature = signed,
+        } })
+        with_archive(bytes, function(path)
+          local result = preflight.open_path(path, limits())
+          local entry = result.entries[1]
+          assert(entry.uses_zip64 == true)
+          assert(entry.uses_zip64_sizes == false)
+          assert(entry.descriptor_length == (signed and 16 or 12))
+          assert(entry.local_span.finish == result.central_directory.start)
+        end)
+      end
+    end,
+  },
+  {
     name = "ZIP64 locator must point to a complete adjacent EOCD record",
     gate = "safety",
     stage = "archive",
