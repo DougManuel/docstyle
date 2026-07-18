@@ -109,12 +109,12 @@ package.path = table.concat({
   root .. "/dev/vnext/xml-spike/?/init.lua",
 }, ";")
 
-local stage = (arg and arg[1]) or "all"
-local options = { reference_performance = arg and arg[2] == "--reference-performance" }
-require("lib.harness").discover_and_run(here, stage, options)
+local harness = require("lib.harness")
+local stage, options = harness.runner_options(os.getenv)
+harness.discover_and_run(here, stage, options)
 ```
 
-Do not append the ambient `package.path`. Stage values are `archive`, `xml`, `package` and `all`; reference performance is enabled only by a second `--reference-performance` argument. The runner prints one line per gate and a final `PASS n | FAIL n | SKIP n`; it fails if discovery count is zero.
+Do not append the ambient `package.path`. The canonical command runs stage `all`. Developer-only stage values `archive`, `xml`, `package` and `all` are selected with `DOCSTYLE_SPIKE_STAGE`; reference performance is enabled with `DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1`. Quarto 1.9.26 forwards extra Lua-script arguments to Pandoc as input filenames, so the runner does not use positional arguments. The runner prints one line per gate and a final `PASS n | FAIL n | SKIP n`; it fails if discovery count is zero.
 
 - [ ] **Step 3: Add a complete provenance schema instance**
 
@@ -125,7 +125,7 @@ Create a JSON object with `runtime`, `candidates`, `fixtures` and `local_modific
 Run:
 
 ```bash
-env -i PATH="$PATH" HOME="$(mktemp -d)" quarto run tests/vnext/xml-spike/run.lua archive
+env -i PATH="$PATH" HOME="$(mktemp -d)" DOCSTYLE_SPIKE_STAGE=archive quarto run tests/vnext/xml-spike/run.lua
 ```
 
 Expected: non-zero test count, runner self-tests pass, no network access and `PASS n | FAIL 0 | SKIP 0`.
@@ -186,7 +186,7 @@ Instrument the archive constructor in the test harness. For every malformed vect
 
 - [ ] **Step 4: Run the archive metadata gate**
 
-Run: `quarto run tests/vnext/xml-spike/run.lua archive`
+Run: `DOCSTYLE_SPIKE_STAGE=archive quarto run tests/vnext/xml-spike/run.lua`
 
 Expected: all preflight tests pass; decompression tests from Task 3 are still absent, so the archive stage is not yet declared passed in the decision report.
 
@@ -248,7 +248,7 @@ For stored entries, compare the compressed length with the declared uncompressed
 Run:
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua archive
+DOCSTYLE_SPIKE_STAGE=archive quarto run tests/vnext/xml-spike/run.lua
 ```
 
 Pass requires: safe metadata preflight, no backend call before validation, capped stored and deflated output, and no allocation or emit beyond the configured cap.
@@ -300,7 +300,7 @@ For UTF-16, maintain a code-point-to-original-byte map that includes BOM and sur
 - [ ] **Step 4: Run and commit**
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua xml
+DOCSTYLE_SPIKE_STAGE=xml quarto run tests/vnext/xml-spike/run.lua
 git add dev/vnext/xml-spike/candidates tests/vnext/xml-spike
 git commit -m "Add independent XML oracle and conformance fixtures
 
@@ -355,7 +355,7 @@ Record vendored lines, Docstyle-owned adapter/strictness/overlay lines, dependen
 - [ ] **Step 5: Run and commit**
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua xml
+DOCSTYLE_SPIKE_STAGE=xml quarto run tests/vnext/xml-spike/run.lua
 git add dev/vnext/xml-spike/candidates/slaxml dev/vnext/xml-spike/provenance.json tests/vnext/xml-spike
 git commit -m "Evaluate hardened SLAXML for bounded OOXML edits
 
@@ -395,7 +395,7 @@ Reject every candidate with an applicable hard-gate failure. If neither A nor B 
 - [ ] **Step 5: Run and commit**
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua xml
+DOCSTYLE_SPIKE_STAGE=xml quarto run tests/vnext/xml-spike/run.lua
 git add dev/vnext/xml-spike/candidates/luaxml dev/vnext/xml-spike/provenance.json tests/vnext/xml-spike
 git commit -m "Compare LuaXML through the WP2 adapter contract
 
@@ -444,7 +444,7 @@ The handle reads only compressed byte ranges identified by `zip_preflight`; it n
 - [ ] **Step 5: Run and commit**
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua package
+DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua
 git add dev/vnext/xml-spike/archive/opc.lua tests/vnext/xml-spike
 git commit -m "Add the spike-only bounded OPC package seam
 
@@ -485,7 +485,7 @@ Inject failures after archive construction, after close, after verification and 
 - [ ] **Step 5: Run and commit**
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua package
+DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua
 git add dev/vnext/xml-spike/archive/writer.lua dev/vnext/xml-spike/provenance.json tests/vnext/xml-spike
 git commit -m "Add office preservation and atomic publication evidence
 
@@ -511,7 +511,7 @@ Generate one, five and 10 MiB XML parts with representative `w:p`, `w:r`, `w:t`,
 
 Run one unreported warm-up and five repetitions per size. Use `pandoc.system.cputime()` around parse, one edit and serialization separately and report median combined CPU time. Force collection before baseline and after each phase; report the maximum retained Lua heap delta as `max(0, observed_kib - initial_kib) * 1024`. Label it retained Lua heap, never peak memory.
 
-Record Quarto, Pandoc, Lua, operating system, architecture, Mac model, processor and installed memory. Do not make performance thresholds ordinary CI assertions; enable them with the runner's second `--reference-performance` argument on the recorded reference Mac.
+Record Quarto, Pandoc, Lua, operating system, architecture, Mac model, processor and installed memory. Do not make performance thresholds ordinary CI assertions; enable them with `DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1` on the recorded reference Mac.
 
 - [ ] **Step 3: Run ten genuinely fresh publication processes**
 
@@ -524,8 +524,8 @@ On the reference environment, the 10 MiB median combined CPU time is at most fiv
 - [ ] **Step 5: Run and commit**
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua all
-quarto run tests/vnext/xml-spike/run.lua all --reference-performance
+quarto run tests/vnext/xml-spike/run.lua
+DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1 quarto run tests/vnext/xml-spike/run.lua
 git add tests/vnext/xml-spike dev/vnext/xml-spike/performance-results.json dev/vnext/xml-spike/determinism-results.json
 git commit -m "Record WP2 determinism and scaling evidence
 
@@ -561,7 +561,7 @@ Expected: no matches.
 - [ ] **Step 4: Run final verification**
 
 ```bash
-quarto run tests/vnext/xml-spike/run.lua all
+quarto run tests/vnext/xml-spike/run.lua
 quarto run tests/vnext/conformance/run.lua
 env R_PROFILE_USER=/dev/null Rscript -e 'devtools::test(stop_on_failure = TRUE)'
 git diff --exit-code main -- tests/vnext/fixtures/
