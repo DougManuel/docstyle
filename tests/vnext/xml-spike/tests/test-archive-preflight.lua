@@ -437,6 +437,23 @@ return {
     end,
   },
   {
+    name = "symlink mode bits fail closed despite a spoofed creator host",
+    gate = "safety",
+    stage = "archive",
+    fn = function()
+      local bytes = vectors.archive({ {
+        name = "word/spoofed-link.xml",
+        made_by_os = 0,
+        external_attributes = 0xA000 << 16,
+      } })
+      with_archive(bytes, function(path)
+        expect_code("zip.symlink-entry", function()
+          preflight.open_path(path, limits())
+        end)
+      end)
+    end,
+  },
+  {
     name = "every central name must match its local header before backend construction",
     gate = "safety",
     stage = "archive",
@@ -818,6 +835,28 @@ return {
       local invalid = {
         "word/a%2.xml", "word/a%GG.xml", "word/a%2F.xml",
         "word/a%5c.xml", "word/a%00.xml", "word/a.", "word/...",
+      }
+      for _, name in ipairs(invalid) do
+        local bytes = vectors.archive({ { name = name } })
+        with_archive(bytes, function(path)
+          expect_code("zip.invalid-name", function()
+            preflight.open_path(path, limits())
+          end)
+        end)
+      end
+    end,
+  },
+  {
+    name = "OPC part names reject percent-encoded unreserved characters",
+    gate = "safety",
+    stage = "archive",
+    fn = function()
+      local invalid = {
+        "word/%2E.xml",
+        "word/%2e%2e/outside.xml",
+        "word/.%2e/outside.xml",
+        "word/%41.xml",
+        "word/%7E.xml",
       }
       for _, name in ipairs(invalid) do
         local bytes = vectors.archive({ { name = name } })

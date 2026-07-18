@@ -72,10 +72,10 @@
     "date": "2026-07-18",
     "command": "DOCSTYLE_SPIKE_STAGE=archive quarto run tests/vnext/xml-spike/run.lua",
     "result": {
-      "pass": 83,
+      "pass": 85,
       "fail": 0,
       "archive_gate_pass": 37,
-      "safety_gate_pass": 46
+      "safety_gate_pass": 48
     },
     "criteria": {
       "metadata_preflight_before_backend": true,
@@ -87,6 +87,8 @@
       "crc32_verified": true,
       "single_handle_bounded_archive_read": true,
       "adjacent_zip64_reconciled": true,
+      "opc_part_name_percent_encoding_verified": true,
+      "symlink_mode_bits_verified": true,
       "vendored_hashes_verified": true,
       "pandoc_zip_full_materialization_excluded": true
     }

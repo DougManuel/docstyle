@@ -149,6 +149,13 @@ local function ascii_lower(value)
   end))
 end
 
+local function is_ascii_unreserved(octet)
+  return (octet >= 0x41 and octet <= 0x5A) or
+    (octet >= 0x61 and octet <= 0x7A) or
+    (octet >= 0x30 and octet <= 0x39) or
+    octet == 0x2D or octet == 0x2E or octet == 0x5F or octet == 0x7E
+end
+
 local function validate_entry_name(name, context)
   if name:find("\0", 1, true) or name:find("\\", 1, true) or
       name:sub(1, 1) == "/" or name:match("^[A-Za-z]:") then
@@ -175,7 +182,7 @@ local function validate_entry_name(name, context)
       end
       local octet = tonumber(encoded, 16)
       if octet == 0 or octet == 0x2F or octet == 0x5C or
-          octet < 0x20 or octet == 0x7F then
+          octet < 0x20 or octet == 0x7F or is_ascii_unreserved(octet) then
         raise("zip.invalid-name", "OPC part name encodes a forbidden octet", context)
       end
       cursor = percent + 3
@@ -470,11 +477,9 @@ local function parse_central_entries(bytes, eocd, limits)
         flags = flags,
       })
     end
-    local version_made = binary.u16le(bytes, offset + 4, context)
-    local made_by_os = version_made >> 8
     local external_attributes = binary.u32le(bytes, offset + 38, context)
     local unix_mode = external_attributes >> 16
-    if made_by_os == 3 and (unix_mode & 0xF000) == 0xA000 then
+    if (unix_mode & 0xF000) == 0xA000 then
       raise("zip.symlink-entry", "symlink ZIP entry is unsupported", { entry = name })
     end
     if uncompressed_size > limits.max_entry_uncompressed_bytes then
