@@ -91,11 +91,11 @@ The oracle and candidate adapters may share diagnostic shapes and fixture data. 
 - `diagnostic.raise(code, message, context)` raises `{docstyle_diagnostic=true, code=..., message=..., context=...}`.
 - `diagnostic.capture(fn)` returns `ok, value_or_diagnostic` and preserves stable codes.
 
-- [ ] **Step 1: Write the runner tests first**
+- [x] **Step 1: Write the runner tests first**
 
 Cover: non-zero discovery, stable alphabetical test order, all six summary groups, duplicate case-name rejection, structured diagnostic capture, a non-zero exit on failure and stage filtering. Stage values are `archive`, `xml`, `package` and `all`; later stages include earlier gates.
 
-- [ ] **Step 2: Implement the runner**
+- [x] **Step 2: Implement the runner**
 
 `run.lua` must set `package.path` explicitly from `PANDOC_SCRIPT_FILE`, without consulting environment paths:
 
@@ -116,11 +116,11 @@ harness.discover_and_run(here, stage, options)
 
 Do not append the ambient `package.path`. The canonical command runs stage `all`. Developer-only stage values `archive`, `xml`, `package` and `all` are selected with `DOCSTYLE_SPIKE_STAGE`; reference performance is enabled with `DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1`. Quarto 1.9.26 forwards extra Lua-script arguments to Pandoc as input filenames, so the runner does not use positional arguments. The runner prints one line per gate and a final `PASS n | FAIL n | SKIP n`; it fails if discovery count is zero.
 
-- [ ] **Step 3: Add a complete provenance schema instance**
+- [x] **Step 3: Add a complete provenance schema instance**
 
 Create a JSON object with `runtime`, `candidates`, `fixtures` and `local_modifications` arrays. Initial runtime fields are populated by `quarto --version`, `quarto pandoc --version`, `uname -srm` and Lua `_VERSION`. Candidate rows may be added only in the commit that vendors their source. No row may contain an unresolved marker, an empty commit or an unverified hash.
 
-- [ ] **Step 4: Verify the hermetic runner**
+- [x] **Step 4: Verify the hermetic runner**
 
 Run:
 
@@ -130,7 +130,7 @@ env -i PATH="$PATH" HOME="$(mktemp -d)" DOCSTYLE_SPIKE_STAGE=archive quarto run 
 
 Expected: non-zero test count, runner self-tests pass, no network access and `PASS n | FAIL 0 | SKIP 0`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/vnext/xml-spike dev/vnext/xml-spike/lib dev/vnext/xml-spike/provenance.json
@@ -154,7 +154,7 @@ Relates to #31"
 - `zip_preflight.open_path(path, limits)` checks file size before reading and returns immutable metadata only after every entry and span validates.
 - Metadata rows contain exact central and local names, flags, method, CRC-32, compressed and declared uncompressed sizes, local-header offset, compressed-data offset, descriptor length and complete half-open local-entry span.
 
-- [ ] **Step 1: Create deterministic binary-vector helpers and failing tests**
+- [x] **Step 1: Create deterministic binary-vector helpers and failing tests**
 
 Build compact archives in Lua from explicit little-endian fields. Do not invoke `zip`, Python or R. Cases must cover:
 
@@ -174,23 +174,23 @@ Build compact archives in Lua from explicit little-endian fields. Do not invoke 
 
 Each failure asserts a stable code and, where available, entry name and byte offset. Include a quadratic-regression fixture with 2,000 empty entries; validation must sort spans once and compare adjacent ranges rather than compare every pair.
 
-- [ ] **Step 2: Implement checked ZIP parsing**
+- [x] **Step 2: Implement checked ZIP parsing**
 
 Parse EOCD and ZIP64 records before constructing any `pandoc.zip` object. Reject unsupported methods other than stored (`0`) and deflate (`8`). Use checked addition before every `offset + length`; never allow a floating-point approximation. Validate every central row against its local header before returning metadata.
 
 Sort complete local-entry spans by start offset and reject a span when `current.start < previous.finish`. Independently require every span to end at or before `central_directory.start`. Central-directory, ZIP64 and EOCD metadata ranges must be non-overlapping and fully in bounds.
 
-- [ ] **Step 3: Show that preflight precedes the backend**
+- [x] **Step 3: Show that preflight precedes the backend**
 
 Instrument the archive constructor in the test harness. For every malformed vector, assert that the constructor call count remains zero. For a valid archive, assert exactly one constructor call after all-entry validation.
 
-- [ ] **Step 4: Run the archive metadata gate**
+- [x] **Step 4: Run the archive metadata gate**
 
 Run: `DOCSTYLE_SPIKE_STAGE=archive quarto run tests/vnext/xml-spike/run.lua`
 
 Expected: all preflight tests pass; decompression tests from Task 3 are still absent, so the archive stage is not yet declared passed in the decision report.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add dev/vnext/xml-spike/lib/binary.lua dev/vnext/xml-spike/archive/zip_preflight.lua tests/vnext/xml-spike
