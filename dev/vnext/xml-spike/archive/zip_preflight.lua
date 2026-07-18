@@ -61,28 +61,52 @@ local function validate_limits(limits)
   end
 end
 
-local function file_size(path)
+local function read_file_bounded(path, max_archive_bytes)
   local handle, err = io.open(path, "rb")
   if not handle then raise("zip.open-failed", tostring(err), { path = path }) end
   local size, seek_err = handle:seek("end")
+  if not size then
+    handle:close()
+    raise("zip.open-failed", tostring(seek_err), { path = path })
+  end
+  if size > max_archive_bytes then
+    handle:close()
+    raise("zip.archive-size-limit", "compressed archive size limit exceeded", {
+      path = path,
+      actual = size,
+      limit = max_archive_bytes,
+    })
+  end
+  local position, rewind_err = handle:seek("set", 0)
+  if not position then
+    handle:close()
+    raise("zip.open-failed", tostring(rewind_err), { path = path })
+  end
+  if size == math.maxinteger then
+    handle:close()
+    checked_end(size, 1, {
+      path = path,
+      record = "archive-read",
+    })
+  end
+  local read_limit = checked_end(size, 1, {
+    path = path,
+    record = "archive-read",
+  })
+  local bytes, read_err = handle:read(read_limit)
   handle:close()
-  if not size then raise("zip.open-failed", tostring(seek_err), { path = path }) end
-  return size
-end
-
-local function read_file(path, expected_size)
-  local handle, err = io.open(path, "rb")
-  if not handle then raise("zip.open-failed", tostring(err), { path = path }) end
-  local bytes = handle:read("a")
-  handle:close()
-  if #bytes ~= expected_size then
+  if bytes == nil and read_err == nil then bytes = "" end
+  if bytes == nil then
+    raise("zip.open-failed", tostring(read_err), { path = path })
+  end
+  if #bytes ~= size then
     raise("zip.file-changed", "archive size changed during preflight", {
       path = path,
-      before = expected_size,
+      before = size,
       after = #bytes,
     })
   end
-  return bytes
+  return bytes, size
 end
 
 local function find_eocd(bytes)
@@ -635,19 +659,19 @@ end
 function M.open_path(path, limits, options)
   options = options or {}
   validate_limits(limits)
-  local size = file_size(path)
-  if size > limits.max_archive_bytes then
-    raise("zip.archive-size-limit", "compressed archive size limit exceeded", {
-      path = path,
-      actual = size,
-      limit = limits.max_archive_bytes,
-    })
-  end
-  local bytes = read_file(path, size)
+  local bytes, size = read_file_bounded(path, limits.max_archive_bytes)
   local eocd_offset, comment_length = find_eocd(bytes)
   local eocd = parse_eocd(bytes, eocd_offset, comment_length)
   local zip64
-  if eocd.requires_zip64 then zip64 = parse_zip64(bytes, eocd) end
+  local locator_start = eocd.start - 20
+  local has_zip64_locator = locator_start >= 0 and
+    binary.u32le(bytes, locator_start, {
+      record = "ZIP64-locator",
+      offset = locator_start,
+    }) == SIG_ZIP64_LOCATOR
+  if eocd.requires_zip64 or has_zip64_locator then
+    zip64 = parse_zip64(bytes, eocd)
+  end
   local entries, central = parse_central_entries(bytes, eocd, limits)
   parse_local_entries(bytes, entries, central.start)
 

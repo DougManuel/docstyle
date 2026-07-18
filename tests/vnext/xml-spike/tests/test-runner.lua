@@ -243,4 +243,41 @@ return {
       assert(type(value.local_modifications) == "table")
     end,
   },
+  {
+    name = "provenance hashes match the vendored source and licence",
+    gate = "safety",
+    stage = "archive",
+    fn = function()
+      local here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
+      local root = pandoc.path.normalize(pandoc.path.join({
+        here, "..", "..", "..",
+      }))
+      local provenance_path = pandoc.path.join({
+        root, "dev", "vnext", "xml-spike", "provenance.json",
+      })
+      local provenance = pandoc.json.decode(
+        fixture.read_bytes(provenance_path), false)
+      local libdeflate
+      for _, candidate in ipairs(provenance.candidates) do
+        if candidate.name == "LibDeflate" then libdeflate = candidate end
+      end
+      assert(libdeflate, "LibDeflate provenance record is required")
+
+      local sha256 = dofile(pandoc.path.join({
+        root, "tests", "vnext", "conformance", "lib", "sha256.lua",
+      }))
+      local vendor_root = pandoc.path.join({
+        root, "dev", "vnext", "xml-spike", "archive", "vendor", "libdeflate",
+      })
+      local source_hash = sha256.hex(fixture.read_bytes(
+        pandoc.path.join({ vendor_root, "LibDeflate.lua" })))
+      local licence_hash = sha256.hex(fixture.read_bytes(
+        pandoc.path.join({ vendor_root, "LICENSE.txt" })))
+
+      assert(source_hash == libdeflate.vendored_source_sha256,
+        "vendored LibDeflate source hash does not match provenance")
+      assert(licence_hash == libdeflate.vendored_license_sha256,
+        "vendored LibDeflate licence hash does not match provenance")
+    end,
+  },
 }

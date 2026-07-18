@@ -39,6 +39,15 @@ local function expect_code(code, fn)
   return err
 end
 
+local function with_open_override(open_fn, fn)
+  local original = io.open
+  io.open = open_fn
+  local results = table.pack(pcall(fn))
+  io.open = original
+  if not results[1] then error(results[2], 0) end
+  return table.unpack(results, 2, results.n)
+end
+
 return {
   {
     name = "little-endian readers use zero-based offsets",
@@ -126,6 +135,70 @@ return {
           assert(entry.local_span.start < entry.local_span.finish)
           assert(entry.local_span.finish <= result.central_directory.start)
         end
+      end)
+    end,
+  },
+  {
+    name = "archive growth is detected through one bounded handle",
+    gate = "safety",
+    stage = "archive",
+    fn = function()
+      local bytes = vectors.archive({ {
+        name = "word/document.xml",
+        data = "x",
+      } })
+      local calls, closes, read_limit = 0, 0, nil
+      local cursor = 0
+      local handle = {}
+      function handle:seek(whence, offset)
+        if whence == "end" then
+          cursor = #bytes
+          return cursor
+        end
+        assert(whence == "set" and offset == 0,
+          "archive reader must rewind the validated handle")
+        cursor = 0
+        return cursor
+      end
+      function handle:read(limit)
+        assert(cursor == 0, "archive reader must rewind before reading")
+        assert(type(limit) == "number", "archive read must be byte-bounded")
+        read_limit = limit
+        cursor = #bytes + 1
+        return bytes .. "x"
+      end
+      function handle:close()
+        closes = closes + 1
+        return true
+      end
+
+      local err = with_open_override(function(path, mode)
+        calls = calls + 1
+        assert(calls == 1, "archive path must be opened exactly once")
+        assert(path == "virtual.docx" and mode == "rb")
+        return handle
+      end, function()
+        return expect_code("zip.file-changed", function()
+          preflight.open_path("virtual.docx", limits())
+        end)
+      end)
+
+      assert(err.context.before == #bytes)
+      assert(err.context.after == #bytes + 1)
+      assert(calls == 1 and closes == 1)
+      assert(read_limit == #bytes + 1,
+        "archive read must probe at most one byte beyond observed size")
+    end,
+  },
+  {
+    name = "empty archive reaches EOCD validation after bounded read",
+    gate = "safety",
+    stage = "archive",
+    fn = function()
+      with_archive("", function(path)
+        expect_code("zip.eocd-not-found", function()
+          preflight.open_path(path, limits())
+        end)
       end)
     end,
   },
@@ -880,13 +953,17 @@ return {
     gate = "safety",
     stage = "archive",
     fn = function()
-      local bytes = vectors.archive({ {
+      local entry = {
         name = "word/document.xml",
         force_zip64 = true,
-      } }, {
+      }
+      local _, info = vectors.archive({ entry }, { zip64 = true })
+      local bytes = vectors.archive({ entry }, {
         zip64 = true,
         entries_on_disk = 1,
         total_entries = 1,
+        central_size = info.central_size,
+        central_offset = info.central_offset,
         zip64_entries_on_disk = 2,
         zip64_total_entries = 2,
       })
