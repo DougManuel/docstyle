@@ -60,7 +60,8 @@ The spike will not:
 
 The following constraints are hard gates:
 
-- The contributor and user path is Quarto-only: QMD, Lua and Pandoc.
+- The production and end-user execution path is Quarto-only: QMD, Lua and Pandoc. It does not require R, Python, LuaRocks, a system Lua installation, a native shared library or an external ZIP executable.
+- Development and CI may use R, Python, native libraries and system utilities for fixture generation, independent oracles, differential testing, provenance capture and regression tests. Any resulting fixture or runtime input must be checked in, and neither the executable spike nor a future production path may invoke those development tools.
 - The spike runs offline after checkout. Candidate code is vendored with version, commit, licence and provenance records.
 - OOXML and field-code content is untrusted data. The spike never executes payload content, follows external targets or expands custom entities.
 - Namespace identity is the pair `(namespace URI, local name)`. Source prefixes are preserved where required but never trusted as identity.
