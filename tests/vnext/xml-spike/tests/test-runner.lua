@@ -171,6 +171,21 @@ return {
     end,
   },
   {
+    name = "registry returns machine-readable candidate evidence",
+    gate = "archive",
+    stage = "archive",
+    fn = function()
+      local registry = harness.new()
+      registry:result("slaxml", {
+        candidate = "SLAXML",
+        dependency_count = 1,
+      })
+      local summary = registry:run("archive", { quiet = true })
+      assert(summary.results.slaxml.candidate == "SLAXML")
+      assert(summary.results.slaxml.dependency_count == 1)
+    end,
+  },
+  {
     name = "failed case produces non-success summary and assertion",
     gate = "archive",
     stage = "archive",

@@ -336,25 +336,25 @@ adapter.replace_text(nodes[1], new_text)
 xml_bytes, edit_ranges = adapter.serialize(document)
 ```
 
-- [ ] **Step 1: Vendor the minimum immutable SLAXML source**
+- [x] **Step 1: Vendor the minimum immutable SLAXML source**
 
 Pin the reviewed v0.8-series commit, licence and hashes. Do not vendor its test directory or serializer. Record its documented well-formedness, declaration, Unicode-name, charset and namespace-serialization limitations in provenance.
 
-- [ ] **Step 2: Run the shared fixture table as failing adapter tests**
+- [x] **Step 2: Run the shared fixture table as failing adapter tests**
 
 The adapter test module iterates the same rows as Task 4. It must not copy expected values into candidate-specific tests. Every edit is verified by `oracle.verify_edit`; the adapter's own parser is never the sole semantic judge.
 
-- [ ] **Step 3: Add the strictness and byte-span overlay**
+- [x] **Step 3: Add the strictness and byte-span overlay**
 
 SLAXML supplies semantic events only. The Docstyle overlay records exact original spans and enforces hierarchy, declarations, entity syntax, XML names, namespace bindings, duplicate expanded-name attributes and all parse limits before returning a document. Candidate serialization concatenates untouched source spans with one deterministically escaped replacement span; it never invokes SLAXML's DOM serializer.
 
 Attribute replacement preserves quote delimiter and writes tab, line feed and carriage return as numeric references. Ordinary text replacement writes carriage return as `&#xD;` and escapes any `>` needed to avoid `]]>`.
 
-- [ ] **Step 4: Measure candidate-specific maintenance evidence**
+- [x] **Step 4: Measure candidate-specific maintenance evidence**
 
 Record vendored lines, Docstyle-owned adapter/strictness/overlay lines, dependency count, unsupported constructs and all rejected fixture rows in a machine-readable result returned by the runner.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 ```bash
 DOCSTYLE_SPIKE_STAGE=xml quarto run tests/vnext/xml-spike/run.lua
