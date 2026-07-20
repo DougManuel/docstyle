@@ -283,23 +283,23 @@ Relates to #31"
 - `oracle.verify_edit(original, edited, golden_range, expected_change)` first checks exact range equality, then outside-range byte identity, then independently reparses both complete parts and compares all namespace bindings, expanded names and decoded values except the declared change.
 - Golden ranges are literal half-open offsets stored in fixture rows or emitted by the fixture generator before candidate parsing.
 
-- [ ] **Step 1: Author the fixture matrix and golden coordinates**
+- [x] **Step 1: Author the fixture matrix and golden coordinates**
 
 Table rows must identify encoding, expected diagnostic or semantic events, mutation operation, selected expanded name, replacement value and exact original byte range. Include UTF-8, UTF-16LE and UTF-16BE with and without BOM where legal; surrogate pairs; contradictory declarations; namespace shadowing; default namespaces; prefixed attributes; all predefined and numeric entities; both attribute quote styles; comments; processing instructions; CDATA; whitespace-only text; `xml:space="preserve"`; Microsoft compatibility markup; unknown elements and attributes.
 
 Include every rejection class named in the approved specification: unsupported version, multiple roots, mismatched/unclosed elements, invalid names and characters, bad namespace bindings, duplicate expanded-name attributes, malformed declarations/comments/CDATA/PIs/references, PI target `xml` in mixed case, `DOCTYPE`, custom/external entities and every parse-limit boundary.
 
-- [ ] **Step 2: Write oracle tests independent of candidate code**
+- [x] **Step 2: Write oracle tests independent of candidate code**
 
 Assert literal golden offsets before any outside-byte comparison. Test that CR in attribute and ordinary text replacements survives semantic reparse as the requested value. Test that a wider or narrower candidate-reported range fails even when outside bytes would otherwise compare equal.
 
-- [ ] **Step 3: Implement the narrow oracle**
+- [x] **Step 3: Implement the narrow oracle**
 
 Implement a forward byte scanner, separate namespace stack and separate entity decoder. It may support only the spike operations, but it must strictly reject the complete accepted-language boundary in the fixture table. Do not import SLAXML, LuaXML or their adapter helpers.
 
 For UTF-16, maintain a code-point-to-original-byte map that includes BOM and surrogate pairs; reported offsets always address original encoded bytes. Re-encode replacement text into the original encoding and preserve BOM and declaration.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 ```bash
 DOCSTYLE_SPIKE_STAGE=xml quarto run tests/vnext/xml-spike/run.lua
