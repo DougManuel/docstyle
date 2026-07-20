@@ -379,7 +379,13 @@ local function decode_references(value, context)
       else
         raise("xml.malformed-reference", "unsupported XML entity", context)
       end
-      local codepoint = tonumber(digits, base)
+      local significant = digits:gsub("^0+", "")
+      if significant == "" then significant = "0" end
+      local max_digits = base == 16 and 6 or 7
+      if #significant > max_digits then
+        raise("xml.invalid-character", "character reference exceeds Unicode", context)
+      end
+      local codepoint = tonumber(significant, base)
       if not codepoint or not is_xml_character(codepoint) then
         raise("xml.invalid-character", "invalid character reference", context)
       end
@@ -881,6 +887,13 @@ function M.parse(bytes, options)
   end
   local decoded = decode_document(bytes)
   local declaration, position = parse_declaration(decoded.text)
+  if decoded.encoding ~= "utf-8" and not decoded.bom and
+      (not declaration or not declaration.encoding) then
+    raise("xml.encoding-mismatch",
+      "non-UTF-8 XML requires a BOM or encoding declaration", {
+        detected = decoded.encoding,
+      })
+  end
   verify_declared_encoding(decoded.encoding, declaration)
 
   local state = {
