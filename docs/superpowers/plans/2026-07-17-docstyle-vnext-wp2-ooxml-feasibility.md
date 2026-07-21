@@ -378,23 +378,23 @@ Continue to Task 6 even if Approach A fails; the comparison is required.
 - Create: `tests/vnext/xml-spike/tests/test-luaxml-adapter.lua`
 - Modify: `dev/vnext/xml-spike/provenance.json`
 
-- [ ] **Step 1: Establish the exact dependency and licence closure before code**
+- [x] **Step 1: Establish the exact dependency and licence closure before code**
 
 Starting from the immutable LuaXML commit, trace every `require` used by the minimum XML parse path. Vendor only that closure. Record the Lua, MIT and modified-BSD licence boundaries file by file. If the minimum parse path requires LuaTeX globals, native modules or an unavailable dependency, keep the executable failure evidence, reject Approach B and do not shim the missing runtime silently.
 
-- [ ] **Step 2: Run the same adapter table first**
+- [x] **Step 2: Run the same adapter table first**
 
 Use the exact interface and Task 4 fixture rows. Candidate-specific code may translate LuaXML nodes into the adapter's node handles but may not relax expected outcomes. Every successful edit goes through the independent oracle.
 
-- [ ] **Step 3: Implement only bounded compatibility code**
+- [x] **Step 3: Implement only bounded compatibility code**
 
 Do not import CSS, XPath, HTML or template modules. If LuaXML serializes the whole tree or loses lexical bytes, the adapter may add an independent byte-span overlay, but that Docstyle-owned code counts in the maintenance comparison and must not reuse the Task 4 oracle.
 
-- [ ] **Step 4: Apply the selection rule**
+- [x] **Step 4: Apply the selection rule**
 
 Reject every candidate with an applicable hard-gate failure. If neither A nor B passes, update the decision report to `no-go`, run regression verification and stop. If one or both pass, select the candidate with the lower supported maintenance risk; record the reasons and omit a numeric score. Approach C remains an oracle unless it independently passes the entire adapter table.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 ```bash
 DOCSTYLE_SPIKE_STAGE=xml quarto run tests/vnext/xml-spike/run.lua

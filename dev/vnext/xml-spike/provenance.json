@@ -85,8 +85,79 @@
           "unicode-greek-pi-target"
         ]
       }
+    },
+    {
+      "name": "LuaXML",
+      "version": "dev@c919471",
+      "upstream_repository": "https://github.com/michal-h21/LuaXML",
+      "commit": "c919471be63d0c770d82200261c5682dee39c9d1",
+      "commit_date": "2026-05-12",
+      "license": "Lua License for the selected path; MIT and Modified BSD components excluded",
+      "upstream_source_path": "luaxml-mod-xml.lua",
+      "upstream_source_git_blob": "fdab942f1bd6fed1010dfc7dfc6e062e32aec67e",
+      "upstream_source_sha256": "1736bcd9e81ed2bf617399fc8fde1234ed420fc0b82ca4b90b51115f52e81a01",
+      "vendored_source_sha256": "1736bcd9e81ed2bf617399fc8fde1234ed420fc0b82ca4b90b51115f52e81a01",
+      "upstream_license_path": "LICENSE",
+      "upstream_license_git_blob": "eb749e19267d670bec7b7923b2d08b1e17f6763e",
+      "upstream_license_sha256": "4508a32ee2fb355d747882cd69d5d18f53a058645a72cc2cae27802e0bfb859d",
+      "vendored_license_sha256": "4508a32ee2fb355d747882cd69d5d18f53a058645a72cc2cae27802e0bfb859d",
+      "minimum_dependency_closure": [
+        "luaxml-mod-xml.lua"
+      ],
+      "file_license_boundaries": {
+        "luaxml-mod-xml.lua": "Lua License",
+        "luaxml-parse-query.lua": "MIT (excluded)",
+        "luaxml-lxpath.lua": "Modified BSD (excluded)"
+      },
+      "selected_path": "Direct XML parser callbacks through the candidate-local strictness and byte-span overlay",
+      "excluded_paths": [
+        "luaxml-domobject.lua tree API",
+        "luaxml-cssquery.lua and luaxml-parse-query.lua",
+        "luaxml-mod-html.lua",
+        "luaxml-lxpath.lua",
+        "LuaRocks installation and upstream build-time generators"
+      ],
+      "executable_probe": {
+        "runtime": "Quarto 1.9.26 embedded Lua 5.4",
+        "luatex_globals_absent": [
+          "kpse",
+          "unicode"
+        ],
+        "minimum_parse_path": "pass"
+      },
+      "documented_limitations": [
+        "shallow upstream well-formedness checks",
+        "no upstream namespace resolution",
+        "upstream attribute names are lowercased and attribute order is discarded",
+        "no upstream character-set decoding",
+        "whole-tree serialization does not preserve lexical bytes"
+      ],
+      "maintenance_evidence": {
+        "vendored_lines": 570,
+        "docstyle_owned_lines": 1304,
+        "dependency_count": 1,
+        "unsupported_constructs": [
+          "DTD and custom entity expansion",
+          "XInclude processing",
+          "character encodings other than UTF-8 and UTF-16"
+        ],
+        "hard_gate_status": "pass",
+        "hard_gate_failures": [],
+        "rejected_fixture_rows": []
+      }
     }
   ],
+  "xml_candidate_selection": {
+    "status": "conditional-go",
+    "selected": "LuaXML",
+    "date": "2026-07-21",
+    "reasons": [
+      "LuaXML passes the complete shared adapter table, including Unicode-name rows",
+      "SLAXML fails the Unicode-name hard gate",
+      "the LuaXML path is one vendored dependency and excludes CSS, HTML, XPath, LuaRocks and native modules",
+      "the selection remains conditional on later package, preservation and performance gates"
+    ]
+  },
   "fixtures": [
     {
       "name": "raw DEFLATE hexadecimal vectors",
@@ -131,6 +202,18 @@
     {
       "file": "dev/vnext/xml-spike/candidates/slaxml/vendor/LICENSE.txt",
       "description": "Line endings normalized from upstream CRLF to repository LF; licence text unchanged"
+    },
+    {
+      "file": "dev/vnext/xml-spike/candidates/luaxml/adapter.lua",
+      "description": "LuaXML adapter contract and one-range mutation ownership"
+    },
+    {
+      "file": "dev/vnext/xml-spike/candidates/luaxml/strictness.lua",
+      "description": "Candidate-local copy of the reviewed SLAXML strictness, encoding and namespace validation layer"
+    },
+    {
+      "file": "dev/vnext/xml-spike/candidates/luaxml/token_overlay.lua",
+      "description": "LuaXML structural-event cross-check and byte-preserving serialization"
     }
   ],
   "stage_1_gate": {
