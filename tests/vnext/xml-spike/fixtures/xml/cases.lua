@@ -316,6 +316,15 @@ xmlns:b="urn:x" a:id="1" b:id="2"/>]], "xml.duplicate-attribute"),
   invalid("utf8-declares-utf16",
     [[<?xml version="1.0" encoding="UTF-16"?><root/>]],
     "xml.encoding-mismatch"),
+  invalid("utf8-unregistered-utf8-alias",
+    [[<?xml version="1.0" encoding="utf8"?><root/>]],
+    "xml.encoding-mismatch"),
+  invalid("utf16le-unregistered-utf16-alias", encode(
+    [[<?xml version="1.0" encoding="utf16"?><root/>]],
+    "utf-16le", true), "xml.encoding-mismatch"),
+  invalid("utf16be-underscore-encoding-label", encode(
+    [[<?xml version="1.0" encoding="UTF_16"?><root/>]],
+    "utf-16be", true), "xml.encoding-mismatch"),
   invalid("utf16le-bom-declares-utf8", encode(
     [[<?xml version="1.0" encoding="UTF-8"?><root/>]],
     "utf-16le", true), "xml.encoding-mismatch"),
@@ -357,6 +366,12 @@ M.capability_boundaries = {
         local_name = "λattr", value = "x" },
     },
     slaxml_diagnostic = "xml.backend-rejected",
+  }),
+  valid("unicode-greek-pi-target", "<?λpi data?><root/>", {
+    token_values = {
+      { kind = "pi", target = "λpi", value = "data" },
+    },
+    slaxml_diagnostic = "xml.backend-mismatch",
   }),
 }
 

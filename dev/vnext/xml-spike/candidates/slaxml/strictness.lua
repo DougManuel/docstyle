@@ -441,7 +441,7 @@ end
 
 local function verify_encoding(decoded, declaration)
   local declared = declaration and declaration.encoding and
-    declaration.encoding:lower():gsub("_", "-") or nil
+    declaration.encoding:lower() or nil
   if decoded.encoding ~= "utf-8" and not decoded.bom and not declared then
     raise("xml.encoding-mismatch",
       "non-UTF-8 XML requires a BOM or encoding declaration", {
@@ -449,16 +449,14 @@ local function verify_encoding(decoded, declaration)
       })
   end
   if not declared then return end
-  if not decoded.bom and (declared == "utf-16" or declared == "utf16") then
+  if not decoded.bom and declared == "utf-16" then
     raise("xml.encoding-mismatch", "generic UTF-16 requires a BOM", {
       declared = declaration.encoding,
       detected = decoded.encoding,
     })
   end
   local matches = declared == decoded.encoding or
-    (declared == "utf-16" and decoded.encoding:sub(1, 6) == "utf-16") or
-    (declared == "utf8" and decoded.encoding == "utf-8") or
-    (declared == "utf16" and decoded.encoding:sub(1, 6) == "utf-16")
+    (declared == "utf-16" and decoded.encoding:sub(1, 6) == "utf-16")
   if not matches then
     raise("xml.encoding-mismatch", "declared XML encoding does not match bytes", {
       declared = declaration.encoding,
