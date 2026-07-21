@@ -35,6 +35,56 @@
       "license": "GPL-2.0-or-later",
       "selected_path": null,
       "excluded_reason": "Materializes complete expanded entry bytes and exposes no enforceable output-byte cap"
+    },
+    {
+      "name": "SLAXML",
+      "version": "0.8",
+      "upstream_repository": "https://github.com/Phrogz/SLAXML",
+      "tag": "v0.8",
+      "commit": "8a3e0c90325aa6d84ad23a7c13bf77247cb7f94e",
+      "license": "MIT",
+      "upstream_source_path": "slaxml.lua",
+      "upstream_source_git_blob": "98e9819543a5967e6ad15fa024bc9af4be86035e",
+      "upstream_source_sha256": "4e736768c061407609741baea1ebbe15e6b53cab5920defea5d7ed3b3c16c35e",
+      "vendored_source_sha256": "4e736768c061407609741baea1ebbe15e6b53cab5920defea5d7ed3b3c16c35e",
+      "upstream_license_git_blob": "6f1dc915f9ed90b48d907216a0a6cfc2584e1c43",
+      "upstream_license_sha256": "21b7b0c90e51ff9111744b02e734f37b4e093ae55ebf5eb1f8abbf380bf3803d",
+      "vendored_license_sha256": "24c9af86e5a9ecc484c7e4afcdc277ec3fbe2a95c465e7afb3c8bced74b930de",
+      "selected_path": "Streaming parser callbacks through the Docstyle strictness and byte-span overlay",
+      "excluded_paths": [
+        "slaxdom.lua DOM builder and serializer",
+        "upstream test directory"
+      ],
+      "documented_limitations": [
+        "incomplete XML well-formedness enforcement",
+        "XML declarations reported as processing instructions",
+        "no Unicode names",
+        "no character-set decoding",
+        "no DTD or custom entity support",
+        "incomplete reserved namespace enforcement",
+        "DOM serializer can emit invalid namespace combinations"
+      ],
+      "maintenance_evidence": {
+        "vendored_lines": 259,
+        "docstyle_owned_lines": 1330,
+        "dependency_count": 1,
+        "unsupported_constructs": [
+          "DTD and custom entity expansion",
+          "XInclude processing",
+          "character encodings other than UTF-8 and UTF-16",
+          "Unicode names in the SLAXML semantic backend"
+        ],
+        "hard_gate_status": "fail",
+        "hard_gate_failures": [
+          "unicode-names"
+        ],
+        "rejected_fixture_rows": [
+          "unicode-greek-element-name",
+          "unicode-cjk-element-name",
+          "unicode-greek-attribute-name",
+          "unicode-greek-pi-target"
+        ]
+      }
     }
   ],
   "fixtures": [
@@ -65,6 +115,22 @@
     {
       "file": "dev/vnext/xml-spike/archive/entry_reader.lua",
       "description": "Budgeted stored/deflated entry reads with length and CRC-32 verification"
+    },
+    {
+      "file": "dev/vnext/xml-spike/candidates/slaxml/adapter.lua",
+      "description": "SLAXML adapter contract and one-range mutation ownership"
+    },
+    {
+      "file": "dev/vnext/xml-spike/candidates/slaxml/strictness.lua",
+      "description": "Independent XML strictness, encoding and namespace validation"
+    },
+    {
+      "file": "dev/vnext/xml-spike/candidates/slaxml/token_overlay.lua",
+      "description": "SLAXML semantic-event binding and byte-preserving serialization"
+    },
+    {
+      "file": "dev/vnext/xml-spike/candidates/slaxml/vendor/LICENSE.txt",
+      "description": "Line endings normalized from upstream CRLF to repository LF; licence text unchanged"
     }
   ],
   "stage_1_gate": {

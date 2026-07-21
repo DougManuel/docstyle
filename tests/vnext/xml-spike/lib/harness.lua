@@ -43,7 +43,7 @@ local function format_error(err)
 end
 
 function M.new()
-  return setmetatable({ cases = {}, names = {} }, Registry)
+  return setmetatable({ cases = {}, names = {}, results = {} }, Registry)
 end
 
 function Registry:case(group, name, fn, options)
@@ -66,6 +66,13 @@ function Registry:case(group, name, fn, options)
   }
 end
 
+function Registry:result(name, value)
+  assert(type(name) == "string" and name ~= "", "result name is required")
+  assert(type(value) == "table", "runner result must be a table")
+  assert(self.results[name] == nil, "duplicate runner result: " .. name)
+  self.results[name] = value
+end
+
 local function should_run(case, stage, options)
   if STAGE_RANK[case.stage] > STAGE_RANK[stage] then return false end
   if case.reference_only and not options.reference_performance then return false end
@@ -85,6 +92,7 @@ function Registry:run(stage, options)
     skip = 0,
     discovered = #cases,
     gates = empty_gate_rows(),
+    results = self.results,
   }
 
   for _, case in ipairs(cases) do
@@ -137,6 +145,11 @@ local function load_test_files(here, registry)
     if group then
       local cases = dofile(pandoc.path.join({ tests_dir, filename }))
       assert(type(cases) == "table", filename .. " must return a case table")
+      if cases.result ~= nil then
+        local value = cases.result
+        if type(value) == "function" then value = value() end
+        registry:result(group, value)
+      end
       for _, case in ipairs(cases) do
         registry:case(group, case.name, case.fn, {
           gate = case.gate,

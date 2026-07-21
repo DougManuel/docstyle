@@ -12,4 +12,4 @@ package.path = table.concat({
 
 local harness = require("lib.harness")
 local stage, options = harness.runner_options(os.getenv)
-harness.discover_and_run(here, stage, options)
+return harness.discover_and_run(here, stage, options)

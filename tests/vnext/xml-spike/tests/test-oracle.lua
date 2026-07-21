@@ -132,6 +132,15 @@ for _, row in ipairs(fixtures.valid) do
   }
 end
 
+for _, row in ipairs(fixtures.capability_boundaries) do
+  cases[#cases + 1] = {
+    name = "accepts capability boundary " .. row.name,
+    gate = "functional",
+    stage = "xml",
+    fn = function() assert_valid_case(row) end,
+  }
+end
+
 for _, row in ipairs(fixtures.invalid) do
   cases[#cases + 1] = {
     name = "rejects " .. row.name,
