@@ -36,6 +36,21 @@ local function matching_node(document, selector)
   return nodes[selector.occurrence or 1], nodes
 end
 
+local function row_names(rows)
+  local names = {}
+  for _, row in ipairs(rows) do names[#names + 1] = row.name end
+  return names
+end
+
+local function same_array(left, right)
+  if type(left) ~= "table" or type(right) ~= "table" or
+      #left ~= #right then return false end
+  for index, value in ipairs(left) do
+    if value ~= right[index] then return false end
+  end
+  return true
+end
+
 local cases = {
   {
     name = "vendors the immutable parser and licence bytes",
@@ -114,6 +129,19 @@ for _, row in ipairs(fixtures.valid) do
         assert(value == expected.value,
           "wrong attribute value for " .. expected.local_name)
       end
+    end,
+  }
+end
+
+for _, row in ipairs(fixtures.capability_boundaries) do
+  cases[#cases + 1] = {
+    name = "records shared capability boundary " .. row.name,
+    gate = "functional",
+    stage = "xml",
+    fn = function()
+      expect_diagnostic(row.slaxml_diagnostic, function()
+        subject().parse(row.bytes)
+      end)
     end,
   }
 end
@@ -281,6 +309,10 @@ cases[#cases + 1] = {
       })))
     assert(type(evidence.unsupported_constructs) == "table")
     assert(type(evidence.rejected_fixture_rows) == "table")
+    assert(evidence.hard_gate_status == "fail")
+    assert(same_array(evidence.hard_gate_failures, { "unicode-names" }))
+    assert(same_array(evidence.rejected_fixture_rows,
+      row_names(fixtures.capability_boundaries)))
 
     local provenance = pandoc.json.decode(fixture.read_bytes(pandoc.path.join({
       root, "dev", "vnext", "xml-spike", "provenance.json",
@@ -295,10 +327,13 @@ cases[#cases + 1] = {
     assert(recorded.vendored_lines == evidence.vendored_lines)
     assert(recorded.docstyle_owned_lines == evidence.docstyle_owned_lines)
     assert(recorded.dependency_count == evidence.dependency_count)
-    assert(#recorded.unsupported_constructs ==
-      #evidence.unsupported_constructs)
-    assert(#recorded.rejected_fixture_rows ==
-      #evidence.rejected_fixture_rows)
+    assert(recorded.hard_gate_status == evidence.hard_gate_status)
+    assert(same_array(recorded.hard_gate_failures,
+      evidence.hard_gate_failures))
+    assert(same_array(recorded.unsupported_constructs,
+      evidence.unsupported_constructs))
+    assert(same_array(recorded.rejected_fixture_rows,
+      evidence.rejected_fixture_rows))
   end,
 }
 

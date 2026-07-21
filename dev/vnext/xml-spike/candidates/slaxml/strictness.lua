@@ -243,6 +243,14 @@ local function is_name_character(codepoint)
     (codepoint >= 0x203f and codepoint <= 0x2040)
 end
 
+local function is_ncname_start(codepoint)
+  return codepoint ~= 0x3a and is_name_start(codepoint)
+end
+
+local function is_ncname_character(codepoint)
+  return codepoint ~= 0x3a and is_name_character(codepoint)
+end
+
 local function next_utf8(text, position)
   local codepoint = utf8.codepoint(text, position)
   local next_at = utf8.offset(text, 2, position) or (#text + 1)
@@ -262,13 +270,36 @@ local function read_name(text, position)
   return text:sub(position, finish - 1), finish
 end
 
+local function validate_ncname(name, context)
+  local position = 1
+  local codepoint, next_at = next_utf8(name, position)
+  if not codepoint or not is_ncname_start(codepoint) then
+    raise("xml.invalid-name", "qualified XML name is invalid", context)
+  end
+  position = next_at
+  while position <= #name do
+    codepoint, next_at = next_utf8(name, position)
+    if not is_ncname_character(codepoint) then
+      raise("xml.invalid-name", "qualified XML name is invalid", context)
+    end
+    position = next_at
+  end
+end
+
 local function split_qname(qname, context)
   local colon = qname:find(":", 1, true)
-  if not colon then return "", qname end
+  if not colon then
+    validate_ncname(qname, context)
+    return "", qname
+  end
   if colon == 1 or colon == #qname or qname:find(":", colon + 1, true) then
     raise("xml.invalid-name", "qualified XML name is invalid", context)
   end
-  return qname:sub(1, colon - 1), qname:sub(colon + 1)
+  local prefix = qname:sub(1, colon - 1)
+  local local_name = qname:sub(colon + 1)
+  validate_ncname(prefix, context)
+  validate_ncname(local_name, context)
+  return prefix, local_name
 end
 
 local entities = {
@@ -418,6 +449,12 @@ local function verify_encoding(decoded, declaration)
       })
   end
   if not declared then return end
+  if not decoded.bom and (declared == "utf-16" or declared == "utf16") then
+    raise("xml.encoding-mismatch", "generic UTF-16 requires a BOM", {
+      declared = declaration.encoding,
+      detected = decoded.encoding,
+    })
+  end
   local matches = declared == decoded.encoding or
     (declared == "utf-16" and decoded.encoding:sub(1, 6) == "utf-16") or
     (declared == "utf8" and decoded.encoding == "utf-8") or
@@ -715,6 +752,7 @@ local function parse_pi(state)
   if not close then raise("xml.malformed-pi", "unclosed processing instruction") end
   local target, cursor = read_name(text, start_at + 2)
   if not target then raise("xml.malformed-pi", "processing instruction needs a target") end
+  validate_ncname(target, { offset = start_at - 1 })
   if target:lower() == "xml" then
     if target == "xml" then
       raise("xml.misplaced-declaration", "XML declaration is misplaced")
@@ -726,7 +764,12 @@ local function parse_pi(state)
     if not is_space(text:sub(cursor, cursor)) then
       raise("xml.malformed-pi", "processing-instruction data needs whitespace")
     end
-    value = text:sub(skip_space(text, cursor), close - 1)
+    local data_start = skip_space(text, cursor)
+    state.pi_separator_spans[#state.pi_separator_spans + 1] = {
+      decoded_start = cursor,
+      decoded_finish = data_start,
+    }
+    value = text:sub(data_start, close - 1)
   end
   emit(state, {
     kind = "pi",
@@ -766,16 +809,30 @@ end
 local function semantic_xml(state)
   local pieces = {}
   local cursor = 1
-  table.sort(state.attribute_spans, function(left, right)
-    return left.decoded_value_start < right.decoded_value_start
-  end)
+  local spans = {}
   for _, attribute in ipairs(state.attribute_spans) do
+    spans[#spans + 1] = {
+      decoded_start = attribute.decoded_value_start,
+      decoded_finish = attribute.decoded_value_finish,
+      normalize_attribute_space = true,
+    }
+  end
+  for _, separator in ipairs(state.pi_separator_spans) do
+    spans[#spans + 1] = separator
+  end
+  table.sort(spans, function(left, right)
+    return left.decoded_start < right.decoded_start
+  end)
+  for _, span in ipairs(spans) do
     pieces[#pieces + 1] = state.decoded.text:sub(
-      cursor, attribute.decoded_value_start - 1)
-    pieces[#pieces + 1] = state.decoded.text:sub(
-      attribute.decoded_value_start,
-      attribute.decoded_value_finish - 1):gsub("[\t\n\r]", " ")
-    cursor = attribute.decoded_value_finish
+      cursor, span.decoded_start - 1)
+    if span.normalize_attribute_space then
+      pieces[#pieces + 1] = state.decoded.text:sub(
+        span.decoded_start, span.decoded_finish - 1):gsub("[\t\n\r]", " ")
+    else
+      pieces[#pieces + 1] = " "
+    end
+    cursor = span.decoded_finish
   end
   pieces[#pieces + 1] = state.decoded.text:sub(cursor)
   return table.concat(pieces)
@@ -806,6 +863,7 @@ function M.inspect(bytes, options)
     next_id = 0,
     token_count = 0,
     attribute_spans = {},
+    pi_separator_spans = {},
   }
   while state.position <= #decoded.text do
     local prefix4 = decoded.text:sub(state.position, state.position + 3)

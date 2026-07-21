@@ -161,6 +161,26 @@ a="&amp;&lt;&gt;&quot;&apos;&#65;&#x1F600;">&amp;&lt;&gt;&quot;&apos;&#65;&#x1F6
           value = [[type="text/xsl" href="style.xsl"]] },
       },
     }),
+  valid("pi-multiple-space-separator", "<?target  data?><root/>", {
+    token_values = {
+      { kind = "pi", target = "target", value = "data" },
+    },
+  }),
+  valid("pi-tab-separator", "<?target\tdata?><root/>", {
+    token_values = {
+      { kind = "pi", target = "target", value = "data" },
+    },
+  }),
+  valid("pi-line-feed-separator", "<?target\ndata?><root/>", {
+    token_values = {
+      { kind = "pi", target = "target", value = "data" },
+    },
+  }),
+  valid("pi-empty-data-after-separator", "<?target  ?><root/>", {
+    token_values = {
+      { kind = "pi", target = "target", value = "" },
+    },
+  }),
   valid("namespace-declaration-follows-use",
     [[<p:root p:a='x' xmlns:p='urn:p'/>]], {
       root = { uri = "urn:p", local_name = "root" },
@@ -223,6 +243,14 @@ M.invalid = {
   invalid("unclosed-root", "<a><b/></a><!--", "xml.malformed-comment"),
   invalid("invalid-name-start", "<1root/>", "xml.invalid-name"),
   invalid("invalid-qualified-name", "<a:b:c/>", "xml.invalid-name"),
+  invalid("invalid-qualified-element-local-start",
+    "<a:1bc xmlns:a='urn:x'/>", "xml.invalid-name"),
+  invalid("invalid-qualified-attribute-local-start-digit",
+    "<root xmlns:a='urn:x' a:1bc='v'/>", "xml.invalid-name"),
+  invalid("invalid-qualified-attribute-local-start-hyphen",
+    "<root xmlns:a='urn:x' a:-bc='v'/>", "xml.invalid-name"),
+  invalid("invalid-namespace-prefix-start",
+    "<root xmlns:1p='urn:p'/>", "xml.invalid-name"),
   invalid("invalid-control-character", "<root>\1</root>",
     "xml.invalid-character"),
   invalid("text-outside-root", "text<root/>", "xml.text-outside-root"),
@@ -264,6 +292,7 @@ xmlns:b="urn:x" a:id="1" b:id="2"/>]], "xml.duplicate-attribute"),
     "xml.malformed-declaration"),
   invalid("pi-target-xml-mixed", "<root><?XmL data?></root>",
     "xml.reserved-pi-target"),
+  invalid("pi-target-colon", "<?a:b data?><root/>", "xml.invalid-name"),
   invalid("unclosed-pi", "<root><?target data</root>", "xml.malformed-pi"),
   invalid("unknown-entity", "<root>&custom;</root>",
     "xml.malformed-reference"),
@@ -296,6 +325,12 @@ xmlns:b="urn:x" a:id="1" b:id="2"/>]], "xml.duplicate-attribute"),
   invalid("utf16be-no-bom-declaration-without-encoding",
     encode([[<?xml version="1.0"?><root>be</root>]], "utf-16be", false),
     "xml.encoding-mismatch"),
+  invalid("utf16le-generic-declaration-no-bom", encode(
+    [[<?xml version="1.0" encoding="UTF-16"?><root>le</root>]],
+    "utf-16le", false), "xml.encoding-mismatch"),
+  invalid("utf16be-generic-declaration-no-bom", encode(
+    [[<?xml version="1.0" encoding="UTF-16"?><root>be</root>]],
+    "utf-16be", false), "xml.encoding-mismatch"),
   invalid("invalid-utf8", "<root>\240\040\140\188</root>",
     "xml.invalid-encoding"),
   invalid("utf16le-lone-high-surrogate",
@@ -303,6 +338,26 @@ xmlns:b="urn:x" a:id="1" b:id="2"/>]], "xml.duplicate-attribute"),
     "xml.invalid-encoding"),
   invalid("utf16be-truncated-code-unit", "\254\255\000\060\000",
     "xml.invalid-encoding"),
+}
+
+M.capability_boundaries = {
+  valid("unicode-greek-element-name", "<λroot>x</λroot>", {
+    root = { uri = "", local_name = "λroot" },
+    text = { "x" },
+    slaxml_diagnostic = "xml.backend-rejected",
+  }),
+  valid("unicode-cjk-element-name", "<中文>x</中文>", {
+    root = { uri = "", local_name = "中文" },
+    text = { "x" },
+    slaxml_diagnostic = "xml.backend-rejected",
+  }),
+  valid("unicode-greek-attribute-name", "<root λattr='x'/>", {
+    attributes = {
+      { owner = { uri = "", local_name = "root" }, uri = "",
+        local_name = "λattr", value = "x" },
+    },
+    slaxml_diagnostic = "xml.backend-rejected",
+  }),
 }
 
 local limit_bytes = "<root xmlns:p='urn:p' xmlns:q='urn:q'>" ..

@@ -146,8 +146,8 @@ local function load_test_files(here, registry)
       local cases = dofile(pandoc.path.join({ tests_dir, filename }))
       assert(type(cases) == "table", filename .. " must return a case table")
       if cases.result ~= nil then
-        local value = type(cases.result) == "function" and
-          cases.result() or cases.result
+        local value = cases.result
+        if type(value) == "function" then value = value() end
         registry:result(group, value)
       end
       for _, case in ipairs(cases) do

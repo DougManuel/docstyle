@@ -126,14 +126,20 @@ M.result = {
   version = "0.8",
   dependency_count = 1,
   vendored_lines = 259,
-  docstyle_owned_lines = 1267,
+  docstyle_owned_lines = 1331,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",
     "character encodings other than UTF-8 and UTF-16",
     "Unicode element and attribute names in the SLAXML semantic backend",
   },
-  rejected_fixture_rows = {},
+  hard_gate_status = "fail",
+  hard_gate_failures = { "unicode-names" },
+  rejected_fixture_rows = {
+    "unicode-greek-element-name",
+    "unicode-cjk-element-name",
+    "unicode-greek-attribute-name",
+  },
 }
 
 return M

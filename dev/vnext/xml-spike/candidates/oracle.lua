@@ -311,13 +311,26 @@ local function read_name(text, position)
   return text:sub(position, next_at - 1), next_at
 end
 
+local function validate_ncname(name, context)
+  local position = 1
+  local codepoint = utf8.codepoint(name, position)
+  if not codepoint or not is_name_start(codepoint, false) then
+    raise("xml.invalid-name", "invalid XML name component", context)
+  end
+  position = utf8.offset(name, 2, position) or (#name + 1)
+  while position <= #name do
+    codepoint = utf8.codepoint(name, position)
+    if not is_name_character(codepoint, false) then
+      raise("xml.invalid-name", "invalid XML name component", context)
+    end
+    position = utf8.offset(name, 2, position) or (#name + 1)
+  end
+end
+
 local function split_qname(qname, context)
   local first = qname:find(":", 1, true)
   if not first then
-    local codepoint = utf8.codepoint(qname, 1)
-    if not codepoint or not is_name_start(codepoint, false) then
-      raise("xml.invalid-name", "invalid XML qualified name", context)
-    end
+    validate_ncname(qname, context)
     return "", qname
   end
   if first == 1 or first == #qname or qname:find(":", first + 1, true) then
@@ -325,21 +338,8 @@ local function split_qname(qname, context)
   end
   local prefix = qname:sub(1, first - 1)
   local local_name = qname:sub(first + 1)
-  for _, value in ipairs({ prefix, local_name }) do
-    local at = 1
-    local codepoint = utf8.codepoint(value, at)
-    if not is_name_start(codepoint, false) then
-      raise("xml.invalid-name", "invalid XML qualified name", context)
-    end
-    at = utf8.offset(value, 2, at) or (#value + 1)
-    while at <= #value do
-      codepoint = utf8.codepoint(value, at)
-      if not is_name_character(codepoint, false) then
-        raise("xml.invalid-name", "invalid XML qualified name", context)
-      end
-      at = utf8.offset(value, 2, at) or (#value + 1)
-    end
-  end
+  validate_ncname(prefix, context)
+  validate_ncname(local_name, context)
   return prefix, local_name
 end
 
@@ -470,9 +470,15 @@ local function parse_declaration(text)
   }, close + 2
 end
 
-local function verify_declared_encoding(detected, declaration)
+local function verify_declared_encoding(detected, bom, declaration)
   if not declaration or not declaration.encoding then return end
   local declared = declaration.encoding:upper()
+  if declared == "UTF-16" and not bom then
+    raise("xml.encoding-mismatch", "generic UTF-16 requires a byte-order mark", {
+      detected = detected,
+      declared = declaration.encoding,
+    })
+  end
   local valid = (detected == "utf-8" and declared == "UTF-8") or
     (detected == "utf-16le" and
       (declared == "UTF-16" or declared == "UTF-16LE")) or
@@ -824,6 +830,9 @@ local function parse_pi(state)
   local position = token_start + 2
   local target, next_at = read_name(text, position)
   if not target then raise("xml.malformed-pi", "processing instruction needs a target") end
+  validate_ncname(target, {
+    offset = original_boundary(state.decoded, position),
+  })
   if target:lower() == "xml" then
     if token_start ~= 1 and target == "xml" then
       raise("xml.misplaced-declaration", "XML declaration is misplaced")
@@ -894,7 +903,7 @@ function M.parse(bytes, options)
         detected = decoded.encoding,
       })
   end
-  verify_declared_encoding(decoded.encoding, declaration)
+  verify_declared_encoding(decoded.encoding, decoded.bom, declaration)
 
   local state = {
     decoded = decoded,
