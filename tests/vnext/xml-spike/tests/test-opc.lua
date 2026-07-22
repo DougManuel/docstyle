@@ -686,6 +686,12 @@ return {
       local bytes = package_bytes({
         extra_entries = {
           {
+            name = "_rels/document.xml.rels",
+            data = document_relationships({ {
+              target = "docProps/core.xml",
+            } }),
+          },
+          {
             name = "word/_rels/document.xml.rels",
             data = document_relationships({ {
               target = "../docProps/core.xml",
@@ -697,6 +703,10 @@ return {
         local pkg = opc.open_path(path, limits())
         expect_code("opc.metadata-replacement", function()
           pkg:replace_part("/_rels/.rels", "replacement")
+        end)
+        expect_code("opc.metadata-replacement", function()
+          pkg:replace_part(
+            "/_rels/document.xml.rels", "replacement")
         end)
         expect_code("opc.metadata-replacement", function()
           pkg:replace_part(

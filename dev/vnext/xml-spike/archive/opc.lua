@@ -160,6 +160,7 @@ end
 
 local function is_relationship_part(zip_name)
   return zip_name == "_rels/.rels" or
+    zip_name:match("^_rels/[^/]+%.rels$") ~= nil or
     zip_name:match("/_rels/[^/]+%.rels$") ~= nil
 end
 
