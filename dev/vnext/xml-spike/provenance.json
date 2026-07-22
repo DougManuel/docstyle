@@ -134,7 +134,7 @@
       ],
       "maintenance_evidence": {
         "vendored_lines": 570,
-        "docstyle_owned_lines": 1304,
+        "docstyle_owned_lines": 1305,
         "dependency_count": 1,
         "unsupported_constructs": [
           "DTD and custom entity expansion",
@@ -148,14 +148,20 @@
     }
   ],
   "xml_candidate_selection": {
-    "status": "conditional-go",
+    "status": "selected-pending-gates",
     "selected": "LuaXML",
     "date": "2026-07-21",
     "reasons": [
       "LuaXML passes the complete shared adapter table, including Unicode-name rows",
       "SLAXML fails the Unicode-name hard gate",
       "the LuaXML path is one vendored dependency and excludes CSS, HTML, XPath, LuaRocks and native modules",
-      "the selection remains conditional on later package, preservation and performance gates"
+      "this is an XML-candidate selection; Tasks 7 through 10 remain pending"
+    ],
+    "pending_gates": [
+      "OPC package integration and fixture matrix",
+      "office evidence and deterministic atomic publication",
+      "fresh-process determinism, reference performance and retained-heap limits",
+      "final decision report"
     ]
   },
   "fixtures": [

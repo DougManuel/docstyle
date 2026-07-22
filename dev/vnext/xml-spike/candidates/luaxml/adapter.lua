@@ -127,7 +127,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1304,
+  docstyle_owned_lines = 1305,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",

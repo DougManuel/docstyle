@@ -39,7 +39,7 @@ candidate therefore has separate Docstyle-owned strictness and byte-span
 modules. The strictness module begins from the reviewed SLAXML candidate's
 strictness implementation and is copied into this candidate so the dependency
 and line-count evidence remains explicit. The LuaXML overlay is backend-
-specific. Neither module imports SLAXML or the independent oracle. All 1,304
+specific. Neither module imports SLAXML or the independent oracle. All 1,305
 Docstyle-owned lines count toward the maintenance comparison.
 
 ## Excluded dependency paths

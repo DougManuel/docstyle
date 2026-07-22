@@ -827,7 +827,8 @@ local function semantic_xml(state)
       cursor, span.decoded_start - 1)
     if span.normalize_attribute_space then
       pieces[#pieces + 1] = state.decoded.text:sub(
-        span.decoded_start, span.decoded_finish - 1):gsub("[\t\n\r]", " ")
+        span.decoded_start, span.decoded_finish - 1):gsub("[\t\n\r]", " "):gsub(
+          ">", "&gt;")
     else
       pieces[#pieces + 1] = " "
     end

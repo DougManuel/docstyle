@@ -380,7 +380,15 @@ cases[#cases + 1] = {
     assert(same_array(recorded.rejected_fixture_rows,
       evidence.rejected_fixture_rows))
     assert(provenance.xml_candidate_selection.selected == "LuaXML")
-    assert(provenance.xml_candidate_selection.status == "conditional-go")
+    assert(provenance.xml_candidate_selection.status ==
+      "selected-pending-gates")
+    assert(same_array(provenance.xml_candidate_selection.pending_gates, {
+      "OPC package integration and fixture matrix",
+      "office evidence and deterministic atomic publication",
+      "fresh-process determinism, reference performance and " ..
+        "retained-heap limits",
+      "final decision report",
+    }))
   end,
 }
 
