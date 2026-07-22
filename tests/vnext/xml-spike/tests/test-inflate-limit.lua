@@ -101,6 +101,7 @@ for _, vector in ipairs(VECTORS) do
       vector.compressed, #vector.expected)
     assert(output == vector.expected)
     assert(produced == #vector.expected)
+    assert(math.type(produced) == "integer")
   end)
 
   add(vector.name .. " block accepts one byte of spare output budget",

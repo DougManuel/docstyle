@@ -429,6 +429,8 @@ pkg:write_atomic(output_path, options)
 
 Assert invalid/non-integral/overflowing limits fail before archive processing. The handle tracks a cumulative materialization budget. Choose and document cache semantics: successful `part()` reads cache immutable bytes and charge once; repeated reads return the cached value without a second charge. Failed reads do not populate the cache. A request that would exceed the remaining budget fails before output exceeds it.
 
+Keep package structure fixed after open. `[Content_Types].xml` remains non-addressable as an OPC part, and `replace_part` rejects package-root and part-level relationship metadata. Ordinary existing parts remain replaceable without a materialization-budget charge.
+
 - [ ] **Step 2: Write path, content-type and root tests**
 
 Validate slash-prefixed part names without URI decoding, map them to ZIP names by removing exactly one leading slash and use byte-exact lookup after rejecting ASCII case collisions. Parse `[Content_Types].xml`, `_rels/.rels` and part relationships with the selected XML adapter. Verify unique relationship IDs, one unambiguous office-document root, `word/document.xml` and `docProps/core.xml` traversal.
@@ -441,7 +443,7 @@ Executable cases include `media/My%20Image.png`, `%7E`, `%2F`, `%2E%2E`, mixed-c
 
 - [ ] **Step 4: Bind validated metadata to bounded content retrieval**
 
-The handle reads only compressed byte ranges identified by `zip_preflight`; it never asks `pandoc.zip` to decompress untrusted entry contents. Verify produced size and record CRC-32 agreement. Preserve unknown entries in the package inventory even when never requested.
+The handle reads only compressed byte ranges identified by `zip_preflight`; it never asks `pandoc.zip` to decompress untrusted entry contents. Verify produced size and CRC-32 agreement before returning bytes, and record both as evidence. Preserve unknown entries in the package inventory even when never requested.
 
 - [ ] **Step 5: Run and commit**
 

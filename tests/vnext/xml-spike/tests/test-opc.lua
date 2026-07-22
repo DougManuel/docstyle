@@ -1,6 +1,7 @@
 local diagnostic = require("lib.diagnostic")
 local fixture = require("lib.fixture")
 local opc = require("archive.opc")
+local libdeflate = require("archive.vendor.libdeflate.LibDeflate")
 
 local runner_here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
 local root = pandoc.path.normalize(pandoc.path.join({
@@ -89,6 +90,11 @@ local function package_bytes(options)
   end
   for _, entry in ipairs(entries) do
     if entry.crc32 == nil then entry.crc32 = vectors.crc32(entry.data or "") end
+    if options.deflate then
+      entry.compressed = assert(libdeflate:CompressDeflate(
+        entry.data or "", { level = 6 }))
+      entry.method = 8
+    end
   end
   return vectors.archive(entries)
 end
@@ -159,6 +165,57 @@ return {
         assert(evidence.crc32 == vectors.crc32(payload))
         assert(evidence.cache_charge_count == 1)
       end)
+    end,
+  },
+  {
+    name = "deflated metadata preserves an integer cumulative budget",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      local bytes = package_bytes({ deflate = true })
+      with_archive(bytes, function(path)
+        local pkg = opc.open_path(path, limits())
+        assert(math.type(pkg:remaining_materialization_bytes()) == "integer")
+        assert(pkg:part(pkg.office_document_part):find(
+          "w:document", 1, true))
+        local evidence = pkg:part_evidence(pkg.office_document_part)
+        assert(evidence.compression_method == 8)
+        assert(math.type(evidence.produced) == "integer")
+      end)
+    end,
+  },
+  {
+    name = "existing Word and Docstyle packages open through the bounded seam",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      local paths = {
+        pandoc.path.join({
+          root, "tests", "testthat", "fixtures",
+          "word-native-comments.docx",
+        }),
+        pandoc.path.join({
+          root, "tests", "vnext", "fixtures", "popcorn-protocol",
+          "baseline", "legacy", "docstyle-docx.docx",
+        }),
+        pandoc.path.join({
+          root, "tests", "vnext", "fixtures", "demport-protocol",
+          "baseline", "legacy", "docstyle-docx.docx",
+        }),
+      }
+      for _, path in ipairs(paths) do
+        local pkg = opc.open_path(path, limits({
+          max_archive_bytes = 128 * 1024 * 1024,
+          max_entries = 10000,
+          max_entry_uncompressed_bytes = 128 * 1024 * 1024,
+          max_total_uncompressed_bytes = 512 * 1024 * 1024,
+          max_compression_ratio = 1000,
+          max_materialized_bytes = 128 * 1024 * 1024,
+        }))
+        assert(pkg:part(pkg.office_document_part):find(
+          "document", 1, true))
+        assert(math.type(pkg:remaining_materialization_bytes()) == "integer")
+      end
     end,
   },
   {
@@ -617,6 +674,36 @@ return {
         end)
         expect_code("opc.invalid-replacement", function()
           pkg:replace_part("/word/document.xml", {})
+        end)
+      end)
+    end,
+  },
+  {
+    name = "replacement rejects package relationship metadata",
+    gate = "preservation",
+    stage = "package",
+    fn = function()
+      local bytes = package_bytes({
+        extra_entries = {
+          {
+            name = "word/_rels/document.xml.rels",
+            data = document_relationships({ {
+              target = "../docProps/core.xml",
+            } }),
+          },
+        },
+      })
+      with_archive(bytes, function(path)
+        local pkg = opc.open_path(path, limits())
+        expect_code("opc.metadata-replacement", function()
+          pkg:replace_part("/_rels/.rels", "replacement")
+        end)
+        expect_code("opc.metadata-replacement", function()
+          pkg:replace_part(
+            "/word/_rels/document.xml.rels", "replacement")
+        end)
+        expect_code("opc.invalid-part-name", function()
+          pkg:replace_part("/[Content_Types].xml", "replacement")
         end)
       end)
     end,

@@ -158,6 +158,11 @@ local function require_entry(self, part_name)
   return zip_name, entry
 end
 
+local function is_relationship_part(zip_name)
+  return zip_name == "_rels/.rels" or
+    zip_name:match("/_rels/[^/]+%.rels$") ~= nil
+end
+
 local function attribute(node, name)
   return xml_adapter.get_attribute(node, "", name)
 end
@@ -203,6 +208,14 @@ function Package:_read_zip_entry(zip_name, missing_code)
     entry,
     self._limits.max_entry_uncompressed_bytes,
     self._materialization_remaining)
+  if math.type(evidence.produced) ~= "integer" or
+      evidence.produced < 0 then
+    raise("opc.invalid-read-evidence",
+      "bounded entry reader returned an invalid output byte count", {
+        zip_name = zip_name,
+        produced = evidence.produced,
+      })
+  end
   self._cache[zip_name] = bytes
   self._materialization_remaining =
     self._materialization_remaining - evidence.produced
@@ -234,6 +247,12 @@ end
 
 function Package:replace_part(part_name, bytes)
   local zip_name = require_entry(self, part_name)
+  if is_relationship_part(zip_name) then
+    raise("opc.metadata-replacement",
+      "relationship metadata is immutable after package open", {
+        part_name = part_name,
+      })
+  end
   if type(bytes) ~= "string" then
     raise("opc.invalid-replacement", "replacement part must be byte string", {
       part_name = part_name,
