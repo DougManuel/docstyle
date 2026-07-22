@@ -141,6 +141,40 @@ a="&amp;&lt;&gt;&quot;&apos;&#65;&#x1F600;">&amp;&lt;&gt;&quot;&apos;&#65;&#x1F6
         local_name = "double", value = "two", quote = "\"" },
     },
   }),
+  valid("raw-greater-than-single-quoted-empty-attribute",
+    "<root a='1>2'/>", {
+      attributes = {
+        { owner = { uri = "", local_name = "root" }, uri = "",
+          local_name = "a", value = "1>2", quote = "'" },
+      },
+    }),
+  valid("raw-greater-than-double-quoted-empty-attribute",
+    [[<root a="1>2"/>]], {
+      attributes = {
+        { owner = { uri = "", local_name = "root" }, uri = "",
+          local_name = "a", value = "1>2", quote = "\"" },
+      },
+    }),
+  valid("cdata-close-marker-inside-attribute", "<root a=']]>'/>", {
+    attributes = {
+      { owner = { uri = "", local_name = "root" }, uri = "",
+        local_name = "a", value = "]]>", quote = "'" },
+    },
+  }),
+  valid("pi-close-marker-inside-attribute", "<root a='x?>y'/>", {
+    attributes = {
+      { owner = { uri = "", local_name = "root" }, uri = "",
+        local_name = "a", value = "x?>y", quote = "'" },
+    },
+  }),
+  valid("empty-element-marker-inside-attribute",
+    "<root a='x/>y'>text</root>", {
+      attributes = {
+        { owner = { uri = "", local_name = "root" }, uri = "",
+          local_name = "a", value = "x/>y", quote = "'" },
+      },
+      text = { "text" },
+    }),
   valid("lexical-content", "<root xml:space=\"preserve\"> \n" ..
     "<!--keep--><?target data?><![CDATA[raw <&>]]><child/>  </root>", {
     attributes = {
