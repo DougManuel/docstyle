@@ -425,27 +425,27 @@ relationships = pkg:relationships(source_part)
 pkg:write_atomic(output_path, options)
 ```
 
-- [ ] **Step 1: Write package-handle and budget tests**
+- [x] **Step 1: Write package-handle and budget tests**
 
 Assert invalid/non-integral/overflowing limits fail before archive processing. The handle tracks a cumulative materialization budget. Choose and document cache semantics: successful `part()` reads cache immutable bytes and charge once; repeated reads return the cached value without a second charge. Failed reads do not populate the cache. A request that would exceed the remaining budget fails before output exceeds it.
 
 Keep package structure fixed after open. `[Content_Types].xml` remains non-addressable as an OPC part, and `replace_part` rejects package-root and part-level relationship metadata. Ordinary existing parts remain replaceable without a materialization-budget charge.
 
-- [ ] **Step 2: Write path, content-type and root tests**
+- [x] **Step 2: Write path, content-type and root tests**
 
 Validate slash-prefixed part names without URI decoding, map them to ZIP names by removing exactly one leading slash and use byte-exact lookup after rejecting ASCII case collisions. Parse `[Content_Types].xml`, `_rels/.rels` and part relationships with the selected XML adapter. Verify unique relationship IDs, one unambiguous office-document root, `word/document.xml` and `docProps/core.xml` traversal.
 
-- [ ] **Step 3: Implement bounded RFC 3986 relationship handling**
+- [x] **Step 3: Implement bounded RFC 3986 relationship handling**
 
 Parse target segments before decoding. Reject malformed encodings, encoded separators, encoded dot segments, encoded NUL/control bytes, schemes, authorities and queries. Normalize retained hex to uppercase and decode only unreserved characters. Remove the fragment before lookup while recording it in the relationship result. Resolve literal `..` relative to the source and fail on package escape. Record but never fetch `TargetMode="External"`; missing mode means internal and other values fail closed.
 
 Executable cases include `media/My%20Image.png`, `%7E`, `%2F`, `%2E%2E`, mixed-case hex, literal `../`, case-variant stored names and external relative targets.
 
-- [ ] **Step 4: Bind validated metadata to bounded content retrieval**
+- [x] **Step 4: Bind validated metadata to bounded content retrieval**
 
 The handle reads only compressed byte ranges identified by `zip_preflight`; it never asks `pandoc.zip` to decompress untrusted entry contents. Verify produced size and CRC-32 agreement before returning bytes, and record both as evidence. Preserve unknown entries in the package inventory even when never requested.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 ```bash
 DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua
@@ -468,21 +468,23 @@ Relates to #31"
 - Create: `tests/vnext/xml-spike/tests/test-publication.lua`
 - Modify: `dev/vnext/xml-spike/provenance.json`
 
-- [ ] **Step 1: Produce and document the LibreOffice fixture**
+- [x] **Step 1: Produce and document the LibreOffice fixture**
 
 The source contains a heading, body paragraph, list, table, internal and external hyperlinks, header or footer and section break. Render locally, open and save through LibreOffice, then record source licence, source hash, output hash, `soffice --version`, generation commands and expected constructs. Comment retention is descriptive evidence and does not determine the gate. Keep the DOCX small and free of personal data.
 
-- [ ] **Step 2: Exercise Word and LibreOffice preservation**
+- [x] **Step 2: Exercise Word and LibreOffice preservation**
 
 Copy repository fixtures to temporary directories. Test native comments and relationships, section properties, headers/footers/page fields, revisions, DOCSTYLE/Zotero field instructions, compatibility namespaces and unknown attributes. Make one permitted existing-attribute or sole-ordinary-text edit per run. Assert untouched entries have identical uncompressed bytes and edited parts satisfy the independent full-part oracle.
 
-- [ ] **Step 3: Implement deterministic writing**
+- [x] **Step 3: Implement deterministic writing**
 
-Preserve existing entry order, uncompressed bytes and modification times. Changed existing entries retain original modification times. Append new entries in bytewise name order with ZIP epoch `1980-01-01T00:00:00`. Fix compression settings where `pandoc.zip` exposes them.
+Preserve existing entry order, uncompressed bytes and modification times. Changed existing entries retain original modification times. The Task 7 fixed-at-open ruling means the spike does not add entries; a future production design that permits new entries must append them in bytewise name order with ZIP epoch `1980-01-01T00:00:00`. Fix compression settings where `pandoc.zip` exposes them.
 
 Reserve a collision-resistant temporary directory in the destination directory with an atomic `pandoc.system.make_directory(candidate, false)` call; the bundled runtime raises `File exists` on a collision. Derive only the random basename from `os.tmpname()`, remove the operating-system temporary entry, prefix the basename with `.docstyle-`, and retry directory reservation on collision. Build and close the archive inside the reserved directory. Reopen the completed temporary package through `opc.open_path`, run the same limits and relationship checks, then use `os.rename` as the single replacement point. Always remove the reserved directory. A simulated failure immediately before rename must leave an existing destination byte-identical and no temporary artifact behind.
 
-- [ ] **Step 4: Test write failure and unknown-part preservation**
+Before reserving temporary resources or constructing the archive, validate replacement bytes against the per-entry and total uncompressed-size limits. After serialization, validate the completed archive byte size before writing it to disk. Pandoc's ZIP writer exposes completed bytes only through `bytestring()`, so this check bounds the disk write but cannot avoid the in-memory serialization itself; record that API limitation explicitly.
+
+- [x] **Step 4: Test write failure and unknown-part preservation**
 
 Inject failures after archive construction, after close, after verification and immediately before rename. Verify the destination and cleanup at every point. Verify initially unrequested unknown entries are republished and preserve uncompressed bytes.
 

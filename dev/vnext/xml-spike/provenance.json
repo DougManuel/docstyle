@@ -37,6 +37,23 @@
       "excluded_reason": "Materializes complete expanded entry bytes and exposes no enforceable output-byte cap"
     },
     {
+      "name": "pandoc.zip.Archive writer",
+      "version": "Pandoc 3.8.3 bundled with Quarto 1.9.26",
+      "license": "GPL-2.0-or-later",
+      "selected_path": "Construct a new archive only after bounded OPC preflight and materialization; preserve validated entry order, uncompressed bytes and entry modification times",
+      "capabilities": [
+        "caller-specified entry order",
+        "caller-specified entry modification time",
+        "in-memory archive serialization"
+      ],
+      "documented_limitations": [
+        "no exposed compression-method or compression-level control",
+        "no exposed preservation control for ZIP extra fields, external attributes or archive comments",
+        "completed archive bytes must be materialized in memory before their size can be verified because the API exposes serialization only through bytestring()",
+        "whole-archive bytes are not expected to match the source archive"
+      ]
+    },
+    {
       "name": "SLAXML",
       "version": "0.8",
       "upstream_repository": "https://github.com/Phrogz/SLAXML",
@@ -155,11 +172,9 @@
       "LuaXML passes the complete shared adapter table, including Unicode-name rows",
       "SLAXML fails the Unicode-name hard gate",
       "the LuaXML path is one vendored dependency and excludes CSS, HTML, XPath, LuaRocks and native modules",
-      "this is an XML-candidate selection; Tasks 7 through 10 remain pending"
+      "this is an XML-candidate selection; Tasks 9 and 10 remain pending"
     ],
     "pending_gates": [
-      "OPC package integration and fixture matrix",
-      "office evidence and deterministic atomic publication",
       "fresh-process determinism, reference performance and retained-heap limits",
       "final decision report"
     ]
@@ -177,6 +192,26 @@
         "high ratio"
       ],
       "location": "tests/vnext/xml-spike/tests/test-inflate-limit.lua"
+    },
+    {
+      "name": "LibreOffice preservation fixture",
+      "licence": "CC0-1.0",
+      "contains_personal_data": false,
+      "source": "tests/vnext/xml-spike/fixtures/office/libreoffice-source.qmd",
+      "source_sha256": "f8641b7aaaa439a705e16c96c3c7bdcdbe555b936339e78f3c2cf75db637beb1",
+      "project_config": "tests/vnext/xml-spike/fixtures/office/_quarto.yml",
+      "project_config_sha256": "a0dcf3904faa5fa932cf4622bd3158538e90390f3a73462408f5b4e07570f0b2",
+      "output": "tests/vnext/xml-spike/fixtures/office/libreoffice-produced.docx",
+      "output_sha256": "3fb9ec751404c2e66e8e81a066fe2c0ab87dfb367756a2987bd99fecb909cec4",
+      "output_size_bytes": 10311,
+      "runtime": {
+        "quarto": "1.9.26",
+        "pandoc": "3.8.3",
+        "lua": "Lua 5.4",
+        "docstyle_extension": "0.19.0",
+        "libreoffice": "LibreOfficeDev 26.8.0.0.alpha0 2c87e51eeaa2b413ff4ae097b2705eea1995d8e5"
+      },
+      "details": "tests/vnext/xml-spike/fixtures/office/metadata.json"
     }
   ],
   "local_modifications": [
@@ -192,6 +227,14 @@
     {
       "file": "dev/vnext/xml-spike/archive/entry_reader.lua",
       "description": "Budgeted stored/deflated entry reads with length and CRC-32 verification"
+    },
+    {
+      "file": "dev/vnext/xml-spike/archive/opc.lua",
+      "description": "Validated package handle and Task 8 atomic-publication entry point"
+    },
+    {
+      "file": "dev/vnext/xml-spike/archive/writer.lua",
+      "description": "Deterministic package reconstruction, completed-output revalidation, failure injection and single-rename publication"
     },
     {
       "file": "dev/vnext/xml-spike/candidates/slaxml/adapter.lua",
@@ -246,6 +289,39 @@
       "symlink_mode_bits_verified": true,
       "vendored_hashes_verified": true,
       "pandoc_zip_full_materialization_excluded": true
+    }
+  },
+  "office_publication_gate": {
+    "decision": "pass",
+    "date": "2026-07-23",
+    "command": "DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua",
+    "result": {
+      "pass": 439,
+      "fail": 0,
+      "preservation_gate_pass": 25,
+      "safety_gate_pass": 109,
+      "determinism_gate_pass": 1
+    },
+    "regression": {
+      "vnext_conformance": "PASS 136 | FAIL 0",
+      "r_suite": "FAIL 0 | WARN 30 | SKIP 4 | PASS 3400"
+    },
+    "criteria": {
+      "word_native_comments_and_revisions_preserved": true,
+      "docstyle_and_zotero_fields_preserved": true,
+      "libreoffice_fixture_documented": true,
+      "unknown_parts_preserved": true,
+      "unmodified_part_bytes_preserved": true,
+      "entry_order_preserved": true,
+      "entry_modification_times_preserved": true,
+      "completed_output_revalidated": true,
+      "same_process_archive_bytes_deterministic": true,
+      "pre_rename_destination_preserved": true,
+      "all_injected_failures_cleaned": true,
+      "temporary_directory_collisions_retried": true,
+      "replacement_entry_size_bounded_before_archive_construction": true,
+      "replacement_total_size_bounded_before_archive_construction": true,
+      "completed_archive_size_bounded_before_disk_write": true
     }
   }
 }

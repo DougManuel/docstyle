@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "name": "LibreOffice preservation fixture",
+  "date": "2026-07-23",
+  "licence": "CC0-1.0",
+  "contains_personal_data": false,
+  "source": {
+    "qmd": "libreoffice-source.qmd",
+    "qmd_sha256": "f8641b7aaaa439a705e16c96c3c7bdcdbe555b936339e78f3c2cf75db637beb1",
+    "project_config": "_quarto.yml",
+    "project_config_sha256": "a0dcf3904faa5fa932cf4622bd3158538e90390f3a73462408f5b4e07570f0b2",
+    "rendered_docx_sha256": "2e10cec9bc3bc5069c43ac7ccd984a0a94bf7d3ce2ad18395e7722e87715d984"
+  },
+  "output": {
+    "docx": "libreoffice-produced.docx",
+    "sha256": "3fb9ec751404c2e66e8e81a066fe2c0ab87dfb367756a2987bd99fecb909cec4",
+    "size_bytes": 10311
+  },
+  "runtime": {
+    "quarto": "1.9.26",
+    "pandoc": "3.8.3",
+    "lua": "Lua 5.4",
+    "docstyle_extension": "0.19.0",
+    "libreoffice": "LibreOfficeDev 26.8.0.0.alpha0 2c87e51eeaa2b413ff4ae097b2705eea1995d8e5"
+  },
+  "generation_commands": [
+    "env R_PROFILE_USER=/dev/null Rscript ../../../../../_extensions/docstyle/generate-reference.R",
+    "quarto render",
+    "soffice -env:UserInstallation=file://<temporary-profile> --headless --convert-to docx --outdir <temporary-directory> output/libreoffice-source.docx"
+  ],
+  "expected_constructs": [
+    "heading",
+    "body paragraph",
+    "bulleted list",
+    "table",
+    "internal bookmark and hyperlink",
+    "external hyperlink relationship",
+    "footer relationship and footer field",
+    "next-page section break",
+    "DOCSTYLE section field instructions",
+    "ZOTERO_PREF field instruction"
+  ],
+  "observed_after_libreoffice_save": {
+    "expected_constructs_present": true,
+    "external_hyperlink_target": "https://example.org/",
+    "comments_part_present": false,
+    "comments_note": "Comment retention is descriptive evidence and does not determine the Task 8 gate."
+  }
+}
