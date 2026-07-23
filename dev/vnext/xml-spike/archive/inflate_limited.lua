@@ -69,6 +69,14 @@ function M.inflate_raw(compressed, limit, emit)
 
   local output, status, produced =
     libdeflate:DecompressDeflateLimited(compressed, limit, emit)
+  local integer_produced = math.tointeger(produced)
+  if integer_produced == nil or integer_produced < 0 then
+    diagnostic.raise("deflate.invalid-stream",
+      "raw DEFLATE decoder returned an invalid output byte count", {
+        produced = produced,
+      })
+  end
+  produced = integer_produced
   if status ~= 0 then raise_status(status, limit, produced) end
   return output, produced
 end

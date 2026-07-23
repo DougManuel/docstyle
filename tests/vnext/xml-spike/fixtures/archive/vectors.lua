@@ -1,5 +1,28 @@
 local M = {}
 
+local CRC32_MASK = 0xFFFFFFFF
+local CRC32_TABLE = {}
+for octet = 0, 255 do
+  local value = octet
+  for _ = 1, 8 do
+    if (value & 1) == 1 then
+      value = (value >> 1) ~ 0xEDB88320
+    else
+      value = value >> 1
+    end
+  end
+  CRC32_TABLE[octet] = value & CRC32_MASK
+end
+
+local function crc32(bytes)
+  local value = CRC32_MASK
+  for index = 1, #bytes do
+    local lookup = (value ~ bytes:byte(index)) & 0xFF
+    value = ((value >> 8) ~ CRC32_TABLE[lookup]) & CRC32_MASK
+  end
+  return (~value) & CRC32_MASK
+end
+
 local function le16(value)
   return string.char(value & 0xFF, (value >> 8) & 0xFF)
 end
@@ -210,5 +233,6 @@ M.le16 = le16
 M.le32 = le32
 M.le64 = le64
 M.zip64_extra = zip64_extra
+M.crc32 = crc32
 
 return M
