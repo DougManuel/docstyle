@@ -482,6 +482,8 @@ Preserve existing entry order, uncompressed bytes and modification times. Change
 
 Reserve a collision-resistant temporary directory in the destination directory with an atomic `pandoc.system.make_directory(candidate, false)` call; the bundled runtime raises `File exists` on a collision. Derive only the random basename from `os.tmpname()`, remove the operating-system temporary entry, prefix the basename with `.docstyle-`, and retry directory reservation on collision. Build and close the archive inside the reserved directory. Reopen the completed temporary package through `opc.open_path`, run the same limits and relationship checks, then use `os.rename` as the single replacement point. Always remove the reserved directory. A simulated failure immediately before rename must leave an existing destination byte-identical and no temporary artifact behind.
 
+Before reserving temporary resources or constructing the archive, validate replacement bytes against the per-entry and total uncompressed-size limits. After serialization, validate the completed archive byte size before writing it to disk. Pandoc's ZIP writer exposes completed bytes only through `bytestring()`, so this check bounds the disk write but cannot avoid the in-memory serialization itself; record that API limitation explicitly.
+
 - [x] **Step 4: Test write failure and unknown-part preservation**
 
 Inject failures after archive construction, after close, after verification and immediately before rename. Verify the destination and cleanup at every point. Verify initially unrequested unknown entries are republished and preserve uncompressed bytes.

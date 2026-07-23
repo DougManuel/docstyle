@@ -49,6 +49,7 @@
       "documented_limitations": [
         "no exposed compression-method or compression-level control",
         "no exposed preservation control for ZIP extra fields, external attributes or archive comments",
+        "completed archive bytes must be materialized in memory before their size can be verified because the API exposes serialization only through bytestring()",
         "whole-archive bytes are not expected to match the source archive"
       ]
     },
@@ -295,10 +296,10 @@
     "date": "2026-07-23",
     "command": "DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua",
     "result": {
-      "pass": 438,
+      "pass": 439,
       "fail": 0,
       "preservation_gate_pass": 25,
-      "safety_gate_pass": 108,
+      "safety_gate_pass": 109,
       "determinism_gate_pass": 1
     },
     "regression": {
@@ -317,7 +318,10 @@
       "same_process_archive_bytes_deterministic": true,
       "pre_rename_destination_preserved": true,
       "all_injected_failures_cleaned": true,
-      "temporary_directory_collisions_retried": true
+      "temporary_directory_collisions_retried": true,
+      "replacement_entry_size_bounded_before_archive_construction": true,
+      "replacement_total_size_bounded_before_archive_construction": true,
+      "completed_archive_size_bounded_before_disk_write": true
     }
   }
 }

@@ -103,6 +103,32 @@ local function maybe_fail(options, point)
   end
 end
 
+local function validate_output_sizes(pkg)
+  local total = 0
+  for _, entry in ipairs(pkg.entries) do
+    local replacement = pkg._replacements[entry.name]
+    local size = replacement and #replacement or entry.uncompressed_size
+    if size > pkg._limits.max_entry_uncompressed_bytes then
+      raise("publication.entry-limit",
+        "output entry exceeds the uncompressed-size limit", {
+          entry = entry.name,
+          actual = size,
+          limit = pkg._limits.max_entry_uncompressed_bytes,
+        })
+    end
+    local remaining = pkg._limits.max_total_uncompressed_bytes - total
+    if size > remaining then
+      raise("publication.total-limit",
+        "output package exceeds the total uncompressed-size limit", {
+          entry = entry.name,
+          actual = total + size,
+          limit = pkg._limits.max_total_uncompressed_bytes,
+        })
+    end
+    total = total + size
+  end
+end
+
 local function publish(pkg, output_path, options)
   local destination_directory = pandoc.path.directory(output_path)
   if destination_directory == "" then destination_directory = "." end
@@ -114,7 +140,15 @@ local function publish(pkg, output_path, options)
   local ok, result = pcall(function()
     local archive = pandoc.zip.Archive(archive_entries(pkg))
     maybe_fail(options, "after_archive")
-    write_bytes(temporary_path, archive:bytestring())
+    local archive_bytes = archive:bytestring()
+    if #archive_bytes > pkg._limits.max_archive_bytes then
+      raise("publication.archive-limit",
+        "completed archive exceeds the archive-size limit", {
+          actual = #archive_bytes,
+          limit = pkg._limits.max_archive_bytes,
+        })
+    end
+    write_bytes(temporary_path, archive_bytes)
     maybe_fail(options, "after_close")
     local verified = require("archive.opc").open_path(
       temporary_path, pkg._limits)
@@ -188,6 +222,7 @@ function M.write_atomic(pkg, output_path, options)
         fail_at = options.fail_at,
       })
   end
+  validate_output_sizes(pkg)
   return publish(pkg, output_path, options)
 end
 

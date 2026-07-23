@@ -41,6 +41,26 @@ local function assert_no_temporary_artifacts(dir)
   end
 end
 
+local function copy_limits(overrides)
+  local copied = {}
+  for name, value in pairs(LIMITS) do copied[name] = value end
+  for name, value in pairs(overrides or {}) do copied[name] = value end
+  return copied
+end
+
+local function deterministic_bytes(length)
+  local bytes = {}
+  local state = 0x12345678
+  for index = 1, length do
+    state = state ~ (state << 13)
+    state = state ~ (state >> 17)
+    state = state ~ (state << 5)
+    state = state & 0xFFFFFFFF
+    bytes[index] = string.char(state & 0xFF)
+  end
+  return table.concat(bytes)
+end
+
 local function edit_first_text(source, replacement)
   local document = adapter.parse(source)
   local target, occurrence
@@ -197,6 +217,57 @@ return {
         end)
         assert(not fixture.exists(output))
         assert_no_temporary_artifacts(dir)
+      end)
+    end,
+  },
+  {
+    name = "publication bounds replacement and completed archive sizes",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("publication-output-limits", function(dir)
+        local baseline = opc.open_path(SOURCE, LIMITS)
+        local largest, total = 0, 0
+        for _, entry in ipairs(baseline.entries) do
+          largest = math.max(largest, entry.uncompressed_size)
+          total = total + entry.uncompressed_size
+        end
+        local document = baseline:part(baseline.office_document_part)
+        local rows = {
+          {
+            code = "publication.entry-limit",
+            limits = copy_limits({
+              max_entry_uncompressed_bytes = largest,
+            }),
+            replacement = string.rep("x", largest + 1),
+          },
+          {
+            code = "publication.total-limit",
+            limits = copy_limits({
+              max_total_uncompressed_bytes = total,
+            }),
+            replacement = document .. "x",
+          },
+          {
+            code = "publication.archive-limit",
+            limits = copy_limits({
+              max_archive_bytes = #fixture.read_bytes(SOURCE),
+            }),
+            replacement = deterministic_bytes(20000),
+          },
+        }
+        for index, row in ipairs(rows) do
+          local output = pandoc.path.join({
+            dir, "published-" .. index .. ".docx",
+          })
+          local pkg = opc.open_path(SOURCE, row.limits)
+          pkg:replace_part(pkg.office_document_part, row.replacement)
+          expect_code(row.code, function()
+            pkg:write_atomic(output)
+          end)
+          assert(not fixture.exists(output))
+          assert_no_temporary_artifacts(dir)
+        end
       end)
     end,
   },
