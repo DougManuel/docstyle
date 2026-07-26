@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "decision": "pass",
+  "date": "2026-07-26",
+  "command": "quarto run tests/vnext/xml-spike/run.lua",
+  "process_count": 10,
+  "process_model": "ten separate quarto run child.lua invocations",
+  "runtime": {
+    "quarto": "1.9.26",
+    "pandoc": "3.8.3",
+    "lua": "Lua 5.4",
+    "os": "darwin",
+    "arch": "aarch64"
+  },
+  "source": "tests/vnext/xml-spike/fixtures/office/libreoffice-produced.docx",
+  "source_sha256": "3fb9ec751404c2e66e8e81a066fe2c0ab87dfb367756a2987bd99fecb909cec4",
+  "edited_part_sha256": "b9bbbeef3c76ba684a9d9f903b64577b8766f84878bcd490eeb526b3ed837caa",
+  "entry_names": [
+    "docProps/core.xml",
+    "docProps/app.xml",
+    "docProps/custom.xml",
+    "_rels/.rels",
+    "word/_rels/document.xml.rels",
+    "word/styles.xml",
+    "word/footer1.xml",
+    "word/document.xml",
+    "word/footer2.xml",
+    "word/footer3.xml",
+    "word/numbering.xml",
+    "word/fontTable.xml",
+    "word/theme/theme1.xml",
+    "word/settings.xml",
+    "[Content_Types].xml"
+  ],
+  "archive_sha256": "cf18c83d1369c190ae75f12ba39b58f5449b51e39ba1ed5d0b450cde5a5f5319"
+}

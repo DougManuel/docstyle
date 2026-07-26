@@ -488,7 +488,7 @@ Before reserving temporary resources or constructing the archive, validate repla
 
 Inject failures after archive construction, after close, after verification and immediately before rename. Verify the destination and cleanup at every point. Verify initially unrequested unknown entries are republished and preserve uncompressed bytes.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 ```bash
 DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua
@@ -509,25 +509,25 @@ Relates to #31"
 - Create: `dev/vnext/xml-spike/performance-results.json`
 - Create: `dev/vnext/xml-spike/determinism-results.json`
 
-- [ ] **Step 1: Generate independent scaling fixtures**
+- [x] **Step 1: Generate independent scaling fixtures**
 
 Generate one, five and 10 MiB XML parts with representative `w:p`, `w:r`, `w:t`, attributes and namespace declarations. The generator computes the planted edit coordinates as it emits source bytes; it must not call any candidate parser or search the completed XML for the target.
 
-- [ ] **Step 2: Implement the measurement protocol exactly**
+- [x] **Step 2: Implement the measurement protocol exactly**
 
 Run one unreported warm-up and five repetitions per size. Use `pandoc.system.cputime()` around parse, one edit and serialization separately and report median combined CPU time. Force collection before baseline and after each phase; report the maximum retained Lua heap delta as `max(0, observed_kib - initial_kib) * 1024`. Label it retained Lua heap, never peak memory.
 
 Record Quarto, Pandoc, Lua, operating system, architecture, Mac model, processor and installed memory. Do not make performance thresholds ordinary CI assertions; enable them with `DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1` on the recorded reference Mac.
 
-- [ ] **Step 3: Run ten genuinely fresh publication processes**
+- [x] **Step 3: Run ten genuinely fresh publication processes**
 
 `child.lua` performs the same XML edit and package write from identical source bytes, then prints JSON containing edited-part SHA-256, ordered entry names and whole-archive SHA-256. The parent invokes `quarto run` ten times with separate temporary output paths and compares all three fields. It must not call the child module ten times in one Lua VM.
 
-- [ ] **Step 4: Apply the gates**
+- [x] **Step 4: Apply the gates**
 
 On the reference environment, the 10 MiB median combined CPU time is at most five seconds, maximum retained Lua heap delta is at most 12 times input bytes, and both 10 MiB measures are at most 15 times the one MiB results. Every edited range must still equal the generator's independent golden coordinates.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 ```bash
 quarto run tests/vnext/xml-spike/run.lua
