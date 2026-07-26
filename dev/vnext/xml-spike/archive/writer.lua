@@ -24,10 +24,17 @@ local function write_bytes(path, bytes)
   end
   local wrote, write_error = handle:write(bytes)
   local closed, close_error = handle:close()
-  if not wrote or not closed then
+  if not wrote then
+    raise("publication.write", "could not write temporary package", {
+      path = path,
+      detail = write_error,
+      close_detail = closed and nil or close_error,
+    })
+  end
+  if not closed then
     raise("publication.write", "could not close temporary package", {
       path = path,
-      detail = write_error or close_error,
+      detail = close_error,
     })
   end
 end
@@ -159,6 +166,17 @@ local function publish(pkg, output_path, options)
           actual = #verified.entries,
         })
     end
+    for index, expected in ipairs(pkg.entries) do
+      local actual = verified.entries[index]
+      if actual.name ~= expected.name then
+        raise("publication.verification",
+          "completed package entry sequence changed", {
+            index = index,
+            expected = expected.name,
+            actual = actual.name,
+          })
+      end
+    end
     maybe_fail(options, "after_verification")
     maybe_fail(options, "before_rename")
     local renamed, rename_error = os.rename(
@@ -179,6 +197,14 @@ local function publish(pkg, output_path, options)
 
   local cleaned, cleanup_error = pcall(
     pandoc.system.remove_directory, reserved, true)
+  if not ok then
+    if not cleaned and type(result) == "table" and
+        result.docstyle_diagnostic == true then
+      result.context.cleanup_path = reserved
+      result.context.cleanup_detail = tostring(cleanup_error)
+    end
+    error(result, 0)
+  end
   if not cleaned then
     raise("publication.cleanup",
       "could not remove reserved temporary directory", {
@@ -186,7 +212,6 @@ local function publish(pkg, output_path, options)
         detail = tostring(cleanup_error),
       })
   end
-  if not ok then error(result, 0) end
   return result
 end
 

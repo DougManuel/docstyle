@@ -296,10 +296,10 @@
     "date": "2026-07-23",
     "command": "DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua",
     "result": {
-      "pass": 439,
+      "pass": 441,
       "fail": 0,
       "preservation_gate_pass": 25,
-      "safety_gate_pass": 109,
+      "safety_gate_pass": 111,
       "determinism_gate_pass": 1
     },
     "regression": {
@@ -321,7 +321,10 @@
       "temporary_directory_collisions_retried": true,
       "replacement_entry_size_bounded_before_archive_construction": true,
       "replacement_total_size_bounded_before_archive_construction": true,
-      "completed_archive_size_bounded_before_disk_write": true
+      "completed_archive_size_bounded_before_disk_write": true,
+      "completed_output_entry_sequence_verified": true,
+      "primary_publication_error_preserved_on_cleanup_failure": true,
+      "write_and_close_failures_distinguished": true
     }
   }
 }

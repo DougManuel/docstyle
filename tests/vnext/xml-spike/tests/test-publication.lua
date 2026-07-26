@@ -202,6 +202,104 @@ return {
     end,
   },
   {
+    name = "publication diagnostics preserve the primary failure",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("publication-diagnostics", function(dir)
+        local rows = {
+          {
+            message = "could not write temporary package",
+            write = function() return nil, "forced write failure" end,
+            close = function() return true end,
+          },
+          {
+            message = "could not close temporary package",
+            write = function() return true end,
+            close = function() return nil, "forced close failure" end,
+          },
+        }
+        for index, row in ipairs(rows) do
+          local output = pandoc.path.join({
+            dir, "published-" .. index .. ".docx",
+          })
+          local pkg = opc.open_path(SOURCE, LIMITS)
+          local original_open = io.open
+          io.open = function(path, mode)
+            if mode == "wb" then
+              return {
+                write = row.write,
+                close = row.close,
+              }
+            end
+            return original_open(path, mode)
+          end
+          local ok, err = diagnostic.capture(function()
+            pkg:write_atomic(output)
+          end)
+          io.open = original_open
+          assert(not ok)
+          assert(err.code == "publication.write")
+          assert(err.message == row.message)
+          assert(not fixture.exists(output))
+          assert_no_temporary_artifacts(dir)
+        end
+
+        local output = pandoc.path.join({
+          dir, "cleanup-failure.docx",
+        })
+        local pkg = opc.open_path(SOURCE, LIMITS)
+        local original_remove = pandoc.system.remove_directory
+        pandoc.system.remove_directory = function()
+          error("forced cleanup failure", 0)
+        end
+        local ok, err = diagnostic.capture(function()
+          pkg:write_atomic(output, { fail_at = "after_archive" })
+        end)
+        pandoc.system.remove_directory = original_remove
+        assert(not ok)
+        assert(err.code == "publication.injected-failure")
+        assert(err.context.point == "after_archive")
+        assert(err.context.cleanup_detail:find(
+          "forced cleanup failure", 1, true))
+      end)
+    end,
+  },
+  {
+    name = "publication verification checks the entry sequence",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("publication-verification", function(dir)
+        local output = pandoc.path.join({ dir, "published.docx" })
+        local pkg = opc.open_path(SOURCE, LIMITS)
+        local original_open_path = opc.open_path
+        opc.open_path = function(path, limits)
+          local reopened = original_open_path(path, limits)
+          local reordered = {}
+          for index, entry in ipairs(reopened.entries) do
+            reordered[index] = entry
+          end
+          reordered[1], reordered[2] =
+            reordered[2], reordered[1]
+          reopened.entries = reordered
+          return reopened
+        end
+        local ok, err = diagnostic.capture(function()
+          pkg:write_atomic(output)
+        end)
+        opc.open_path = original_open_path
+        assert(not ok)
+        assert(err.code == "publication.verification",
+          "expected publication.verification, got " ..
+          err.code .. ": " .. err.message)
+        assert(err.context.index == 1)
+        assert(not fixture.exists(output))
+        assert_no_temporary_artifacts(dir)
+      end)
+    end,
+  },
+  {
     name = "publication rejects unknown test options",
     gate = "safety",
     stage = "package",
@@ -248,13 +346,6 @@ return {
             }),
             replacement = document .. "x",
           },
-          {
-            code = "publication.archive-limit",
-            limits = copy_limits({
-              max_archive_bytes = #fixture.read_bytes(SOURCE),
-            }),
-            replacement = deterministic_bytes(20000),
-          },
         }
         for index, row in ipairs(rows) do
           local output = pandoc.path.join({
@@ -268,6 +359,44 @@ return {
           assert(not fixture.exists(output))
           assert_no_temporary_artifacts(dir)
         end
+
+        local replacement = deterministic_bytes(20000)
+        local candidate = pandoc.path.join({
+          dir, "archive-limit-candidate.docx",
+        })
+        local candidate_pkg = opc.open_path(SOURCE, LIMITS)
+        candidate_pkg:replace_part(
+          candidate_pkg.office_document_part, replacement)
+        candidate_pkg:write_atomic(candidate)
+        local candidate_size = #fixture.read_bytes(candidate)
+        assert(candidate_size > #fixture.read_bytes(SOURCE))
+
+        local exact = pandoc.path.join({
+          dir, "archive-limit-exact.docx",
+        })
+        local exact_limits = copy_limits({
+          max_archive_bytes = candidate_size,
+        })
+        local exact_pkg = opc.open_path(SOURCE, exact_limits)
+        exact_pkg:replace_part(
+          exact_pkg.office_document_part, replacement)
+        exact_pkg:write_atomic(exact)
+        assert(#fixture.read_bytes(exact) == candidate_size)
+
+        local capped = pandoc.path.join({
+          dir, "archive-limit-capped.docx",
+        })
+        local capped_limits = copy_limits({
+          max_archive_bytes = candidate_size - 1,
+        })
+        local capped_pkg = opc.open_path(SOURCE, capped_limits)
+        capped_pkg:replace_part(
+          capped_pkg.office_document_part, replacement)
+        expect_code("publication.archive-limit", function()
+          capped_pkg:write_atomic(capped)
+        end)
+        assert(not fixture.exists(capped))
+        assert_no_temporary_artifacts(dir)
       end)
     end,
   },
