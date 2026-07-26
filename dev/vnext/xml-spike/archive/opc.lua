@@ -262,6 +262,11 @@ function Package:replace_part(part_name, bytes)
   self._replacements[zip_name] = bytes
 end
 
+function Package:write_atomic(output_path, options)
+  return require("archive.writer").write_atomic(
+    self, output_path, options)
+end
+
 local function parse_content_types(self)
   local bytes = self:_read_zip_entry(
     "[Content_Types].xml", "opc.content-types-missing")

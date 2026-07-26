@@ -1,0 +1,29 @@
+---
+title: LibreOffice preservation fixture
+license: CC0-1.0
+---
+
+## Source constructs {#source-constructs}
+
+This small document is a public-domain fixture for testing Open Packaging
+Conventions and WordprocessingML preservation.
+
+- First list item
+- Second list item
+
+| Construct | Expected value |
+|-----------|----------------|
+| Heading   | Preserved       |
+| Table     | Preserved       |
+
+Follow the [internal link](#second-section) or visit the
+[external link](https://example.org/).
+
+::: {.section-appendix page-break="true"
+footer-left="Second section" footer-right="Page {page}"}
+
+## Second section {#second-section}
+
+This section begins after a section break and uses a different footer label.
+
+:::
