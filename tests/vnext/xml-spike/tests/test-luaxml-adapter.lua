@@ -383,8 +383,6 @@ cases[#cases + 1] = {
     assert(provenance.xml_candidate_selection.status ==
       "selected-pending-gates")
     assert(same_array(provenance.xml_candidate_selection.pending_gates, {
-      "fresh-process determinism, reference performance and " ..
-        "retained-heap limits",
       "final decision report",
     }))
   end,

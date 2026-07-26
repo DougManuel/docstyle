@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "decision": "fail",
+  "date": "2026-07-26",
+  "command": "DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1 quarto run tests/vnext/xml-spike/run.lua",
+  "runtime": {
+    "quarto": "1.9.26",
+    "pandoc": "3.8.3",
+    "lua": "Lua 5.4",
+    "os": "darwin",
+    "arch": "aarch64"
+  },
+  "reference_environment": {
+    "operating_system": "macOS 26.5.2",
+    "architecture": "arm64",
+    "model_name": "MacBook Pro",
+    "model_identifier": "MacBookPro18,2",
+    "processor": "Apple M1 Max",
+    "processor_cores": 10,
+    "installed_memory_bytes": 68719476736
+  },
+  "protocol": {
+    "fixture_sizes_mib": [
+      1,
+      5,
+      10
+    ],
+    "warmups_per_size": 1,
+    "repetitions_per_size": 5,
+    "clock": "pandoc.system.cputime picoseconds converted to seconds",
+    "phases": [
+      "parse",
+      "one existing-attribute edit",
+      "serialization"
+    ],
+    "memory_metric": "retained Lua heap after collection, not peak memory"
+  },
+  "gates": {
+    "ten_mib_cpu_seconds_at_most": 5,
+    "ten_mib_retained_heap_multiple_at_most": 12,
+    "ten_to_one_mib_cpu_ratio_at_most": 15,
+    "ten_to_one_mib_retained_heap_ratio_at_most": 15
+  },
+  "gate_results": {
+    "ten_mib_cpu": {
+      "actual": 5.274299,
+      "limit": 5,
+      "pass": false
+    },
+    "ten_mib_retained_heap": {
+      "actual": 35144865,
+      "limit": 125829120,
+      "pass": true
+    },
+    "ten_to_one_mib_cpu": {
+      "one_mib": 0.52074,
+      "ten_mib": 5.274299,
+      "limit_multiple": 15,
+      "pass": true
+    },
+    "ten_to_one_mib_retained_heap": {
+      "one_mib": 3519009,
+      "ten_mib": 35144865,
+      "limit_multiple": 15,
+      "pass": true
+    }
+  },
+  "sizes": [
+    {
+      "input_mib": 1,
+      "input_bytes": 1048576,
+      "golden_range": {
+        "start": 298,
+        "finish": 306
+      },
+      "warmups": 1,
+      "median_combined_cpu_seconds": 0.52074,
+      "maximum_retained_lua_heap_delta_bytes": 3519009,
+      "repetitions": [
+        {
+          "parse_cpu_seconds": 0.516535,
+          "edit_cpu_seconds": 0.000073,
+          "serialization_cpu_seconds": 0.000062,
+          "combined_cpu_seconds": 0.51667,
+          "retained_lua_heap_delta_bytes": 3519009,
+          "edited_bytes": 1048576,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 0.520603,
+          "edit_cpu_seconds": 0.000074,
+          "serialization_cpu_seconds": 0.000063,
+          "combined_cpu_seconds": 0.52074,
+          "retained_lua_heap_delta_bytes": 3519009,
+          "edited_bytes": 1048576,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 0.519165,
+          "edit_cpu_seconds": 0.000077,
+          "serialization_cpu_seconds": 0.000064,
+          "combined_cpu_seconds": 0.519306,
+          "retained_lua_heap_delta_bytes": 3519009,
+          "edited_bytes": 1048576,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 0.524487,
+          "edit_cpu_seconds": 0.000082,
+          "serialization_cpu_seconds": 0.000062,
+          "combined_cpu_seconds": 0.524631,
+          "retained_lua_heap_delta_bytes": 3519009,
+          "edited_bytes": 1048576,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 0.524196,
+          "edit_cpu_seconds": 0.000076,
+          "serialization_cpu_seconds": 0.000062,
+          "combined_cpu_seconds": 0.524334,
+          "retained_lua_heap_delta_bytes": 3519009,
+          "edited_bytes": 1048576,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        }
+      ]
+    },
+    {
+      "input_mib": 5,
+      "input_bytes": 5242880,
+      "golden_range": {
+        "start": 298,
+        "finish": 306
+      },
+      "warmups": 1,
+      "median_combined_cpu_seconds": 2.643611,
+      "maximum_retained_lua_heap_delta_bytes": 17576993,
+      "repetitions": [
+        {
+          "parse_cpu_seconds": 2.660272,
+          "edit_cpu_seconds": 0.000277,
+          "serialization_cpu_seconds": 0.00132,
+          "combined_cpu_seconds": 2.661869,
+          "retained_lua_heap_delta_bytes": 17576993,
+          "edited_bytes": 5242880,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 2.591871,
+          "edit_cpu_seconds": 0.000697,
+          "serialization_cpu_seconds": 0.001272,
+          "combined_cpu_seconds": 2.59384,
+          "retained_lua_heap_delta_bytes": 17576993,
+          "edited_bytes": 5242880,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 2.655372,
+          "edit_cpu_seconds": 0.000277,
+          "serialization_cpu_seconds": 0.00147,
+          "combined_cpu_seconds": 2.657119,
+          "retained_lua_heap_delta_bytes": 17576993,
+          "edited_bytes": 5242880,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 2.593632,
+          "edit_cpu_seconds": 0.000265,
+          "serialization_cpu_seconds": 0.001878,
+          "combined_cpu_seconds": 2.595775,
+          "retained_lua_heap_delta_bytes": 17576993,
+          "edited_bytes": 5242880,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 2.64195,
+          "edit_cpu_seconds": 0.00027,
+          "serialization_cpu_seconds": 0.001391,
+          "combined_cpu_seconds": 2.643611,
+          "retained_lua_heap_delta_bytes": 17576993,
+          "edited_bytes": 5242880,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        }
+      ]
+    },
+    {
+      "input_mib": 10,
+      "input_bytes": 10485760,
+      "golden_range": {
+        "start": 298,
+        "finish": 306
+      },
+      "warmups": 1,
+      "median_combined_cpu_seconds": 5.274299,
+      "maximum_retained_lua_heap_delta_bytes": 35144865,
+      "repetitions": [
+        {
+          "parse_cpu_seconds": 5.270297,
+          "edit_cpu_seconds": 0.000538,
+          "serialization_cpu_seconds": 0.003464,
+          "combined_cpu_seconds": 5.274299,
+          "retained_lua_heap_delta_bytes": 35144865,
+          "edited_bytes": 10485760,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 5.138874,
+          "edit_cpu_seconds": 0.000491,
+          "serialization_cpu_seconds": 0.001069,
+          "combined_cpu_seconds": 5.140434,
+          "retained_lua_heap_delta_bytes": 35144865,
+          "edited_bytes": 10485760,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 5.293851,
+          "edit_cpu_seconds": 0.000582,
+          "serialization_cpu_seconds": 0.003147,
+          "combined_cpu_seconds": 5.29758,
+          "retained_lua_heap_delta_bytes": 35144865,
+          "edited_bytes": 10485760,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 5.185312,
+          "edit_cpu_seconds": 0.00049,
+          "serialization_cpu_seconds": 0.004723,
+          "combined_cpu_seconds": 5.190525,
+          "retained_lua_heap_delta_bytes": 35144865,
+          "edited_bytes": 10485760,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        },
+        {
+          "parse_cpu_seconds": 5.325718,
+          "edit_cpu_seconds": 0.000485,
+          "serialization_cpu_seconds": 0.003276,
+          "combined_cpu_seconds": 5.329479,
+          "retained_lua_heap_delta_bytes": 35144865,
+          "edited_bytes": 10485760,
+          "reported_range": {
+            "start": 298,
+            "finish": 306
+          }
+        }
+      ]
+    }
+  ]
+}

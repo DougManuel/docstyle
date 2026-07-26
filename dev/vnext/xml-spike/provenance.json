@@ -172,10 +172,9 @@
       "LuaXML passes the complete shared adapter table, including Unicode-name rows",
       "SLAXML fails the Unicode-name hard gate",
       "the LuaXML path is one vendored dependency and excludes CSS, HTML, XPath, LuaRocks and native modules",
-      "this is an XML-candidate selection; Tasks 9 and 10 remain pending"
+      "Task 9 resolved fresh-process determinism and reference performance evidence; the final Task 10 decision remains pending"
     ],
     "pending_gates": [
-      "fresh-process determinism, reference performance and retained-heap limits",
       "final decision report"
     ]
   },
@@ -329,6 +328,57 @@
       "first_entry_modification_time_mutation_detected": true,
       "raw_primary_error_retains_cleanup_context": true,
       "cleanup_failure_after_success_is_diagnostic": true
+    }
+  },
+  "task_9_gate": {
+    "decision": "fail",
+    "date": "2026-07-26",
+    "ordinary_command": "quarto run tests/vnext/xml-spike/run.lua",
+    "reference_command": "DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1 quarto run tests/vnext/xml-spike/run.lua",
+    "ordinary_result": {
+      "pass": 449,
+      "fail": 0,
+      "skip": 1
+    },
+    "reference_result": {
+      "pass": 449,
+      "fail": 1,
+      "skip": 0
+    },
+    "determinism": {
+      "decision": "pass",
+      "process_count": 10,
+      "results": "dev/vnext/xml-spike/determinism-results.json",
+      "edited_part_sha256": "b9bbbeef3c76ba684a9d9f903b64577b8766f84878bcd490eeb526b3ed837caa",
+      "archive_sha256": "cf18c83d1369c190ae75f12ba39b58f5449b51e39ba1ed5d0b450cde5a5f5319"
+    },
+    "performance": {
+      "decision": "fail",
+      "results": "dev/vnext/xml-spike/performance-results.json",
+      "ten_mib_median_cpu_seconds": 5.274299,
+      "ten_mib_cpu_limit_seconds": 5,
+      "maximum_retained_lua_heap_delta_bytes": 35144865,
+      "ten_mib_retained_heap_limit_bytes": 125829120
+    },
+    "observations": [
+      "An extra full-stage env -i probe without locale variables changed two rejected-SLAXML diagnostics from xml.backend-rejected to xml.backend-mismatch; the selected LuaXML and contracted Task 9 paths were unaffected, and Task 10 must record the residual diagnostic-portability observation"
+    ],
+    "criteria": {
+      "fresh_process_determinism": true,
+      "edited_part_hash_deterministic": true,
+      "entry_order_deterministic": true,
+      "whole_archive_hash_deterministic": true,
+      "exact_one_five_ten_mib_fixtures": true,
+      "generator_owned_golden_ranges": true,
+      "existing_attribute_edit_measured": true,
+      "oracle_verified_all_scaling_ranges": true,
+      "one_warmup_five_repetitions": true,
+      "parse_edit_serialization_cpu_measured": true,
+      "retained_lua_heap_after_collection_measured": true,
+      "ten_mib_cpu_gate": false,
+      "ten_mib_retained_heap_gate": true,
+      "cpu_scaling_gate": true,
+      "retained_heap_scaling_gate": true
     }
   }
 }
