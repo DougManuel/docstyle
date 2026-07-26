@@ -198,10 +198,17 @@ local function publish(pkg, output_path, options)
   local cleaned, cleanup_error = pcall(
     pandoc.system.remove_directory, reserved, true)
   if not ok then
-    if not cleaned and type(result) == "table" and
-        result.docstyle_diagnostic == true then
-      result.context.cleanup_path = reserved
-      result.context.cleanup_detail = tostring(cleanup_error)
+    if not cleaned then
+      if type(result) == "table" and
+          result.docstyle_diagnostic == true then
+        result.context.cleanup_path = reserved
+        result.context.cleanup_detail = tostring(cleanup_error)
+      else
+        raise("internal.lua-error", tostring(result), {
+          cleanup_path = reserved,
+          cleanup_detail = tostring(cleanup_error),
+        })
+      end
     end
     error(result, 0)
   end

@@ -61,6 +61,18 @@ local function deterministic_bytes(length)
   return table.concat(bytes)
 end
 
+local function write_distinct_modtime_source(path)
+  local source = pandoc.zip.Archive(fixture.read_bytes(SOURCE))
+  local entries = {}
+  local base_time = 946684800
+  for index, entry in ipairs(source.entries) do
+    entries[index] = pandoc.zip.Entry(
+      entry.path, entry:contents(), base_time + index * 120)
+  end
+  fixture.write_bytes(path,
+    pandoc.zip.Archive(entries):bytestring())
+end
+
 local function edit_first_text(source, replacement)
   local document = adapter.parse(source)
   local target, occurrence
@@ -175,6 +187,43 @@ return {
     end,
   },
   {
+    name = "publication preserves distinct per-entry modification times",
+    gate = "preservation",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("publication-distinct-modtimes", function(dir)
+        local source = pandoc.path.join({
+          dir, "distinct-modtimes-source.docx",
+        })
+        local output = pandoc.path.join({
+          dir, "distinct-modtimes-output.docx",
+        })
+        write_distinct_modtime_source(source)
+
+        local pkg = opc.open_path(source, LIMITS)
+        local document = pkg:part(pkg.office_document_part)
+        pkg:replace_part(pkg.office_document_part,
+          edit_first_text(document,
+            "Docstyle distinct modification-time evidence"))
+        pkg:write_atomic(output)
+
+        local source_archive = pandoc.zip.Archive(
+          fixture.read_bytes(source))
+        local output_archive = pandoc.zip.Archive(
+          fixture.read_bytes(output))
+        local seen = {}
+        for index, source_entry in ipairs(source_archive.entries) do
+          local output_entry = output_archive.entries[index]
+          assert(not seen[source_entry.modtime],
+            "synthetic source modification times must be distinct")
+          seen[source_entry.modtime] = true
+          assert(output_entry.modtime == source_entry.modtime,
+            "modification time changed at index " .. index)
+        end
+      end)
+    end,
+  },
+  {
     name = "publication failures preserve destination and remove temporary data",
     gate = "safety",
     stage = "package",
@@ -262,6 +311,68 @@ return {
         assert(err.context.point == "after_archive")
         assert(err.context.cleanup_detail:find(
           "forced cleanup failure", 1, true))
+      end)
+    end,
+  },
+  {
+    name = "publication reports cleanup failure after success",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("publication-cleanup-only", function(dir)
+        local output = pandoc.path.join({ dir, "published.docx" })
+        local pkg = opc.open_path(SOURCE, LIMITS)
+        local original_remove = pandoc.system.remove_directory
+        pandoc.system.remove_directory = function()
+          error("forced cleanup-only failure", 0)
+        end
+        local ok, err = diagnostic.capture(function()
+          pkg:write_atomic(output)
+        end)
+        pandoc.system.remove_directory = original_remove
+        assert(not ok)
+        assert(err.code == "publication.cleanup")
+        assert(fixture.exists(output))
+        assert(fixture.exists(err.context.path))
+        original_remove(err.context.path, true)
+        assert_no_temporary_artifacts(dir)
+      end)
+    end,
+  },
+  {
+    name = "publication reports cleanup failure beside raw primary errors",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("publication-raw-double-fault", function(dir)
+        local output = pandoc.path.join({ dir, "published.docx" })
+        local pkg = opc.open_path(SOURCE, LIMITS)
+        local original_open = io.open
+        local original_remove = pandoc.system.remove_directory
+        io.open = function(path, mode)
+          if mode == "wb" then
+            error("forced raw publication failure", 0)
+          end
+          return original_open(path, mode)
+        end
+        pandoc.system.remove_directory = function()
+          error("forced raw cleanup failure", 0)
+        end
+        local ok, err = diagnostic.capture(function()
+          pkg:write_atomic(output)
+        end)
+        io.open = original_open
+        pandoc.system.remove_directory = original_remove
+        assert(not ok)
+        assert(err.code == "internal.lua-error")
+        assert(err.message:find(
+          "forced raw publication failure", 1, true))
+        assert(err.context.cleanup_detail:find(
+          "forced raw cleanup failure", 1, true))
+        assert(fixture.exists(err.context.cleanup_path))
+        assert(not fixture.exists(output))
+        original_remove(err.context.cleanup_path, true)
+        assert_no_temporary_artifacts(dir)
       end)
     end,
   },

@@ -293,13 +293,13 @@
   },
   "office_publication_gate": {
     "decision": "pass",
-    "date": "2026-07-23",
+    "date": "2026-07-26",
     "command": "DOCSTYLE_SPIKE_STAGE=package quarto run tests/vnext/xml-spike/run.lua",
     "result": {
-      "pass": 441,
+      "pass": 444,
       "fail": 0,
-      "preservation_gate_pass": 25,
-      "safety_gate_pass": 111,
+      "preservation_gate_pass": 26,
+      "safety_gate_pass": 113,
       "determinism_gate_pass": 1
     },
     "regression": {
@@ -324,7 +324,11 @@
       "completed_archive_size_bounded_before_disk_write": true,
       "completed_output_entry_sequence_verified": true,
       "primary_publication_error_preserved_on_cleanup_failure": true,
-      "write_and_close_failures_distinguished": true
+      "write_and_close_failures_distinguished": true,
+      "distinct_per_entry_modification_times_preserved": true,
+      "first_entry_modification_time_mutation_detected": true,
+      "raw_primary_error_retains_cleanup_context": true,
+      "cleanup_failure_after_success_is_diagnostic": true
     }
   }
 }
