@@ -40,6 +40,58 @@ local FILLER_OPEN =
 local FILLER_CLOSE = '</w:t></w:r></w:p>'
 local SUFFIX = '</w:body></w:document>'
 
+local function pipe_trim(command, arguments)
+  local output = pandoc.pipe(command, arguments, "")
+  return output:match("^%s*(.-)%s*$")
+end
+
+local function query_reference_environment()
+  assert(pandoc.system.os == "darwin",
+    "reference environment validation requires macOS")
+  local profile = pandoc.json.decode(pandoc.pipe(
+    "/usr/sbin/system_profiler",
+    { "SPHardwareDataType", "-json" }, ""), false)
+  local hardware = assert(profile.SPHardwareDataType[1],
+    "system_profiler did not return hardware data")
+  local processor_cores_text = assert(
+    hardware.number_processors:match("^proc%s+(%d+):"),
+    "system_profiler processor count has an unexpected form")
+  local memory_gib_text = assert(
+    hardware.physical_memory:match("^(%d+)%s+GB$"),
+    "system_profiler memory has an unexpected form")
+  local processor_cores = tonumber(processor_cores_text)
+  local memory_gib = tonumber(memory_gib_text)
+
+  return {
+    operating_system =
+      pipe_trim("/usr/bin/sw_vers", { "-productName" }) .. " " ..
+      pipe_trim("/usr/bin/sw_vers", { "-productVersion" }),
+    architecture = pipe_trim("/usr/bin/uname", { "-m" }),
+    model_name = hardware.machine_name,
+    model_identifier = hardware.machine_model,
+    processor = hardware.chip_type,
+    processor_cores = processor_cores,
+    installed_memory_bytes = memory_gib * 1024 * 1024 * 1024,
+  }
+end
+
+local function assert_reference_environment_matches_recorded(recorded)
+  local queried = query_reference_environment()
+  for _, key in ipairs({
+    "operating_system",
+    "architecture",
+    "model_name",
+    "model_identifier",
+    "processor",
+    "processor_cores",
+    "installed_memory_bytes",
+  }) do
+    assert(recorded[key] == queried[key],
+      ("recorded reference environment differs for %s: %s ~= %s")
+        :format(key, tostring(recorded[key]), tostring(queried[key])))
+  end
+end
+
 local function generate_scaling_fixture(size_mib)
   assert(size_mib == 1 or size_mib == 5 or size_mib == 10,
     "scaling size must be one, five or 10 MiB")
@@ -284,24 +336,27 @@ return {
     end,
   },
   {
-    name = "measured attribute edit uses generator golden coordinates",
+    name = "attribute edit preserves generator coordinates at every size",
     gate = "preservation",
     stage = "performance",
     fn = function()
-      local generated = generate_scaling_fixture(1)
-      local document = adapter.parse(generated.bytes)
-      local target = assert(adapter.find_all(document, W_NS, "p")[1])
-      adapter.set_attribute(
-        target, W_NS, "rsidR", REPLACEMENT_ATTRIBUTE_VALUE)
-      local edited, ranges = adapter.serialize(document)
-      assert(#ranges == 1)
-      assert_range(ranges[1], generated.golden_range)
-      local change = attribute_change()
-      change.reported_range = ranges[1]
-      change.value = REPLACEMENT_ATTRIBUTE_VALUE
-      local verification = oracle.verify_edit(
-        generated.bytes, edited, generated.golden_range, change)
-      assert(verification.ok == true)
+      for _, size_mib in ipairs({ 1, 5, 10 }) do
+        local generated = generate_scaling_fixture(size_mib)
+        local document = adapter.parse(generated.bytes)
+        local target =
+          assert(adapter.find_all(document, W_NS, "p")[1])
+        adapter.set_attribute(
+          target, W_NS, "rsidR", REPLACEMENT_ATTRIBUTE_VALUE)
+        local edited, ranges = adapter.serialize(document)
+        assert(#ranges == 1)
+        assert_range(ranges[1], generated.golden_range)
+        local change = attribute_change()
+        change.reported_range = ranges[1]
+        change.value = REPLACEMENT_ATTRIBUTE_VALUE
+        local verification = oracle.verify_edit(
+          generated.bytes, edited, generated.golden_range, change)
+        assert(verification.ok == true)
+      end
     end,
   },
   {
@@ -406,6 +461,10 @@ return {
     stage = "performance",
     reference_only = true,
     fn = function()
+      local evidence = pandoc.json.decode(
+        fixture.read_bytes(RESULTS), false)
+      assert_reference_environment_matches_recorded(
+        evidence.reference_environment)
       local result = measure_reference()
       local gates_pass = evaluate_reference_gates(result)
       local output_path =
