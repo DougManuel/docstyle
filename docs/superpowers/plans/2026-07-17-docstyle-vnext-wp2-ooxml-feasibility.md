@@ -25,7 +25,12 @@
 - Keep all spike-only implementation under `dev/vnext/xml-spike/` and all runner code, fixtures and tests under `tests/vnext/xml-spike/`. Do not modify `_extensions/docstyle/` or production R code.
 - Vendor only the files needed by the spike. Record upstream repository, immutable commit, version or tag, licence, source hashes, vendored hashes and local modifications in `dev/vnext/xml-spike/provenance.json`.
 - Candidate source retrieval is a contributor-time operation. Runtime tests must verify vendored hashes and must not contact upstream services.
-- Do not weaken a hard gate after observing candidate behaviour. Record failure and reject the candidate.
+- Do not weaken a hard gate after observing candidate behaviour unless the
+  project owner approves an explicit post-result specification amendment.
+  Such an amendment must preserve the original threshold, result and failure
+  classification; explain the rationale; identify every binding gate that
+  remains; and add a concrete production prerequisite when the reclassified
+  requirement would otherwise leave production behaviour unbounded.
 - Use Canadian Press spelling, sentence-case headings and the repository's ASCII ` -- ` convention in prose. Run the writing-style checker on new Markdown.
 - Commit locally at each review boundary with plain-text messages and no AI credit. Do not push until Doug reviews the branch. Because `docs/` is ignored as generated pkgdown output, stage this plan and other `docs/superpowers/` files with `git add -f`.
 - Baseline before implementation: `PASS 136 | FAIL 0` from the vNext conformance runner and `[ FAIL 0 | WARN 30 | SKIP 4 | PASS 3400 ]` from the full R suite.
@@ -527,6 +532,12 @@ Record Quarto, Pandoc, Lua, operating system, architecture, Mac model, processor
 
 On the reference environment, the 10 MiB median combined CPU time is at most five seconds, maximum retained Lua heap delta is at most 12 times input bytes, and both 10 MiB measures are at most 15 times the one MiB results. Every edited range must still equal the generator's independent golden coordinates.
 
+Task 9 was executed under this original four-hard-gate contract. Its recorded
+5.274299-second result remains a failure against the original five-second
+threshold. The July 27, 2026 specification amendment changes only Task 10's
+interpretation of that absolute CPU threshold; it does not rewrite Task 9
+evidence.
+
 - [x] **Step 5: Run and commit**
 
 ```bash
@@ -544,30 +555,45 @@ Relates to #31"
 
 **Files:**
 - Create or complete: `dev/vnext/xml-spike/decision-report.md`
-- Modify only if results changed: `dev/vnext/xml-spike/provenance.json`
+- Modify: `dev/vnext/xml-spike/provenance.json`
+- Modify: `tests/vnext/xml-spike/tests/test-performance.lua`
+- Modify: `docs/superpowers/specs/2026-07-16-docstyle-vnext-wp2-ooxml-feasibility-design.md`
 
-- [ ] **Step 1: Write the candidate comparison**
+- [x] **Step 0: Apply the approved post-result amendment without rewriting evidence**
+
+Retain `dev/vnext/xml-spike/performance-results.json` and the Task 9 provenance
+row unchanged. In executable Task 10 evaluation, report the unmet five-second
+absolute CPU target separately from the three binding performance gates. A
+fresh reference run succeeds only when the retained-heap, CPU-scaling and
+retained-heap-scaling gates pass; it must still report whether the advisory CPU
+target was met.
+
+- [x] **Step 1: Write the candidate comparison**
 
 For archive layer, Approach A, Approach B and the oracle, report runtime/dependency closure, licence/provenance, strictness, namespace correctness, byte preservation, determinism, archive safety, office results, CPU/heap evidence, vendored and Docstyle-owned lines and residual limitations. Explain each rejection and the maintenance-risk judgement. Do not collapse the evidence into an arbitrary score.
 
-- [ ] **Step 2: State exactly one decision**
+- [x] **Step 2: State exactly one decision**
 
-Use `go`, `conditional go` or `no-go` for the bounded read, existing-attribute update and sole-ordinary-text replacement seam. A conditional prerequisite must be concrete and testable and cannot defer a security, preservation, namespace or determinism failure. Record the case-sensitive-lookup spike restriction and whether office fixtures actually contain URI-encoded relationship targets.
+Use `go`, `conditional go` or `no-go` for the bounded read, existing-attribute update and sole-ordinary-text replacement seam. A conditional prerequisite must be concrete and testable and cannot defer a security, preservation, namespace, determinism, retained-heap or scaling failure. Record the original absolute-CPU failure and the post-result amendment. Record the case-sensitive-lookup spike restriction and whether office fixtures actually contain URI-encoded relationship targets.
 
-- [ ] **Step 3: Audit all 12 acceptance tests**
+- [x] **Step 3: Audit all 12 acceptance tests**
 
 Add a table mapping every specification acceptance test to commands, test cases and evidence files. A stage-1 no-go maps only the executable archive evidence, supported report and regression checks, as authorized by the specification. Search for unresolved placeholders:
 
 ```bash
-rg -n 'TB[D]|TO[D]|FIXM[E]|PLACEHOLDE[R]|X{2,}' dev/vnext/xml-spike tests/vnext/xml-spike
+rg -n 'TB[D]|TO[D]|FIXM[E]|PLACEHOLDE[R]|X{2,}' \
+  dev/vnext/xml-spike tests/vnext/xml-spike -g '!**/vendor/**'
 ```
 
-Expected: no matches.
+Expected: no matches in Docstyle-owned files. Immutable vendored sources are
+excluded because their upstream comments include `TODO` and `FIXME` markers
+that are not Docstyle decision placeholders.
 
-- [ ] **Step 4: Run final verification**
+- [x] **Step 4: Run final verification**
 
 ```bash
 quarto run tests/vnext/xml-spike/run.lua
+DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1 quarto run tests/vnext/xml-spike/run.lua
 quarto run tests/vnext/conformance/run.lua
 env R_PROFILE_USER=/dev/null Rscript -e 'devtools::test(stop_on_failure = TRUE)'
 git diff --exit-code main -- tests/vnext/fixtures/
@@ -575,13 +601,17 @@ python3 ~/github/ai-infrastructure/skills/writing-style/scripts/check_style.py d
 git diff --check
 ```
 
-Expected on the current baseline: spike runner `FAIL 0`; conformance `PASS 136 | FAIL 0`; R suite `[ FAIL 0 | WARN 30 | SKIP 4 | PASS 3400 ]`; no WP0 fixture changes; style and whitespace checks pass.
+Expected on the current baseline: ordinary and reference spike runners
+`FAIL 0`; the reference output reports the advisory CPU result independently
+of its binding-gate decision; conformance `PASS 136 | FAIL 0`; R suite
+`[ FAIL 0 | WARN 30 | SKIP 4 | PASS 3400 ]`; no WP0 fixture changes; style and
+whitespace checks pass.
 
-- [ ] **Step 5: Review the decision boundary before committing**
+- [x] **Step 5: Review the decision boundary before committing**
 
 Verify no candidate code entered `_extensions/docstyle/` or production R. Verify the report does not authorize production integration. A go or conditional go leads to a separate production WP2 plan and review; a no-go returns to programme architecture.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add dev/vnext/xml-spike tests/vnext/xml-spike
@@ -605,7 +635,8 @@ Do not push. Request independent review of the evidence, decision report and bra
 7. Internal and external relationship rules are executable -- Task 7.
 8. Ten fresh processes produce identical edited XML, entry order and archive hash -- Task 9.
 9. Simulated pre-rename failure preserves the prior destination -- Task 8.
-10. Reference scaling and retained-heap gates are measured -- Task 9.
+10. Reference scaling and retained-heap gates pass, and the unmet advisory
+    absolute CPU target is retained and reported -- Tasks 9 and 10.
 11. Offline spike, conformance and legacy regression suites pass -- Tasks 1 and 10.
 12. The report contains one supported decision with no placeholders -- Task 10.
 

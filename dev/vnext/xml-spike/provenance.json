@@ -165,17 +165,19 @@
     }
   ],
   "xml_candidate_selection": {
-    "status": "selected-pending-gates",
+    "status": "conditional-go",
     "selected": "LuaXML",
-    "date": "2026-07-21",
+    "date": "2026-07-29",
     "reasons": [
       "LuaXML passes the complete shared adapter table, including Unicode-name rows",
       "SLAXML fails the Unicode-name hard gate",
       "the LuaXML path is one vendored dependency and excludes CSS, HTML, XPath, LuaRocks and native modules",
-      "Task 9 resolved fresh-process determinism and reference performance evidence; the final Task 10 decision remains pending"
+      "fresh-process determinism, archive safety, office preservation, retained-heap and scaling gates pass",
+      "the original five-second absolute CPU threshold remains recorded as failed and is advisory under the approved post-result amendment",
+      "production integration remains blocked on the performance-characterization prerequisite recorded in task_10_decision"
     ],
-    "pending_gates": [
-      "final decision report"
+    "production_prerequisites": [
+      "performance-characterization-and-xml-part-limit"
     ]
   },
   "fixtures": [
@@ -379,6 +381,62 @@
       "ten_mib_retained_heap_gate": true,
       "cpu_scaling_gate": true,
       "retained_heap_scaling_gate": true
+    }
+  },
+  "task_10_decision": {
+    "decision": "conditional-go",
+    "date": "2026-07-29",
+    "report": "dev/vnext/xml-spike/decision-report.md",
+    "scope": "Quarto-only bounded OPC read, existing-attribute update, sole-ordinary-text replacement and atomic package publication",
+    "selected_xml_candidate": "LuaXML structural callbacks with the Docstyle strictness and byte-span overlay",
+    "post_result_amendment": {
+      "approved": "2026-07-27",
+      "original_decision": "fail",
+      "absolute_cpu_target_seconds": 5,
+      "observed_cpu_seconds": 5.274299,
+      "absolute_cpu_target_met": false,
+      "classification_after_amendment": "advisory",
+      "historical_evidence_rewritten": false
+    },
+    "reference_verification": {
+      "date": "2026-07-29",
+      "command": "DOCSTYLE_SPIKE_REFERENCE_PERFORMANCE=1 quarto run tests/vnext/xml-spike/run.lua",
+      "decision": "pass",
+      "observed_cpu_seconds": 5.117641,
+      "absolute_cpu_target_seconds": 5,
+      "absolute_cpu_target_met": false,
+      "binding_performance_gates_passed": true
+    },
+    "binding_performance_gates": {
+      "ten_mib_retained_heap": true,
+      "cpu_scaling": true,
+      "retained_heap_scaling": true
+    },
+    "production_prerequisite": {
+      "id": "performance-characterization-and-xml-part-limit",
+      "status": "required-before-production",
+      "representative_fixture_evidence": {
+        "files_inspected": 6,
+        "largest_archive_bytes": 180739,
+        "largest_entry_count": 31,
+        "largest_total_uncompressed_bytes": 878539,
+        "largest_wordprocessingml_part_bytes": 654301,
+        "largest_entry_compression_ratio": 20.042676211453745
+      },
+      "candidate_xml_part_limit_bytes": 1048576,
+      "requirements": [
+        "repeat the reference benchmark in the production implementation branch",
+        "measure the parse-dominated cost on representative WordprocessingML parts",
+        "review and approve the proposed 1048576-byte XML-part limit",
+        "record expected worst-case latency at the approved limit",
+        "retain the hard retained-heap and scaling gates"
+      ]
+    },
+    "restrictions": {
+      "case_sensitive_part_lookup": true,
+      "office_uri_encoded_relationship_targets_observed": false,
+      "broader_uri_reference_support_deferred": true,
+      "slaxml_diagnostic_portability_observation": "Without locale variables, two rejected-SLAXML cases changed diagnostic code; selected LuaXML behaviour was unaffected"
     }
   }
 }

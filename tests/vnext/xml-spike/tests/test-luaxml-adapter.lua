@@ -381,9 +381,10 @@ cases[#cases + 1] = {
       evidence.rejected_fixture_rows))
     assert(provenance.xml_candidate_selection.selected == "LuaXML")
     assert(provenance.xml_candidate_selection.status ==
-      "selected-pending-gates")
-    assert(same_array(provenance.xml_candidate_selection.pending_gates, {
-      "final decision report",
+      "conditional-go")
+    assert(same_array(
+      provenance.xml_candidate_selection.production_prerequisites, {
+      "performance-characterization-and-xml-part-limit",
     }))
   end,
 }
