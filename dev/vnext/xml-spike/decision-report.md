@@ -114,7 +114,7 @@ declared uncompressed entry, 512 MiB total declared uncompressed bytes, a
 1,000:1 declared compression ratio and a 256 MiB materialization budget.
 These values are not production defaults. The production plan should validate
 them against a broader document corpus and may lower them independently of the
-stricter parsed-XML limit.
+stricter XML-part input-byte limit.
 
 ## Candidate comparison
 
