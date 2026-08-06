@@ -77,8 +77,10 @@ end
 
 local function assert_reference_environment_matches_recorded(recorded)
   local queried = query_reference_environment()
+  -- Hardware and architecture fix the performance-comparability class; a
+  -- mismatch means the numbers were measured on a different reference machine
+  -- and must fail closed.
   for _, key in ipairs({
-    "operating_system",
     "architecture",
     "model_name",
     "model_identifier",
@@ -90,6 +92,27 @@ local function assert_reference_environment_matches_recorded(recorded)
       ("recorded reference environment differs for %s: %s ~= %s")
         :format(key, tostring(recorded[key]), tostring(queried[key])))
   end
+  -- operating_system is advisory: the reference machine's OS patch/minor
+  -- version drifts over time (e.g. macOS 26.5.2 -> 26.6) while the perf class
+  -- is fixed by the hardware above and the embedded Quarto/Pandoc/Lua runtime.
+  -- A mismatch is reported but does not fail the reference measurement, so the
+  -- documented verification command stays reproducible across OS updates.
+  if recorded.operating_system ~= queried.operating_system then
+    io.stderr:write(
+      ("NOTE reference environment operating_system differs (advisory): %s ~= %s\n")
+        :format(tostring(recorded.operating_system),
+          tostring(queried.operating_system)))
+  end
+end
+
+-- Render the advisory absolute-CPU outcome as a stable, greppable line. The
+-- amended specification reports the advisory five-second target independently
+-- of the binding-gate decision, so the reference command must always surface
+-- the actual value, the target and whether it was met -- a green summary must
+-- never be able to hide an unmet advisory target.
+local function format_advisory_cpu_line(cpu)
+  return ("ADVISORY reference 10 MiB combined CPU: actual=%.6f s | target=%d s | met=%s")
+    :format(cpu.actual, cpu.limit, tostring(cpu.pass))
 end
 
 local function generate_scaling_fixture(size_mib)
@@ -278,11 +301,12 @@ local function measure_reference()
   }
 end
 
-local function evaluate_reference_gates(result)
+local function evaluate_reference_gates(result, options)
+  options = options or {}
   local one = result.sizes[1]
   local ten = result.sizes[3]
   assert(ten.input_bytes == 10 * MIB)
-  result.gate_results = {
+  local results = {
     ten_mib_cpu = {
       actual = ten.median_combined_cpu_seconds,
       limit = 5,
@@ -309,8 +333,24 @@ local function evaluate_reference_gates(result)
         15 * one.maximum_retained_lua_heap_delta_bytes,
     },
   }
+  local rows
+  if options.absolute_cpu_is_advisory then
+    result.advisory_results = {
+      ten_mib_cpu = results.ten_mib_cpu,
+    }
+    result.binding_gate_results = {
+      ten_mib_retained_heap = results.ten_mib_retained_heap,
+      ten_to_one_mib_cpu = results.ten_to_one_mib_cpu,
+      ten_to_one_mib_retained_heap =
+        results.ten_to_one_mib_retained_heap,
+    }
+    rows = result.binding_gate_results
+  else
+    result.gate_results = results
+    rows = result.gate_results
+  end
   local all_pass = true
-  for _, row in pairs(result.gate_results) do
+  for _, row in pairs(rows) do
     if not row.pass then all_pass = false end
   end
   result.decision = all_pass and "pass" or "fail"
@@ -456,7 +496,90 @@ return {
     end,
   },
   {
-    name = "reference Mac meets CPU and retained-heap gates",
+    name = "Task 10 amendment preserves the original failure and separates the advisory target",
+    gate = "performance",
+    stage = "performance",
+    fn = function()
+      local evidence = pandoc.json.decode(
+        fixture.read_bytes(RESULTS), false)
+      assert(evidence.decision == "fail")
+      local binding_gates_pass = evaluate_reference_gates(evidence, {
+        absolute_cpu_is_advisory = true,
+      })
+      assert(binding_gates_pass == true)
+      assert(evidence.advisory_results.ten_mib_cpu.pass == false)
+      assert(evidence.binding_gate_results.ten_mib_retained_heap.pass == true)
+      assert(evidence.binding_gate_results.ten_to_one_mib_cpu.pass == true)
+      assert(evidence.binding_gate_results
+        .ten_to_one_mib_retained_heap.pass == true)
+      assert(evidence.decision == "pass")
+    end,
+  },
+  {
+    name = "provenance records the conditional go without rewriting Task 9",
+    gate = "performance",
+    stage = "performance",
+    fn = function()
+      local provenance = pandoc.json.decode(
+        fixture.read_bytes(PROVENANCE), false)
+      local task_9 = assert(provenance.task_9_gate)
+      local task_10 = assert(provenance.task_10_decision)
+      assert(task_9.decision == "fail")
+      assert(task_9.performance.ten_mib_cpu_limit_seconds == 5)
+      assert(task_9.performance.ten_mib_median_cpu_seconds == 5.274299)
+      assert(task_10.decision == "conditional-go")
+      assert(task_10.post_result_amendment.original_decision == "fail")
+      assert(task_10.post_result_amendment
+        .absolute_cpu_target_seconds == 5)
+      assert(task_10.post_result_amendment
+        .observed_cpu_seconds == 5.274299)
+      assert(task_10.post_result_amendment
+        .absolute_cpu_target_met == false)
+      assert(task_10.reference_verification.decision == "pass")
+      assert(task_10.reference_verification
+        .absolute_cpu_target_met == false)
+      assert(task_10.reference_verification
+        .observed_cpu_seconds == 5.117641)
+      assert(task_10.binding_performance_gates
+        .ten_mib_retained_heap == true)
+      assert(task_10.binding_performance_gates
+        .cpu_scaling == true)
+      assert(task_10.binding_performance_gates
+        .retained_heap_scaling == true)
+      assert(task_10.production_prerequisite.status ==
+        "required-before-production")
+      assert(task_10.production_prerequisite
+        .pre_parse_rejection_required == true)
+      local pre_parse_required = false
+      for _, req in ipairs(task_10.production_prerequisite.requirements) do
+        if req:find("before invoking the XML parser", 1, true) then
+          pre_parse_required = true
+        end
+      end
+      assert(pre_parse_required,
+        "production prerequisite must require pre-parse rejection")
+      assert(task_10.restrictions.case_sensitive_part_lookup == true)
+      assert(task_10.restrictions
+        .office_uri_encoded_relationship_targets_observed == false)
+    end,
+  },
+  {
+    name = "reference advisory CPU outcome is reported with actual, target and met status",
+    gate = "performance",
+    stage = "performance",
+    fn = function()
+      local evidence = pandoc.json.decode(
+        fixture.read_bytes(RESULTS), false)
+      evaluate_reference_gates(evidence, { absolute_cpu_is_advisory = true })
+      local line = format_advisory_cpu_line(
+        evidence.advisory_results.ten_mib_cpu)
+      assert(line:find("actual=5.274299", 1, true), line)
+      assert(line:find("target=5 s", 1, true), line)
+      assert(line:find("met=false", 1, true), line)
+    end,
+  },
+  {
+    name = "reference Mac meets binding performance gates and reports the advisory CPU target",
     gate = "performance",
     stage = "performance",
     reference_only = true,
@@ -466,15 +589,18 @@ return {
       assert_reference_environment_matches_recorded(
         evidence.reference_environment)
       local result = measure_reference()
-      local gates_pass = evaluate_reference_gates(result)
+      local gates_pass = evaluate_reference_gates(result, {
+        absolute_cpu_is_advisory = true,
+      })
+      print(format_advisory_cpu_line(result.advisory_results.ten_mib_cpu))
       local output_path =
         os.getenv("DOCSTYLE_SPIKE_REFERENCE_RESULT_OUTPUT")
       if output_path and output_path ~= "" then
         fixture.write_bytes(output_path, pandoc.json.encode(result))
       end
       assert(gates_pass,
-        "reference performance gates failed: " ..
-        pandoc.json.encode(result.gate_results))
+        "reference binding performance gates failed: " ..
+        pandoc.json.encode(result.binding_gate_results))
     end,
   },
 }

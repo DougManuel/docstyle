@@ -257,17 +257,45 @@ The runner generates XML parts of one, five and 10 MiB with representative `w:p`
 
 ## Performance protocol
 
+### Amendment approved July 27, 2026: absolute CPU target
+
+The project owner approved a narrow amendment after reviewing the Task 9
+performance evidence. The original contract treated all four reference
+performance thresholds as hard feasibility gates. The recorded 10 MiB median
+of 5.274299 CPU seconds therefore remains a failure against the original
+five-second threshold.
+
+The amended contract treats the five-second absolute CPU threshold as an
+advisory reference target. The retained-heap threshold and the CPU and
+retained-heap scaling thresholds remain hard gates. Security, preservation,
+namespace and determinism requirements are unchanged.
+
+This is a post-result amendment. The decision report and machine-readable
+provenance must retain the original threshold, result and failure
+classification, identify this amendment and avoid describing the five-second
+target as met. The rationale is that absolute CPU time is sensitive to the
+reference hardware and runtime, while the retained-heap and scaling limits
+continue to bound resource growth across the one and 10 MiB fixtures.
+
+The amendment permits a `conditional go` only if the report names a
+production prerequisite that is separate from the spike gates. Before
+production integration, that prerequisite must record representative
+WordprocessingML part sizes from the WP0 Word and LibreOffice fixtures, repeat
+the reference benchmark, identify the parse-dominated cost and set a reviewed
+production XML-part limit with an expected worst-case latency. It must not
+weaken the retained-heap or scaling gates.
+
 The runner performs one unreported warm-up and five measured repetitions for each size. It uses `pandoc.system.cputime()` for CPU measurements and reports the median combined parse, edit and serialization time. Instrumentation and forced collections are outside timed phases.
 
 For retained Lua heap measurements, the runner calls `collectgarbage("collect")` before the initial baseline and after each phase, then reads `collectgarbage("count")`. Each phase-boundary delta is `max(0, observed_kib - initial_kib) * 1024`; the largest delta across phases and measured repetitions is reported in bytes. This metric does not observe allocations created and released inside a phase or native allocations, and the report must not describe it as peak memory. The decision report records Quarto, Pandoc, Lua, operating system, architecture, Mac model, processor and installed memory.
 
 On the reference macOS environment:
 
-- the 10 MiB case must complete parse, one bounded edit and serialization within five CPU seconds;
+- the 10 MiB case has an advisory target of five CPU seconds for parse, one bounded edit and serialization;
 - the largest observed retained Lua heap delta must be no more than 12 times the input size;
 - median combined time and maximum observed heap delta for the 10 MiB case must each be no more than 15 times the corresponding one MiB measurement.
 
-These measurements are feasibility gates on the reference environment, not timing assertions in ordinary CI. CI tests retain functional limits and a generous timeout so routine hardware variation does not create false failures.
+The retained-heap and scaling thresholds are feasibility gates on the reference environment. The absolute CPU target is reported but does not reject a candidate. None of these measurements is a timing assertion in ordinary CI. CI tests retain functional limits and a generous timeout so routine hardware variation does not create false failures.
 
 ## Test and evaluation protocol
 
@@ -312,13 +340,13 @@ Every candidate receives a table with:
 - code size and Docstyle-owned maintenance burden;
 - residual limitations.
 
-Every constraint identified as a hard gate, every normative XML, archive, preservation, determinism and performance requirement, and acceptance tests 3 through 11 apply to a candidate where the candidate supplies that layer. Acceptance tests 1, 2 and 12 apply to the spike as a whole. Any applicable hard-gate failure rejects the candidate. The report must explain rejected approaches and may recommend:
+Every constraint identified as a hard gate, every normative XML, archive, preservation, determinism and binding performance requirement, and acceptance tests 3 through 10 apply to a candidate where the candidate supplies that layer. The advisory five-second CPU target is reported but is not a hard gate. Acceptance tests 1, 2, 11 and 12 are whole-spike checks (the offline runner plus conformance and R regression, and the single supported decision), not layers a candidate supplies. Any applicable hard-gate failure rejects the candidate. The report must explain rejected approaches and may recommend:
 
 - **go:** one candidate passes all gates and can support a production plan for the bounded read, existing-attribute update and ordinary-text replacement seam tested here;
 - **conditional go:** a candidate passes the spike gates, but a named, bounded engineering prerequisite, licensing correction or upstream fix must land before production integration;
 - **no-go:** no candidate supports the contract without changing the programme architecture.
 
-A conditional-go prerequisite must be concrete and testable. It cannot change the runtime architecture or defer a failed security, preservation, namespace or determinism gate to production.
+A conditional-go prerequisite must be concrete and testable. It cannot change the runtime architecture or defer a failed security, preservation, namespace, determinism, retained-heap or scaling gate to production.
 
 ## Acceptance tests
 
@@ -333,7 +361,7 @@ If stage 1 establishes that safe archive handling is impossible on the programme
 7. Relationship tests distinguish `TargetMode="External"` and correctly normalize internal `..` targets without package escape.
 8. Ten package writes from ten fresh processes, each given identical source bytes including at least one edited XML part, produce identical XML bytes, entry order and whole-archive SHA-256 hashes.
 9. Simulated pre-rename failure leaves the prior destination unchanged.
-10. The scaling fixtures meet the reference performance and heap gates.
+10. The scaling fixtures meet the absolute retained-heap, CPU-scaling and retained-heap-scaling gates; the advisory five-second absolute CPU target and whether it was met are reported.
 11. The runner passes without network or R and the existing conformance and R suites remain green.
 12. The decision report contains a supported go, conditional-go or no-go result with no unresolved placeholders.
 
