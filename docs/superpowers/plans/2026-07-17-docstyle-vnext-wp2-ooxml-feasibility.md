@@ -574,7 +574,7 @@ For archive layer, Approach A, Approach B and the oracle, report runtime/depende
 
 - [x] **Step 2: State exactly one decision**
 
-Use `go`, `conditional go` or `no-go` for the bounded read, existing-attribute update and sole-ordinary-text replacement seam. A conditional prerequisite must be concrete and testable and cannot defer a security, preservation, namespace, determinism, retained-heap or scaling failure. Record the original absolute-CPU failure and the post-result amendment. Record the case-sensitive-lookup spike restriction and whether office fixtures actually contain URI-encoded relationship targets.
+Use `go`, `conditional go` or `no-go` for the bounded read, existing-attribute update and sole-ordinary-text replacement seam. A conditional prerequisite must be concrete and testable and cannot defer a security, preservation, namespace, determinism, retained-heap or scaling failure. The mandatory elements of the CPU/performance prerequisite are the conditions in the specification amendment block (`docs/superpowers/specs/2026-07-16-docstyle-vnext-wp2-ooxml-feasibility-design.md`, the post-result amendment section) rather than restated here; the report and the machine-readable provenance must satisfy them, including rejecting an over-limit XML part before the parser is invoked. Record the original absolute-CPU failure and the post-result amendment. Record the case-sensitive-lookup spike restriction and whether office fixtures actually contain URI-encoded relationship targets.
 
 - [x] **Step 3: Audit all 12 acceptance tests**
 
@@ -615,10 +615,16 @@ Verify no candidate code entered `_extensions/docstyle/` or production R. Verify
 
 ```bash
 git add dev/vnext/xml-spike tests/vnext/xml-spike
+git add -f docs/superpowers/specs/2026-07-16-docstyle-vnext-wp2-ooxml-feasibility-design.md \
+  docs/superpowers/plans/2026-07-17-docstyle-vnext-wp2-ooxml-feasibility.md
 git commit -m "Publish the WP2 OOXML feasibility decision
 
 Closes #31"
 ```
+
+The specification amendment was committed separately at the Step 0 boundary as
+`97b5217`. Because `docs/` is gitignored as generated pkgdown output, its
+tracked plan and specification files are staged explicitly with `git add -f`.
 
 Do not push. Request independent review of the evidence, decision report and branch diff before issue closure or any production plan.
 

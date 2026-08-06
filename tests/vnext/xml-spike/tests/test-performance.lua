@@ -105,6 +105,16 @@ local function assert_reference_environment_matches_recorded(recorded)
   end
 end
 
+-- Render the advisory absolute-CPU outcome as a stable, greppable line. The
+-- amended specification reports the advisory five-second target independently
+-- of the binding-gate decision, so the reference command must always surface
+-- the actual value, the target and whether it was met -- a green summary must
+-- never be able to hide an unmet advisory target.
+local function format_advisory_cpu_line(cpu)
+  return ("ADVISORY reference 10 MiB combined CPU: actual=%.6f s | target=%d s | met=%s")
+    :format(cpu.actual, cpu.limit, tostring(cpu.pass))
+end
+
 local function generate_scaling_fixture(size_mib)
   assert(size_mib == 1 or size_mib == 5 or size_mib == 10,
     "scaling size must be one, five or 10 MiB")
@@ -538,9 +548,34 @@ return {
         .retained_heap_scaling == true)
       assert(task_10.production_prerequisite.status ==
         "required-before-production")
+      assert(task_10.production_prerequisite
+        .pre_parse_rejection_required == true)
+      local pre_parse_required = false
+      for _, req in ipairs(task_10.production_prerequisite.requirements) do
+        if req:find("before invoking the XML parser", 1, true) then
+          pre_parse_required = true
+        end
+      end
+      assert(pre_parse_required,
+        "production prerequisite must require pre-parse rejection")
       assert(task_10.restrictions.case_sensitive_part_lookup == true)
       assert(task_10.restrictions
         .office_uri_encoded_relationship_targets_observed == false)
+    end,
+  },
+  {
+    name = "reference advisory CPU outcome is reported with actual, target and met status",
+    gate = "performance",
+    stage = "performance",
+    fn = function()
+      local evidence = pandoc.json.decode(
+        fixture.read_bytes(RESULTS), false)
+      evaluate_reference_gates(evidence, { absolute_cpu_is_advisory = true })
+      local line = format_advisory_cpu_line(
+        evidence.advisory_results.ten_mib_cpu)
+      assert(line:find("actual=5.274299", 1, true), line)
+      assert(line:find("target=5 s", 1, true), line)
+      assert(line:find("met=false", 1, true), line)
     end,
   },
   {
@@ -557,6 +592,7 @@ return {
       local gates_pass = evaluate_reference_gates(result, {
         absolute_cpu_is_advisory = true,
       })
+      print(format_advisory_cpu_line(result.advisory_results.ten_mib_cpu))
       local output_path =
         os.getenv("DOCSTYLE_SPIKE_REFERENCE_RESULT_OUTPUT")
       if output_path and output_path ~= "" then

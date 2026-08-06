@@ -424,11 +424,13 @@
         "largest_entry_compression_ratio": 20.042676211453745
       },
       "candidate_xml_part_limit_bytes": 1048576,
+      "pre_parse_rejection_required": true,
       "requirements": [
         "repeat the reference benchmark in the production implementation branch",
         "measure the parse-dominated cost on representative WordprocessingML parts",
-        "review and approve the proposed 1048576-byte XML-part limit",
+        "review and approve the proposed 1048576-byte XML-part input-byte limit",
         "record expected worst-case latency at the approved limit",
+        "reject XML parts larger than the approved input-byte limit before invoking the XML parser",
         "retain the hard retained-heap and scaling gates"
       ]
     },

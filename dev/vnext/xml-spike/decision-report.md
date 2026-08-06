@@ -70,10 +70,11 @@ median was 5.117641 seconds: the advisory target was again not met, while all
 three binding performance gates passed and the reference suite reported
 `PASS 452 | FAIL 0 | SKIP 0`.
 
-The reference environment was Quarto 1.9.26, Pandoc 3.8.3 and Lua 5.4 on
-macOS 26.5.2, arm64, on a 10-core Apple M1 Max MacBook Pro with 64 GiB of
-installed memory. The reported memory measure is retained Lua heap observed
-after collection at phase boundaries, not peak process memory.
+The reference environment for the recorded July 29 measurements was Quarto
+1.9.26, Pandoc 3.8.3 and Lua 5.4 on macOS 26.5.2, arm64, on a 10-core Apple
+M1 Max MacBook Pro with 64 GiB of installed memory. The reported memory
+measure is retained Lua heap observed after collection at phase boundaries,
+not peak process memory.
 
 ## Production performance prerequisite
 
@@ -100,7 +101,8 @@ Six Word, Docstyle and LibreOffice fixtures were inspected for this decision:
 The largest observed WordprocessingML part is 654,301 bytes. The one MiB
 synthetic case measured a 0.520740-second median and a 0.524631-second maximum
 across five repetitions. The production plan should begin with a candidate
-parsed-XML limit of 1,048,576 bytes and a candidate reference-CPU expectation
+XML-part input-byte limit of 1,048,576 bytes and a candidate reference-CPU
+expectation
 of no more than 0.75 seconds at that limit. These are proposed review values,
 not approved production defaults. The prerequisite remains open until a fresh
 benchmark supports them on the production branch.

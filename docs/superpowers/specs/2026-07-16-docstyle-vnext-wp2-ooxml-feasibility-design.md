@@ -340,7 +340,7 @@ Every candidate receives a table with:
 - code size and Docstyle-owned maintenance burden;
 - residual limitations.
 
-Every constraint identified as a hard gate, every normative XML, archive, preservation, determinism and binding performance requirement, and acceptance tests 3 through 11 apply to a candidate where the candidate supplies that layer. The advisory five-second CPU target is reported but is not a hard gate. Acceptance tests 1, 2 and 12 apply to the spike as a whole. Any applicable hard-gate failure rejects the candidate. The report must explain rejected approaches and may recommend:
+Every constraint identified as a hard gate, every normative XML, archive, preservation, determinism and binding performance requirement, and acceptance tests 3 through 10 apply to a candidate where the candidate supplies that layer. The advisory five-second CPU target is reported but is not a hard gate. Acceptance tests 1, 2, 11 and 12 are whole-spike checks (the offline runner plus conformance and R regression, and the single supported decision), not layers a candidate supplies. Any applicable hard-gate failure rejects the candidate. The report must explain rejected approaches and may recommend:
 
 - **go:** one candidate passes all gates and can support a production plan for the bounded read, existing-attribute update and ordinary-text replacement seam tested here;
 - **conditional go:** a candidate passes the spike gates, but a named, bounded engineering prerequisite, licensing correction or upstream fix must land before production integration;
