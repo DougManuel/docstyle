@@ -37,14 +37,17 @@ target and WP4 a precise field-code and catalogue rendering contract.
 
 1. One canonical normalized form for the document abstract.
 2. A metadata-view record binding every generated span or block to the
-   record path that generates it.
-3. An ordered, document-specific contribution model separating identity
+   record path — or ordered record collection — that generates it.
+3. Concrete QMD bindings: a mapping table and worked examples from
+   author-facing YAML/QMD to the normalized records for every bound
+   object.
+4. An ordered, document-specific contribution model separating identity
    from per-document authorship facts.
-4. Typed semantic attributes for table and figure nodes, separated from
+5. Typed semantic attributes for table and figure nodes, separated from
    presentation properties.
-5. A settled preservation and reverse-edit policy for tables.
-6. The embedded catalogue schema and its DOCX carrier.
-7. An explicit versioning rule for every schema change this specification
+6. A settled preservation and reverse-edit policy for tables.
+7. The embedded catalogue schema and its DOCX carrier.
+8. An explicit versioning rule for every schema change this specification
    requires.
 
 ## Non-goals
@@ -63,8 +66,10 @@ target and WP4 a precise field-code and catalogue rendering contract.
 The WP1 schemas are merged v1 contracts. Every change in this specification
 is an **additive v1 revision**: new optional fields, new record types added
 to the record dispatch, and new `$defs`. No existing required field changes
-meaning, no existing valid instance becomes invalid, with one deliberate
-exception recorded in the abstract decision below. Each change ships with
+meaning and no existing valid instance becomes invalid, with two deliberate,
+declared exceptions: the abstract canonical-form rule (a warning only)
+and the closed table/figure attribute core (a true narrowing
+for those two node types, reviewed below). Each change ships with
 valid and invalid examples under `schemas/examples/`, which the WP1
 conformance runner validates automatically. A future change that would
 break an existing valid instance mints a v2 schema; nothing in this
@@ -118,12 +123,36 @@ region to its source:
 }
 ```
 
-- `sourceRecord` — id of the record the view renders (document, person,
-  organization, funding or contribution).
-- `path` — dotted path into that record (`version`, `dates.published`,
-  `versionHistory`). An empty path means the whole record (author plates).
+A view has exactly one source, in one of two forms:
+
+- **Single record:** `sourceRecord` (record id) plus `path` — a dotted path
+  into that record (`version`, `dates.published`, `versionHistory`). An
+  empty path means the whole record.
+- **Collection:** `sourceCollection` — an ordered, document-scoped set of
+  typed records: `{ "recordType": "contribution", "orderBy": "position" }`.
+  The collection is every record of that type whose `document` field names
+  this document, ordered by the named field. The author plate is the
+  canonical case:
+
+```json
+{
+  "id": "view-author-plate",
+  "recordType": "metadata-view",
+  "schemaVersion": 1,
+  "privacy": "public",
+  "sourceCollection": { "recordType": "contribution", "orderBy": "position" },
+  "presentation": "block"
+}
+```
+
 - `presentation` — `span`, `block`, `section` or `table`; a rendering hint,
   never authority.
+
+`sourceRecord`+`path` and `sourceCollection` are mutually exclusive
+(`oneOf` in the schema). The collection form covers every multi-record
+display (author plates, affiliation blocks); a single-record view cannot
+describe an ordered set, and no free-query language is introduced —
+collections are typed, document-scoped and ordered by one declared field.
 
 The rendered region's field envelope uses the **same id** as the view
 record, `role: "metadata-value"`, `policy: "generated-replace"`. That
@@ -134,9 +163,18 @@ blocks, date and version spans, version-summary blocks and version-history
 tables all become metadata views; WP4 renders them from records and must
 not invent unbound generated regions.
 
-Round trip: a Word-side edit inside a `generated-replace` region is never a
-patch; reconciliation reports it as a conflict against the authoritative
-record, per the WP1 authority rules.
+**Decision (product behaviour, explicit).** A Word-side edit inside a
+`generated-replace` metadata display — author plate, date, version,
+version-history table, title or status span — is **never** applied as a
+patch, to the record or to the QMD. Reconciliation reports it as a
+conflict naming the authoritative record and path, and the render
+regenerates the display from the record. Collaborators change metadata by
+changing the YAML or the record, not the rendered display. This is the
+strict reading of the WP1 authority rules, chosen deliberately: accepting
+display edits would create a second write path into records that bypasses
+validation and privacy separation. If a workflow later needs Word-side
+metadata editing, that requires a new reversibility contract for a
+specific field type; this rule stands.
 
 ## 3. Contribution model
 
@@ -182,17 +220,31 @@ so the WP6 JATS backend maps directly.
 
 **Decision.** `document-model.v1` gains `$defs/table-attrs` and
 `$defs/figure-attrs`, applied conditionally by node type (`if type ==
-"table" then attrs matches table-attrs`; likewise `figure`). Both remain
-open objects (`additionalProperties: true`) so profiles can extend them.
+"table" then attrs matches table-attrs`; likewise `figure`). The core
+attribute set is **closed** (`additionalProperties: false`) so typos and
+collisions fail validation; extension happens only through a namespaced
+container: an optional `profiles` object keyed by registered profile
+identifier, whose values are validated by that profile's manifest. A
+profile extends a table or figure by adding records under its own key,
+never by inventing loose core attributes.
 
 Semantic attributes only:
 
-- **table-attrs:** `label` (crossref label text), `caption` (node id of the
-  caption), `summary` (accessibility summary), `notes` (array of strings),
-  `provenance` (free string: data source statement).
+- **table-attrs:** `label` (crossref label text), `caption` (node id of
+  the caption), `summary` (accessibility summary), `notes` (array of node
+  ids — table notes are authored content nodes, not metadata strings),
+  `provenance` (`oneOf [string, {record: <id>}]` — a simple statement or a
+  reference to a catalogue record when the provenance is itself a
+  structured scholarly object), `profiles` (namespaced extensions).
 - **figure-attrs:** `label`, `caption` (node id), `alt` (alt text —
   required for the catalogue embedder when the figure is public),
-  `asset` (asset registry id), `credit` (attribution string).
+  `asset` (asset registry id), `credit` (`oneOf [string, {record: <id>}]`),
+  `profiles` (namespaced extensions).
+
+The record-reference forms keep simple cases simple (a plain string) while
+letting rich provenance, licences and source relationships live as
+catalogue records related to the table or figure by id — the intended
+scholarly-object model — without changing the core schema.
 
 Presentation data — column widths, alignment, borders, image width,
 wrapping, anchor position — is excluded from the semantic model. It belongs
@@ -258,14 +310,59 @@ if present, then bind envelopes to records by id; a document with
 envelopes but no catalogue degrades to WP1 behaviour (identity and policy
 known, rich metadata unknown).
 
+## QMD bindings
+
+The last mile between author-facing QMD and the normalized model. The WP3
+compiler implements exactly these mappings; nothing else reads author YAML.
+
+| Author writes (QMD/YAML) | Normalizes to | Rendered as |
+|---|---|---|
+| `abstract: "Background..."` or a `::: {#abstract}` div | `#abstract` section node (role `abstract`, authored-preserve); document record `{"abstract": {"region": "abstract"}}` | Authored section, envelope id `abstract` |
+| `author:` + `affiliations:` (standard Quarto) | one `person` record per author (identity only), `organization` records, one ordered `contribution` record per author | Author plate: metadata view over `sourceCollection` contribution/position |
+| `date: 2026-08-14`, `version: "2.1"` | document record `dates.*`, `version` | Generated spans bound by metadata views (`sourceRecord` + path) |
+| `version-history:` YAML list | document record `versionHistory[]` | Generated section or table, view path `versionHistory` |
+| `{{< meta version >}}` inline | no model change — resolves to a metadata view over the named document-record path | Generated span, `role: "metadata-value"` |
+| pipe/grid table + `: Caption {#tbl-outcomes}` | `table` node (id `tbl-outcomes`, structural) + caption node (authored) + `table-attrs` (`label`, `caption`, optional `summary`/`notes`/`provenance`) | Structural table envelope with authored descendants |
+| `![Caption](flow.png){#fig-flow fig-alt="..."}` | `figure` node (id `fig-flow`, authored) + `figure-attrs` (`alt` from `fig-alt`, `caption`, `asset`) + asset record (path, mediaType, hash) | Authored figure envelope |
+| `licence:`, `status:`, `type:`, `identifiers:` | document record fields (WP1 core vocabulary) | Metadata views where displayed |
+| profile fields (PICOS, PCC — future) | profile records under the profile's registered key | Per the profile's own specification |
+
+Two worked examples fix the author-to-record shape.
+
+Authorship — the author writes standard Quarto:
+
+```yaml
+author:
+  - name: Jane Smith
+    orcid: 0000-0002-1825-0097
+    email: jane.smith@example.org
+    corresponding: true
+    roles: [conceptualization, methodology]
+    affiliations:
+      - ref: uottawa
+affiliations:
+  - id: uottawa
+    name: University of Ottawa
+```
+
+The normalizer produces `person` `{id: "rec-person-1", name: {given: "Jane", family: "Smith"}, orcid: …}`, `organization` `{id: "rec-org-uottawa", name: "University of Ottawa"}`, and `contribution` `{id: "contrib-1", document: "rec-document", person: "rec-person-1", position: 1, roles: […], corresponding: true, email: …, affiliations: ["rec-org-uottawa"]}`. Author order in YAML is `position` order; nothing else encodes it.
+
+Version display — the author writes `version: "2.1"` and, in prose,
+`Protocol version {{< meta version >}}.` The normalizer stores
+`version: "2.1"` on the document record, registers the
+`view-document-version` metadata view, and WP4 renders the span wrapped in
+an envelope whose id is the view id. Editing the rendered "2.1" in Word is
+a conflict (see the generated-views decision); editing the YAML changes
+the record and every view of it.
+
 ## Schema-change manifest
 
 | File | Change | Kind |
 |---|---|---|
 | `metadata-core.v1.json` | `document.abstract` becomes `oneOf [string, {region}]` | additive (widening) |
-| `metadata-core.v1.json` | new `$defs/metadata-view`, `$defs/contribution`; both join the record dispatch | additive |
+| `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection), `$defs/contribution`; both join the record dispatch | additive |
 | `metadata-core.v1.json` | `person.roles`, `person.corresponding` marked deprecated in descriptions | additive |
-| `document-model.v1.json` | `$defs/table-attrs`, `$defs/figure-attrs` + conditional application to `node.attrs` | additive |
+| `document-model.v1.json` | `$defs/table-attrs`, `$defs/figure-attrs` (closed core + namespaced `profiles` container; `notes` as node ids; `provenance`/`credit` as `oneOf [string, {record}]`) + conditional application to `node.attrs` | **narrowing for table/figure nodes** — declared exception; existing examples re-validated and updated where loose attributes were used |
 | `document-model.v1.json` | asset gains optional `credit` | additive |
 | `catalogue.v1.json` | new schema | new file |
 | `schemas/examples/…` | valid + invalid examples for every change above | new files |
