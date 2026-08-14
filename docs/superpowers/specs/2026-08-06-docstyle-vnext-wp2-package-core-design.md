@@ -4,7 +4,7 @@ Date: August 6, 2026
 
 Work package: WP2 — Lua OOXML foundation (production build)
 
-Status: design for review, before implementation planning.
+Status: approved; revised August 14, 2026 after external review of the implementation plan (effective package view, safe XML insertion, inventory contract, ported publication and determinism tests, interface settlements). Implementation plan: `docs/superpowers/plans/2026-08-14-docstyle-vnext-wp2-package-core.md`.
 
 ## Context
 
@@ -65,6 +65,10 @@ The promoted modules keep their tested internals and take production names:
 
 A single `init.lua` composes these modules into the public interface. Feature modules and the machine interface depend only on `init.lua`; they never reach into an internal module. New internal structure must not require edits spread across the core.
 
+**Effective package view.** Once parts can be replaced and added, the package's real state is originals plus replacements plus additions. One internal view over that combined state — ordered names, byte access, existence and ASCII-case-collision lookup — is the single source for every read, relationship resolution, collision check, size validation and the writer's entry assembly and post-publication verification. No call site re-derives package state from the original entries alone.
+
+**Safe XML insertion.** Package metadata updates (content-type overrides, added relationships) never use string substitution on serialized XML. The XML module provides an insertion primitive that registers a zero-width byte-span edit at the validated parent element's end-tag offset, with attribute values escaped by the module's own escaping functions. This is the only mechanism for adding elements to `[Content_Types].xml` and `_rels/*.rels` streams.
+
 ## Public interface
 
 The interface extends the spike's real functions. Items marked new are added for production; the rest are promoted as-is.
@@ -72,15 +76,16 @@ The interface extends the spike's real functions. Items marked new are added for
 **Open and inspect**
 
 - `open(path, limits, options) -> package` — preflight the archive and parse OPC metadata, or raise a typed diagnostic. Promoted from `zip_preflight.open_path` composed with OPC parsing.
-- `package:inventory()` — new. A read-only view of parts, content types, relationships and unknown parts, for feature modules to plan edits.
+- `package:inventory()` — new. A read-only report over the effective package state: `metadata` (the content-types stream and relationship parts), `parts` (OPC parts in effective order), `content_types` (per part) and `relationships` (per source, including the package root `/`). Relationship records are copies, so a caller cannot mutate package state; malformed metadata raises rather than being silently skipped. Unknown-part *preservation* remains a writer guarantee; inventory reports what exists without classifying parts as unknown.
 - `package:part(name)`, `package:content_type(name)` — promoted.
 - `package:relationships(source)` — new. The relationships declared by a source part.
 - `package:remaining_materialization_bytes()` — promoted.
 
 **XML edit**
 
-- `xml.parse(bytes, options) -> doc` — promoted; enforces the input-byte limit (see below) before parsing.
-- `doc:find_all(ns, local_name)`, `node:get_attribute(ns, local_name)`, `node:set_attribute(ns, local_name, value)`, `node:replace_text(text)` — promoted.
+- `xml.parse(bytes, options) -> doc` — promoted; enforces the input-byte limit (see below) before parsing. `options.max_input_bytes` must be a non-negative integer; anything else raises `xml.invalid-limit`.
+- `xml.find_all(doc, ns, local_name)`, `xml.get_attribute(node, ns, local_name)`, `xml.set_attribute(node, ns, local_name, value)`, `xml.replace_text(node, text)` — promoted. The interface is module functions taking the document or node as the first argument, matching the tested spike code; no method-style wrappers are added.
+- `xml.append_element(doc, node, name, attributes) -> node` — new. Registers a zero-width insertion edit at `node`'s end-tag offset for a new empty child element, escaping every attribute value. This is the safe-insertion primitive the package core uses for content-type and relationship updates.
 - `xml.serialize(doc) -> bytes` — promoted, extended. Applies multiple non-overlapping byte-span edits collected against the original offsets in one pass, rebasing later offsets for earlier length deltas. Overlapping edits fail closed with a typed diagnostic. Only the exact requested ranges change; all other bytes are preserved verbatim.
 
 **Write and finalize**
@@ -92,7 +97,7 @@ The interface extends the spike's real functions. Items marked new are added for
 
 **Diagnostics**
 
-- `diagnostic.raise(code, message, context)` and `diagnostic.capture(fn)` — promoted. Codes are namespaced `zip.*`, `opc.*`, `xml.*` and `write.*`. The package core returns structured results and raises typed diagnostics; mapping to the programme's capability and validation result states happens at the feature-module boundary, not inside the core.
+- `diagnostic.raise(code, message, context)` and `diagnostic.capture(fn) -> ok, result_or_error` — promoted. Codes keep the tested namespaces: `zip.*`, `opc.*`, `xml.*` and `publication.*` (the spike's writer namespace is retained; no `write.*` alias is introduced). The package core returns structured results and raises typed diagnostics; mapping to the programme's capability and validation result states happens at the feature-module boundary, not inside the core.
 
 ## Performance prerequisite
 
@@ -127,11 +132,13 @@ Writes are safe by construction: the archive is validated before publication and
 
 Promote the hermetic Lua harness (`tests/vnext/xml-spike/` to `tests/vnext/package-core/`), preserving every gate the spike already passes: archive, functional (XML), preservation, safety, determinism (fresh-process) and performance. The three real office fixtures and the WP0 corpus remain standing evidence and must not be regenerated to pass a test.
 
+Gate preservation is by executable test, not by rationale: the spike's publication tests (the four failure-injection points, destination preservation, temporary-directory cleanup, output size and sequence validation, distinct-modtime preservation) and the fresh-process determinism test move into the production suite with the harness. Only the feasibility-record tests stay behind: candidate selection, the rejected SLAXML adapter, and the recorded reference-performance evidence, whose production replacement is the re-run benchmark below.
+
 Add coverage for the new work:
 
-- Finalization primitives: `add_part` (including collision and case-collision rejection), `add_relationship` (relationship-id minting, internal and external modes), and `write_atomic` preservation of the added parts alongside unknown parts.
-- Multiple non-overlapping edits per part, with byte-exact preservation outside the edited ranges, verified by the independent oracle; overlapping-edit rejection.
-- Performance-prerequisite enforcement: a part above the approved limit is rejected before parsing.
+- Finalization primitives: `add_part` (collision and ASCII-case-collision rejection against originals and prior additions), `add_relationship` (relationship-id minting, internal and external modes, distinct ids across repeated additions on the same source), and `write_atomic` preservation and verification of added parts alongside unknown parts.
+- Multiple non-overlapping edits per part, verified by the independent oracle (reparse and range check, not substring assertions); overlapping-edit rejection.
+- Performance-prerequisite enforcement: a part above the approved limit is rejected before parsing; the reference benchmark overrides the limit explicitly for its 5 and 10 MiB scaling cases and records the observed worst-case latency at the approved limit against the 0.75-second expectation.
 
 Wire the promoted suite into the vNext conformance run so continuous verification exercises it. No R is involved. The R suite remains unaffected.
 
