@@ -24,6 +24,8 @@ overrides the new input-byte limit for its scaling cases.
 - XML-part input-byte limit: candidate 1,048,576 bytes (1 MiB), enforced fail-closed before `xml.parse`. Visible configuration, never hidden. `max_input_bytes` overrides must be validated as non-negative integers.
 - One effective package view: every lookup, collision check, relationship resolution, size validation, writer entry assembly and post-publication verification goes through the `Package:_effective_*` helpers introduced in Task 3. No call site re-derives state from `pkg.entries` alone once additions exist.
 - Package metadata (`[Content_Types].xml`, `_rels/*.rels`) is modified only through the XML module's insertion primitive with escaped attributes. String substitution on serialized XML is forbidden.
+- Every insertion is encoded through the document's recorded encoding before registration (mirror how `attribute_replacement`/`text_replacement` thread `node.document.encoding`); element and attribute names are validated qualified names; inserted children reuse the validated parent's namespace prefix. UTF-16 and prefixed-manifest fixtures exercise both the content-types and relationships paths.
+- An added part is a first-class part from the moment `add_part` returns: readable, typed, listed by `inventory()`, replaceable and a valid relationship target. Every consumer routes through the effective-entry iterator; direct iteration of `pkg._additions` outside the effective helpers is forbidden.
 - Determinism: output bytes and entry order are reproducible across fresh `quarto run` processes; added entries use the fixed modtime constant and sorted-name order (never `pairs` order, never the wall clock).
 - Diagnostics: typed codes via `diagnostic.raise(code, message, context)`, namespaced `zip.*`, `opc.*`, `xml.*`, `publication.*` (plus `internal.lua-error`). `diagnostic.capture(fn)` returns `ok, result_or_error` — rejection tests bind both and assert `not ok` before inspecting `err.code`. No `print`/`io.write` in library modules; benchmark advisory output goes to stderr so stdout stays valid JSON.
 - WP0 characterization fixtures under `tests/vnext/fixtures/` are immutable migration evidence. Never regenerate a baseline to make a test pass.
@@ -234,7 +236,12 @@ local core_ok, core_output = pcall(function()
   return pandoc.pipe("quarto", { "run", core_runner }, "")
 end)
 if core_ok then
-  local summary = tostring(core_output):match("(PASS %d+ | FAIL %d+ | SKIP %d+)")
+  -- Per-gate lines ("archive: PASS 38 | …") precede the total; keep the LAST
+  -- match, which is the suite total, not the first gate's line.
+  local summary
+  for line in tostring(core_output):gmatch("PASS %d+ | FAIL %d+ | SKIP %d+") do
+    summary = line
+  end
   print("package-core: " .. (summary or "PASS (summary line not captured)"))
 else
   fail_hard("runner/package-core", tostring(core_output))
@@ -389,7 +396,35 @@ function Package:_effective_case_collision(zip_name)
   end
   return nil
 end
+
+-- The single iterator every consumer uses: ordered effective entries with
+-- name, kind and bytes. The writer derives modtime from kind (original
+-- entries keep their backend modtime; added entries use the fixed constant).
+function Package:_effective_entries()
+  local result = {}
+  for _, entry in ipairs(self.entries) do
+    result[#result + 1] = { name = entry.name, kind = "original" }
+  end
+  local added = {}
+  for zip_name in pairs(self._additions) do added[#added + 1] = zip_name end
+  table.sort(added)
+  for _, zip_name in ipairs(added) do
+    result[#result + 1] = { name = zip_name, kind = "added" }
+  end
+  return result
+end
+
+-- Effective analogue of require_entry: an added part is a first-class part.
+-- Returns the zip name, raising opc.part-not-found when the part exists in
+-- neither the originals nor the additions.
+function Package:_require_effective(part_name)
+  local zip_name = zip_name_for_part(part_name)
+  if self._additions[zip_name] ~= nil then return zip_name end
+  return require_entry(self, part_name)
+end
 ```
+
+Rebase `_effective_names()` on the iterator (`local names = {}; for _, e in ipairs(self:_effective_entries()) do names[#names+1] = e.name end`) so ordering logic exists once. Then route every `require_entry`-based public path through `_require_effective` — `Package:part`, `Package:content_type`, `Package:replace_part` and the source-existence check at the top of `Package:relationships` (`if source_part ~= "/" then self:_require_effective(source_part) end`) — so `add_part` followed by `inventory()`, `relationships()`, `content_type()` or `replace_part()` treats the added part exactly like an original. `replace_part` on an added part updates `self._additions[zip_name]` (the addition is the current bytes; there is no original to shadow); the rels-metadata guard stays first in all paths.
 
 Route `Package:relationships` reads through the effective view: in its body, replace the entry lookup and read —
 
@@ -479,7 +514,7 @@ Relates to #27"
 
 **Interfaces:**
 - Consumes: `xml.parse`, `xml.find_all`, `xml.set_attribute`, `xml.replace_text`, `xml.serialize`; `lib.oracle` for independent verification.
-- Produces: `xml.serialize(document) -> bytes, ranges` applies every registered edit (attribute, text, insertion); intersecting ranges raise `xml.overlapping-edits`; editing the same token twice raises `xml.edit-target`; `xml.append_element(document, node, name, attributes) -> nil` registers a zero-width insertion of `<name attr="…"…/>` at `node`'s end-tag offset with escaped attribute values; `token_overlay.escape_attribute(value, quote)` is exported for the adapter.
+- Produces: `xml.serialize(document) -> bytes, ranges` applies every registered edit (attribute, text, insertion); intersecting ranges raise `xml.overlapping-edits`; editing the same token twice raises `xml.edit-target`; `xml.append_element(node, local_name, attributes) -> nil` registers a zero-width, encoding-safe insertion at `node`'s end-tag offset — NCName-validated local name, parent-prefix reuse, QName-validated attribute names, escaped values; `token_overlay.escape_attribute(value, quote)` and `token_overlay.encode_insertion(utf8_text, encoding)` are exported; `strictness.is_ncname`/`strictness.is_qname` are exported; `oracle.verify_edits(original, edited, edits)` verifies multi-edit results in the test lib.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -503,17 +538,15 @@ return {
       local doc = xml.parse(SOURCE)
       local p = xml.find_all(doc, "urn:w", "p")[1]
       local t = xml.find_all(doc, "urn:w", "t")[1]
-      xml.set_attribute(doc, p, "urn:w", "one", "X")
-      xml.set_attribute(doc, p, "urn:w", "two", "Y")
-      xml.replace_text(doc, t, "world")
+      xml.set_attribute(p, "urn:w", "one", "X")
+      xml.set_attribute(p, "urn:w", "two", "Y")
+      xml.replace_text(t, "world")
       local out, ranges = xml.serialize(doc)
       assert(#ranges == 3, "three edit ranges expected, got " .. #ranges)
-      -- Independent verification: reparse through the oracle and confirm the
-      -- expanded names and edited values, and that bytes outside the reported
-      -- ranges are unchanged. Mirror the oracle call pattern used by the
-      -- promoted adapter edit cases in test-xml-adapter.lua (read that file
-      -- for the exact verify_edit signature) rather than substring checks.
-      oracle.verify_edit(SOURCE, out, ranges)
+      -- Independent multi-edit verification (Step 6 adds verify_edits to the
+      -- test-lib oracle; the single-edit verify_edit signature takes one
+      -- range plus an expected-change record and cannot verify this case).
+      oracle.verify_edits(SOURCE, out, doc.edits)
       local reparsed = xml.parse(out)
       local p2 = xml.find_all(reparsed, "urn:w", "p")[1]
       assert(xml.get_attribute(p2, "urn:w", "one") == "X")
@@ -527,9 +560,9 @@ return {
     fn = function()
       local doc = xml.parse(SOURCE)
       local p = xml.find_all(doc, "urn:w", "p")[1]
-      xml.set_attribute(doc, p, "urn:w", "one", "X")
+      xml.set_attribute(p, "urn:w", "one", "X")
       local ok, err = diagnostic.capture(function()
-        xml.set_attribute(doc, p, "urn:w", "one", "Z")
+        xml.set_attribute(p, "urn:w", "one", "Z")
       end)
       assert(not ok, "second edit of one token must be rejected")
       assert(err.code == "xml.edit-target", tostring(err))
@@ -556,25 +589,88 @@ return {
     end,
   },
   {
-    name = "append_element inserts an escaped empty element before the close tag",
+    name = "append_element reuses the parent prefix and escapes attribute values",
     gate = "functional",
     stage = "xml",
     fn = function()
       local doc = xml.parse(SOURCE)
       local p = xml.find_all(doc, "urn:w", "p")[1]
-      xml.append_element(doc, p, "w:extra", {
+      -- local name in; the child reuses the parent's validated prefix
+      xml.append_element(p, "extra", {
         { name = "w:val", value = 'a&b<c>"d' },
       })
       local out = xml.serialize(doc)
       assert(out:find('<w:extra w:val="a&amp;b&lt;c&gt;&quot;d"/></w:p>', 1, true),
-        "escaped insertion before the parent close tag: " .. out)
+        "prefixed, escaped insertion before the parent close tag: " .. out)
       xml.parse(out)  -- the result must still be strict-valid
+    end,
+  },
+  {
+    name = "append_element under a default-namespace parent stays unprefixed",
+    gate = "functional",
+    stage = "xml",
+    fn = function()
+      local doc = xml.parse(
+        '<?xml version="1.0"?><Types xmlns="urn:ct"></Types>')
+      local root = xml.find_all(doc, "urn:ct", "Types")[1]
+      xml.append_element(root, "Override", {
+        { name = "PartName", value = "/word/custom.xml" },
+        { name = "ContentType", value = "application/xml" },
+      })
+      local out = xml.serialize(doc)
+      local reparsed = xml.parse(out)
+      assert(#xml.find_all(reparsed, "urn:ct", "Override") == 1,
+        "unprefixed child must inherit the default namespace: " .. out)
+    end,
+  },
+  {
+    name = "append_element rejects invalid element and attribute names",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      local doc = xml.parse(SOURCE)
+      local p = xml.find_all(doc, "urn:w", "p")[1]
+      for _, bad in ipairs({ "1abc", "a b", "", "a:b" }) do
+        local ok, err = diagnostic.capture(function()
+          xml.append_element(p, bad, {})
+        end)
+        assert(not ok, "invalid local name must be rejected: " .. bad)
+        assert(err.code == "xml.invalid-input", tostring(err))
+      end
+      local ok, err = diagnostic.capture(function()
+        xml.append_element(p, "extra", { { name = "1bad", value = "x" } })
+      end)
+      assert(not ok, "invalid attribute name must be rejected")
+      assert(err.code == "xml.invalid-input", tostring(err))
+    end,
+  },
+  {
+    name = "append_element on a UTF-16 document preserves the encoding",
+    gate = "preservation",
+    stage = "xml",
+    fn = function()
+      -- Build the UTF-16LE source the same way the promoted adapter tests
+      -- build their UTF-16 fixtures (pandoc.text.toencoding + BOM); read
+      -- test-xml-adapter.lua for the exact helper and mirror it.
+      local utf8_source =
+        '<?xml version="1.0" encoding="UTF-16"?>' ..
+        '<w:p xmlns:w="urn:w" w:one="A"></w:p>'
+      local utf16_source = "\xFF\xFE" ..
+        pandoc.text.toencoding(utf8_source, "UTF-16LE")
+      local doc = xml.parse(utf16_source)
+      local p = xml.find_all(doc, "urn:w", "p")[1]
+      xml.append_element(p, "extra", { { name = "w:val", value = "v" } })
+      local out = xml.serialize(doc)
+      -- The output must still be UTF-16 (BOM intact) and must reparse with
+      -- the inserted element visible; a raw UTF-8 splice fails both.
+      assert(out:sub(1, 2) == "\xFF\xFE", "BOM must be preserved")
+      local reparsed = xml.parse(out)
+      assert(#xml.find_all(reparsed, "urn:w", "extra") == 1,
+        "inserted element must survive the UTF-16 round trip")
     end,
   },
 }
 ```
-
-(Adapter API note: the spike's `set_attribute(node, …)` reaches the document via `node.document`; if so, drop the `doc` first argument in these calls to match — confirm against `xml/adapter.lua` and keep the promoted signature, since the interface settlement is module functions with the tested shapes.)
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -651,39 +747,101 @@ end
 In `xml/adapter.lua`. The insertion offset is the start of the parent's end-tag token. The strict document's event stream carries end-tag ranges; read `overlay.bind` and expose the element's end-tag range on the bound node as `node.end_tag_range` (a small `bind` extension mirroring how `range` is already attached), then:
 
 ```lua
-function M.append_element(document, node, name, attributes)
-  assert_document(document)
+function M.append_element(node, local_name, attributes)
   assert_node(node)
-  if type(name) ~= "string" or name == "" then
-    raise("xml.invalid-input", "element name is required")
+  local document = node.document
+  -- Validate the local name against the XML Name production WITHOUT a
+  -- colon (an NCName): the child's prefix comes from the parent, never the
+  -- caller. Reuse the strictness module's name validator (read
+  -- xml/strictness.lua for the exported Name/NCName check the parser
+  -- itself uses; do not write a second regex).
+  if type(local_name) ~= "string" or
+      not strictness.is_ncname(local_name) then
+    raise("xml.invalid-input", "element name must be a valid NCName", {
+      name = tostring(local_name),
+    })
   end
   if not node.end_tag_range then
     raise("xml.edit-target",
       "append_element requires an element with a separate end tag", {})
   end
-  local pieces = { "<", name }
+  -- Reuse the validated parent's namespace prefix, so the child lands in
+  -- the parent's namespace whether the manifest root is prefixed
+  -- (<ct:Types>) or default-namespaced (<Types xmlns="…">). The parent's
+  -- prefix is on the bound node (confirm the field name in overlay.bind;
+  -- the strictness events carry the qualified name split).
+  local child_name = node.name.prefix and
+    (node.name.prefix .. ":" .. local_name) or local_name
+  local pieces = { "<", child_name }
   for _, attribute in ipairs(attributes or {}) do
+    if type(attribute.name) ~= "string" or
+        not strictness.is_qname(attribute.name) then
+      raise("xml.invalid-input",
+        "attribute name must be a valid qualified name", {
+          name = tostring(attribute.name),
+        })
+    end
     pieces[#pieces + 1] = (' %s="%s"'):format(
       attribute.name, overlay.escape_attribute(attribute.value, '"'))
   end
   pieces[#pieces + 1] = "/>"
+  -- Encode the complete insertion into the document's recorded encoding
+  -- before registration — exactly how attribute_replacement and
+  -- text_replacement thread node.document.encoding. A raw UTF-8 splice
+  -- corrupts UTF-16 parts.
+  local replacement = overlay.encode_insertion(
+    table.concat(pieces), document.encoding)
   local offset = node.end_tag_range.start
   register_edit(document, { insertion = true, at = offset },
-    { start = offset, finish = offset }, table.concat(pieces))
+    { start = offset, finish = offset }, replacement)
 end
 ```
 
-(Attribute *names* are caller-supplied qualified names; the package core passes only fixed literals — `PartName`, `ContentType`, `Id`, `Type`, `Target`, `TargetMode`. Values are always escaped. If `bind` does not currently record end-tag ranges, extend it: the strictness event list contains the end-tag event with its half-open range; attach it to the node when the end-tag event closes that element.)
+Supporting work in this step: export the strictness name checks (`strictness.is_ncname`, `strictness.is_qname`) by wrapping the Name-production validation the parser already applies — no new regex; and add `overlay.encode_insertion(utf8_text, encoding)` beside `attribute_replacement`/`text_replacement`, reusing their existing encoding path (read how they encode replacements and factor that call out). If `bind` does not currently record end-tag ranges, extend it: the strictness event list contains the end-tag event with its half-open range; attach it to the node when the end-tag event closes that element. Insertion byte ranges refer to original *encoded* offsets, consistent with every other edit. `append_element` returns nothing — no bound node exists until the serialized bytes are reparsed.
 
-- [ ] **Step 6: Run the suite**
+- [ ] **Step 6: Add a real multi-edit verification to the test-lib oracle**
+
+The promoted `oracle.verify_edit` takes one range plus an expected-change record; it cannot verify a multi-edit result. Add to `tests/vnext/package-core/lib/oracle.lua`:
+
+```lua
+-- Verify a multi-edit result: every byte outside the reported ranges is
+-- unchanged, and each replacement occupies its shifted position exactly.
+-- edits is the document's ordered edit list ({range, replacement}, original
+-- coordinates); this function is independent of the overlay's serializer
+-- application order because it walks both byte strings once, left to right.
+function M.verify_edits(original, edited, edits)
+  local ordered = {}
+  for index, edit in ipairs(edits) do ordered[index] = edit end
+  table.sort(ordered, function(a, b) return a.range.start < b.range.start end)
+  local source_cursor, edited_cursor = 0, 0
+  for _, edit in ipairs(ordered) do
+    local unchanged_length = edit.range.start - source_cursor
+    assert(original:sub(source_cursor + 1, source_cursor + unchanged_length)
+      == edited:sub(edited_cursor + 1, edited_cursor + unchanged_length),
+      "bytes before an edit range changed")
+    edited_cursor = edited_cursor + unchanged_length
+    assert(edited:sub(edited_cursor + 1, edited_cursor + #edit.replacement)
+      == edit.replacement, "replacement bytes do not match")
+    source_cursor = edit.range.finish
+    edited_cursor = edited_cursor + #edit.replacement
+  end
+  assert(original:sub(source_cursor + 1) == edited:sub(edited_cursor + 1),
+    "bytes after the last edit range changed")
+  return true
+end
+```
+
+(Range convention: match the overlay's `replace_range` arithmetic — the replaced span is bytes `start+1 .. finish` — and adjust the `sub` offsets above if inspection of `xml/common.lua` shows a different convention. The semantic half of the verification stays with the reparse assertions already in the test.)
+
+- [ ] **Step 7: Run the suite**
 
 Run: `quarto run tests/vnext/package-core/run.lua`
 Expected: `FAIL 0` — the new cases pass and every promoted single-edit case still passes (a single edit is the one-element list).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add _extensions/docstyle/vnext/package-core/xml tests/vnext/package-core/tests/test-multi-edit.lua
+git add _extensions/docstyle/vnext/package-core/xml tests/vnext/package-core
 git commit -m "Support multiple non-overlapping XML edits and safe element insertion
 
 Relates to #27"
@@ -710,7 +868,7 @@ Create `dev/vnext/package-core/part-size-survey.lua`: for each `.docx` under `te
 quarto run dev/vnext/package-core/part-size-survey.lua
 ```
 
-Record the largest WordprocessingML part in the Task commit message. If any real part exceeds 1 MiB, raise the candidate limit to the next power of two above the maximum and carry the change through this task and the spec.
+Record the largest WordprocessingML part in the Task commit message. If any real part exceeds the 1 MiB candidate, **stop and request explicit review of the limit** — do not silently select a larger value. The 1 MiB ratification is conditional on the survey confirming headroom.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -919,6 +1077,54 @@ return {
     end,
   },
   {
+    name = "a prefixed content-types root gets a prefixed Override in the same namespace",
+    gate = "preservation",
+    stage = "package",
+    fn = function()
+      -- Synthetic package whose [Content_Types].xml uses a namespace prefix
+      -- (<ct:Types xmlns:ct="…">). Build it in-test with pandoc.zip
+      -- (mirror the archive vector fixtures' minimal-package construction),
+      -- write to a temp path, then add_part + write_atomic + reopen: the
+      -- added part's content type must resolve on reopen, proving the
+      -- Override landed as <ct:Override> in the content-types namespace.
+      -- A same-namespace-wrong-prefix or unprefixed child fails reopen
+      -- validation or resolves no content type.
+      fixture.with_temp_dir("prefixed-ct", function(dir)
+        local source = build_prefixed_content_types_package(dir)  -- local helper in this file
+        local out = dir .. "/out.docx"
+        local pkg = core.open(source)
+        pkg:add_part("/word/custom.xml", "<root/>", "application/xml")
+        pkg:write_atomic(out)
+        local reopened = core.open(out)
+        assert(reopened:content_type("/word/custom.xml") == "application/xml",
+          "Override must be valid in a prefixed content-types stream")
+      end)
+    end,
+  },
+  {
+    name = "an added part is a first-class part before publication",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      local pkg = core.open(WORD)
+      pkg:add_part("/word/custom.xml", "<root/>", "application/xml")
+      -- inventory lists it (this exercises relationships()/content_type()
+      -- routing through _require_effective; the naive version raises
+      -- opc.part-not-found here)
+      local inv = pkg:inventory()
+      local listed = false
+      for _, name in ipairs(inv.parts) do
+        if name == "/word/custom.xml" then listed = true end
+      end
+      assert(listed, "added part must appear in inventory")
+      assert(inv.content_types["/word/custom.xml"] == "application/xml")
+      -- and it is replaceable like any other part
+      pkg:replace_part("/word/custom.xml", "<root updated='1'/>")
+      assert(pkg:part("/word/custom.xml") == "<root updated='1'/>",
+        "replace_part must update an added part")
+    end,
+  },
+  {
     name = "two publishes of the same additions are byte-identical",
     gate = "determinism",
     stage = "package",
@@ -990,7 +1196,11 @@ function Package:_register_content_type_override(part_name, content_type)
   local current = self._replacements["[Content_Types].xml"]
     or self:_read_zip_entry("[Content_Types].xml", "opc.content-types-missing")
   local document = xml_adapter.parse(current)
-  xml_adapter.append_element(document, document.root, "Override", {
+  -- Revalidate before every insertion: open-time validation does not
+  -- guarantee the stream is still a content-types root here.
+  assert_root(document, CONTENT_TYPES_NS, "Types",
+    "opc.content-types-root", "content-types stream")
+  xml_adapter.append_element(document.root, "Override", {
     { name = "PartName", value = part_name },
     { name = "ContentType", value = content_type },
   })
@@ -998,7 +1208,7 @@ function Package:_register_content_type_override(part_name, content_type)
 end
 ```
 
-(No `gsub`: the Override is inserted by the escaped, strictness-validated `append_element` at the validated `Types` root's end-tag offset. `document.root` — confirm the bound document exposes the root node under that field; the spike's `assert_root` reads `document.root`, so it does.)
+(No `gsub`: the Override is inserted by the escaped, NCName-validated `append_element` at the revalidated `Types` root's end-tag offset, reusing the root's prefix — a prefixed manifest root (`<ct:Types>`) gets `<ct:Override>` in the same namespace automatically. During implementation, also verify that `replace_part` cannot target the content-types stream: `zip_name_for_part` rejects the literal name `[Content_Types].xml`, so direct replacement appears structurally blocked, but if any path reaches it, add an explicit `opc.metadata-replacement` guard exactly as for rels parts.)
 
 Extend the read paths for additions: in `require_entry` (or at the top of `Package:part` and `Package:content_type` before `require_entry` raises), consult the effective view —
 
@@ -1018,29 +1228,41 @@ and in `Package:content_type`, resolve the zip name the same way before `require
 
 In `writer.lua`:
 
+The writer consumes ONLY the effective view — it never inspects `pkg._additions` directly (the single-view invariant). Rework `archive_entries` to iterate `pkg:_effective_entries()`:
+
 ```lua
 local ADDED_ENTRY_MODTIME = 315532800  -- 1980-01-01T00:00:00Z, the ZIP epoch
 
-local function sorted_addition_names(pkg)
-  local names = {}
-  for zip_name in pairs(pkg._additions or {}) do
-    names[#names + 1] = zip_name
+local function archive_entries(pkg)
+  local metadata_archive = pandoc.zip.Archive(pkg._archive_bytes)
+  -- Backend agreement is still checked against the ORIGINAL entries; the
+  -- backend archive cannot know about additions.
+  if #metadata_archive.entries ~= #pkg.entries then
+    raise("publication.backend-mismatch", …)  -- existing raise unchanged
   end
-  table.sort(names)
-  return names
+  local entries = {}
+  for index, effective in ipairs(pkg:_effective_entries()) do
+    if effective.kind == "original" then
+      local metadata = metadata_archive.entries[index]
+      if metadata.path ~= effective.name then
+        raise("publication.backend-mismatch", …)  -- existing raise unchanged
+      end
+      entries[#entries + 1] = pandoc.zip.Entry(
+        effective.name, pkg:_effective_bytes(effective.name),
+        metadata.modtime)
+    else
+      entries[#entries + 1] = pandoc.zip.Entry(
+        effective.name, pkg:_effective_bytes(effective.name),
+        ADDED_ENTRY_MODTIME)
+    end
+  end
+  return entries
 end
 ```
 
-In `archive_entries`, after the existing validated-originals loop, append:
+(`_effective_bytes` returns the replacement when one exists and the original bytes otherwise, so the per-entry `replacement or read` branch in the old loop collapses into it. Original entries always precede additions in the iterator, so `metadata_archive.entries[index]` stays aligned for the `kind == "original"` prefix.)
 
-```lua
-  for _, zip_name in ipairs(sorted_addition_names(pkg)) do
-    entries[#entries + 1] = pandoc.zip.Entry(
-      zip_name, pkg._additions[zip_name], ADDED_ENTRY_MODTIME)
-  end
-```
-
-In `validate_output_sizes`, after the originals loop, add the additions with the same entry and running-total checks (sorted iteration, same `publication.entry-limit` / `publication.total-limit` raises, `total = total + #bytes`).
+Rework `validate_output_sizes` the same way: iterate `pkg:_effective_entries()`, take each size from `#pkg:_effective_bytes(name)` for replaced/added entries or `entry.uncompressed_size` for untouched originals, and apply the existing `publication.entry-limit` / `publication.total-limit` checks over the full effective sequence.
 
 Fix the post-publication verification in `publish` — replace the `#verified.entries ~= #pkg.entries` count check and the per-index originals loop with the effective sequence:
 
@@ -1298,8 +1520,7 @@ function Package:add_relationship(source_part, rel_type, target, mode)
     local document = xml_adapter.parse(current)
     assert_root(document, RELATIONSHIPS_NS, "Relationships",
       "opc.relationships-root", "relationships part")
-    xml_adapter.append_element(document, document.root,
-      "Relationship", attributes)
+    xml_adapter.append_element(document.root, "Relationship", attributes)
     local updated = xml_adapter.serialize(document)
     if self._additions[relationship_zip] then
       self._additions[relationship_zip] = updated
@@ -1312,8 +1533,7 @@ function Package:add_relationship(source_part, rel_type, target, mode)
       '<Relationships xmlns="', RELATIONSHIPS_NS, '">',
     }
     local document = xml_adapter.parse(table.concat(pieces) .. "</Relationships>")
-    xml_adapter.append_element(document, document.root,
-      "Relationship", attributes)
+    xml_adapter.append_element(document.root, "Relationship", attributes)
     self._additions[relationship_zip] = xml_adapter.serialize(document)
   end
   self._relationship_cache[relationship_zip] = nil
@@ -1321,7 +1541,7 @@ function Package:add_relationship(source_part, rel_type, target, mode)
 end
 ```
 
-(Both branches insert through `append_element` — escaped, structure-validated, no `gsub`. The `Relationships` root here is unprefixed with a default namespace, so the fixed child name `Relationship` inherits it; when an *existing* rels stream uses a namespace prefix on its root, the insertion offset still comes from the validated root node, but the unprefixed child would not be in the Relationships namespace — detect that case by checking the root's tag prefix (available on the bound node; confirm the field in `bind`) and reuse the root's prefix for the child name.)
+(Both branches insert through `append_element` — escaped, revalidated, no `gsub`. Prefix correctness is automatic: `append_element` takes a local name and reuses the validated root's prefix, so an unprefixed default-namespace root gets `<Relationship …/>` and a prefixed root (`<r:Relationships>`) gets `<r:Relationship …/>`, both in the Relationships namespace. Add two synthetic-package cases to the test file, built in-test with `pandoc.zip.Entry`/`Archive` written to a temp path and opened with `core.open`: one whose document rels part uses a **prefixed** Relationships root, one whose rels part is **UTF-16** with a BOM — for each, `add_relationship` then `write_atomic` then reopen must list the added relationship, proving the insertion respected namespace prefix and encoding at the package level. Mirror the minimal-package construction used by the archive vector fixtures.)
 
 - [ ] **Step 4: Run the add-relationship tests, then the whole suite**
 
@@ -1408,5 +1628,7 @@ Relates to #27"
 **Spec coverage:** promote + isolate (Task 1), gate preservation incl. publication/determinism ports (Task 1), conformance aggregation with explicit combined-failure semantics (Task 2), effective view + inventory contract (Task 3), multi-edit + safe insertion primitive (Task 4), pre-parse limit with override validation (Task 5), `add_part` with case-collision against originals and additions plus writer verification (Task 6), `add_relationship` with distinct-id minting, external mode and rels immutability (Task 7), performance prerequisite incl. limit override, 0.75 s recording and stderr/stdout separation (Task 8). Non-goals have no tasks.
 
 **Review-finding coverage:** effective view consulted by relationships/resolution/collisions/writer/verification (Tasks 3, 6, 7); no `gsub` insertion anywhere, enforced by the Task 8 grep; `[Content_Types].xml` never passed to `content_type()`; root relationships reported by inventory and copies returned; `pcall` suppression removed; `diagnostic.capture` two-value usage in every rejection test; publication + determinism tests ported with the spike-record cross-check removed; benchmark overrides the limit, records approved-limit latency, and keeps stdout valid JSON; conformance aggregation is explicit; interface settlements (module functions, `publication.*`, no `allocate_id`) are in the revised spec.
+
+**Second-round coverage (PR #48 review):** `append_element` is encoding-safe (insertions encoded through `document.encoding` via `encode_insertion`), NCName/QName-validated, and parent-prefix-reusing, with UTF-16, default-namespace, prefixed-parent and invalid-name test cases at the xml level plus prefixed-manifest (Task 6) and prefixed/UTF-16 rels (Task 7) synthetic-package cases; the effective view is genuinely effective — `_effective_entries()` iterator plus `_require_effective` routing for `part`/`content_type`/`replace_part`/`relationships`, the writer consumes only the iterator, and `add_part → inventory` / `add_part → replace_part` are tested; Task 4's tests use the settled node-first API and a real `oracle.verify_edits`; contracts settled as `append_element -> nil` and `serialize -> bytes, ranges` in the spec; content-types root revalidated before every insertion, with a structural-blockage check on `replace_part`; the conformance summary keeps the last (total) match; the 1 MiB limit stops for explicit review if the corpus exceeds it.
 
 **Type consistency:** `document.edits` (list with `seq`) defined in Task 4 and consumed by its serialize; `Package:_effective_names/_effective_bytes/_effective_exists/_effective_case_collision` defined in Task 3, consumed in Tasks 6–7 and the writer; `xml.append_element` defined in Task 4, consumed in Tasks 6–7; `xml.MAX_INPUT_BYTES` defined and asserted in Task 5, overridden in Task 8; `sorted_addition_names` and `ADDED_ENTRY_MODTIME` defined and used in Task 6. Field names taken from the spike source (`self.entries`, `entry.name`, `_entries_by_name`, `_entries_by_normalized_name`, `_relationship_cache`, `RELATIONSHIPS_NS`, `document.root`) with confirm-notes where a field must be checked before editing.
