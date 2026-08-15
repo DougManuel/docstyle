@@ -246,6 +246,29 @@ cases[#cases + 1] = {
 }
 
 cases[#cases + 1] = {
+  name = "verify_edits accepts same-offset edits whose array order disagrees with seq",
+  gate = "preservation",
+  stage = "xml",
+  fn = function()
+    -- Two zero-width insertions at the same offset, given to verify_edits
+    -- in array order [seq 2, seq 1] -- the reverse of registration order.
+    -- token_overlay.M.serialize sorts by (range.start, seq) and applies
+    -- right-to-left, so same-offset edits always compose into the FINAL
+    -- bytes in seq (registration) order regardless of how the caller's
+    -- edits array happens to be ordered. verify_edits must sort the same
+    -- way or it walks the bytes in the wrong order and rejects output the
+    -- real pipeline actually produces.
+    local source = "0123456789"
+    local edits = {
+      { range = { start = 6, finish = 6 }, replacement = "B", seq = 2 },
+      { range = { start = 6, finish = 6 }, replacement = "A", seq = 1 },
+    }
+    local edited = source:sub(1, 6) .. "A" .. "B" .. source:sub(7)
+    assert(oracle.verify_edits(source, edited, edits) == true)
+  end,
+}
+
+cases[#cases + 1] = {
   name = "rejects an undeclared semantic change outside the owned range",
   gate = "preservation",
   stage = "xml",

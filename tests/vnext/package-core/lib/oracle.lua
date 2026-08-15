@@ -1142,7 +1142,17 @@ end
 function M.verify_edits(original, edited, edits)
   local ordered = {}
   for index, edit in ipairs(edits) do ordered[index] = edit end
-  table.sort(ordered, function(a, b) return a.range.start < b.range.start end)
+  -- Mirror token_overlay.M.serialize's own comparator: same-offset edits
+  -- are disambiguated by registration order (seq), not array position, so
+  -- this must tie-break the same way the real serializer orders them or a
+  -- same-offset edits list can be rejected even though it matches the
+  -- bytes the pipeline actually produced.
+  table.sort(ordered, function(a, b)
+    if a.range.start ~= b.range.start then
+      return a.range.start < b.range.start
+    end
+    return a.seq < b.seq
+  end)
   local source_cursor, edited_cursor = 0, 0
   for _, edit in ipairs(ordered) do
     local unchanged_length = edit.range.start - source_cursor

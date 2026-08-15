@@ -146,6 +146,24 @@ return {
     end,
   },
   {
+    name = "append_element on a self-closing parent is rejected",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      -- A self-closing "<Empty/>" has no separate end tag: the paired end
+      -- event is the empty=true marker reusing the start tag's own range,
+      -- so overlay.bind never attaches end_tag_range to this node. There is
+      -- nowhere for append_element to insert before.
+      local doc = xml.parse('<?xml version="1.0"?><root><Empty/></root>')
+      local empty = xml.find_all(doc, "", "Empty")[1]
+      local ok, err = diagnostic.capture(function()
+        xml.append_element(empty, "extra", {})
+      end)
+      assert(not ok, "self-closing parent must be rejected")
+      assert(err.code == "xml.edit-target", tostring(err))
+    end,
+  },
+  {
     name = "two insertions at the same offset apply in registration order",
     gate = "functional",
     stage = "xml",
