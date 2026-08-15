@@ -68,8 +68,15 @@ return {
       fixture.with_temp_dir("add-part", function(dir)
         local out = dir .. "/out.docx"
         local pkg = core.open(WORD, LIMITS)
+        local original_document_type = pkg:content_type("/word/document.xml")
+        -- Content type must NOT be resolvable via any Default extension
+        -- rule (the fixture declares Default Extension="xml" ->
+        -- application/xml) -- otherwise this test is vacuous: it would
+        -- pass even if the Override were never written, because
+        -- content_type() falls back to the extension Default. Only a
+        -- non-default type proves the Override round-tripped.
         pkg:add_part("/word/custom.xml",
-          '<?xml version="1.0"?><root/>', "application/xml")
+          '<?xml version="1.0"?><root/>', "application/vnd.docstyle-custom+xml")
         assert(pkg:part("/word/custom.xml") ==
           '<?xml version="1.0"?><root/>', "added part readable before publish")
         pkg:write_atomic(out)
@@ -77,11 +84,29 @@ return {
         local reopened = core.open(out, LIMITS)
         assert(reopened:part("/word/custom.xml") ==
           '<?xml version="1.0"?><root/>', "added part bytes survive")
-        assert(reopened:content_type("/word/custom.xml") == "application/xml",
+        assert(reopened:content_type("/word/custom.xml") ==
+          "application/vnd.docstyle-custom+xml",
           "added content type survives")
         assert(reopened:part("/word/document.xml") ~= nil,
           "original parts untouched")
+        assert(reopened:content_type("/word/document.xml") ==
+          original_document_type,
+          "an original part's content type is unchanged after add_part")
       end)
+    end,
+  },
+  {
+    name = "adding the same new part name twice fails closed on the second call",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      local pkg = core.open(WORD, LIMITS)
+      pkg:add_part("/word/custom.xml", "<root/>", "application/xml")
+      local ok, err = diagnostic.capture(function()
+        pkg:add_part("/word/custom.xml", "<root/>", "application/xml")
+      end)
+      assert(not ok)
+      assert(err.code == "opc.add-part-collision", tostring(err))
     end,
   },
   {
@@ -172,10 +197,17 @@ return {
         local source = build_prefixed_content_types_package(dir)
         local out = dir .. "/out.docx"
         local pkg = core.open(source, LIMITS)
-        pkg:add_part("/word/custom.xml", "<root/>", "application/xml")
+        -- Same non-Default-resolvable content type as the round-trip test,
+        -- and for the same reason: the fixture declares
+        -- Default Extension="xml" -> application/xml, so an
+        -- application/xml Override would make this test pass even with a
+        -- no-op _register_content_type_override.
+        pkg:add_part("/word/custom.xml", "<root/>",
+          "application/vnd.docstyle-custom+xml")
         pkg:write_atomic(out)
         local reopened = core.open(out, LIMITS)
-        assert(reopened:content_type("/word/custom.xml") == "application/xml",
+        assert(reopened:content_type("/word/custom.xml") ==
+          "application/vnd.docstyle-custom+xml",
           "Override must be valid in a prefixed content-types stream")
       end)
     end,
