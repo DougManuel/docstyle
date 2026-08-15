@@ -3,6 +3,7 @@ local diagnostic = require("lib.diagnostic")
 
 local M = {}
 local MAX_RESERVATION_ATTEMPTS = 32
+local ADDED_ENTRY_MODTIME = 315532800  -- 1980-01-01T00:00:00Z, the ZIP epoch
 local FAILURE_POINTS = {
   after_archive = true,
   after_close = true,
@@ -70,8 +71,14 @@ local function reserve_directory(destination_directory)
     })
 end
 
+-- The writer consumes ONLY the effective view (single-view invariant): it
+-- never inspects pkg._additions directly. Original entries always precede
+-- additions in the iterator, so metadata_archive.entries[index] stays
+-- aligned for the kind == "original" prefix.
 local function archive_entries(pkg)
   local metadata_archive = pandoc.zip.Archive(pkg._archive_bytes)
+  -- Backend agreement is still checked against the ORIGINAL entries; the
+  -- backend archive cannot know about additions.
   if #metadata_archive.entries ~= #pkg.entries then
     raise("publication.backend-mismatch",
       "ZIP backend entry count differs from validated preflight", {
@@ -81,22 +88,25 @@ local function archive_entries(pkg)
   end
 
   local entries = {}
-  for index, validated in ipairs(pkg.entries) do
-    local metadata = metadata_archive.entries[index]
-    if metadata.path ~= validated.name then
-      raise("publication.backend-mismatch",
-        "ZIP backend entry order differs from validated preflight", {
-          index = index,
-          validated = validated.name,
-          backend = metadata.path,
-        })
+  for index, effective in ipairs(pkg:_effective_entries()) do
+    if effective.kind == "original" then
+      local metadata = metadata_archive.entries[index]
+      if metadata.path ~= effective.name then
+        raise("publication.backend-mismatch",
+          "ZIP backend entry order differs from validated preflight", {
+            index = index,
+            validated = effective.name,
+            backend = metadata.path,
+          })
+      end
+      entries[#entries + 1] = pandoc.zip.Entry(
+        effective.name, pkg:_effective_bytes(effective.name),
+        metadata.modtime)
+    else
+      entries[#entries + 1] = pandoc.zip.Entry(
+        effective.name, pkg:_effective_bytes(effective.name),
+        ADDED_ENTRY_MODTIME)
     end
-    local bytes = pkg._replacements[validated.name]
-    if bytes == nil then
-      bytes = pkg:_read_zip_entry(validated.name)
-    end
-    entries[index] = pandoc.zip.Entry(
-      validated.name, bytes, metadata.modtime)
   end
   return entries
 end
@@ -112,13 +122,18 @@ end
 
 local function validate_output_sizes(pkg)
   local total = 0
-  for _, entry in ipairs(pkg.entries) do
-    local replacement = pkg._replacements[entry.name]
-    local size = replacement and #replacement or entry.uncompressed_size
+  for _, effective in ipairs(pkg:_effective_entries()) do
+    local size
+    if effective.kind == "original" and
+        pkg._replacements[effective.name] == nil then
+      size = pkg._entries_by_name[effective.name].uncompressed_size
+    else
+      size = #pkg:_effective_bytes(effective.name)
+    end
     if size > pkg._limits.max_entry_uncompressed_bytes then
       raise("publication.entry-limit",
         "output entry exceeds the uncompressed-size limit", {
-          entry = entry.name,
+          entry = effective.name,
           actual = size,
           limit = pkg._limits.max_entry_uncompressed_bytes,
         })
@@ -127,7 +142,7 @@ local function validate_output_sizes(pkg)
     if size > remaining then
       raise("publication.total-limit",
         "output package exceeds the total uncompressed-size limit", {
-          entry = entry.name,
+          entry = effective.name,
           actual = total + size,
           limit = pkg._limits.max_total_uncompressed_bytes,
         })
@@ -159,21 +174,21 @@ local function publish(pkg, output_path, options)
     maybe_fail(options, "after_close")
     local verified = require("opc").open_path(
       temporary_path, pkg._limits)
-    if #verified.entries ~= #pkg.entries then
+    local expected_names = pkg:_effective_names()
+    if #verified.entries ~= #expected_names then
       raise("publication.verification",
         "completed package entry count changed", {
-          expected = #pkg.entries,
+          expected = #expected_names,
           actual = #verified.entries,
         })
     end
-    for index, expected in ipairs(pkg.entries) do
-      local actual = verified.entries[index]
-      if actual.name ~= expected.name then
+    for index, expected in ipairs(expected_names) do
+      if verified.entries[index].name ~= expected then
         raise("publication.verification",
           "completed package entry sequence changed", {
             index = index,
-            expected = expected.name,
-            actual = actual.name,
+            expected = expected,
+            actual = verified.entries[index].name,
           })
       end
     end

@@ -330,6 +330,57 @@ function Package:replace_part(part_name, bytes)
   end
 end
 
+function Package:_register_content_type_override(part_name, content_type)
+  local current = self._replacements["[Content_Types].xml"]
+    or self:_read_zip_entry("[Content_Types].xml", "opc.content-types-missing")
+  local document = xml_adapter.parse(current)
+  -- Revalidate before every insertion: open-time validation does not
+  -- guarantee the stream is still a content-types root here.
+  assert_root(document, CONTENT_TYPES_NS, "Types",
+    "opc.content-types-root", "content-types stream")
+  xml_adapter.append_element(document.root, "Override", {
+    { name = "PartName", value = part_name },
+    { name = "ContentType", value = content_type },
+  })
+  self._replacements["[Content_Types].xml"] = xml_adapter.serialize(document)
+end
+
+function Package:add_part(part_name, bytes, content_type)
+  local zip_name = zip_name_for_part(part_name)
+  if is_relationship_part(zip_name) then
+    raise("opc.metadata-replacement",
+      "relationship metadata is not added through add_part", {
+        part_name = part_name,
+      })
+  end
+  if type(bytes) ~= "string" then
+    raise("opc.invalid-addition", "added part must be a byte string", {
+      part_name = part_name,
+    })
+  end
+  if type(content_type) ~= "string" or content_type == "" then
+    raise("opc.invalid-addition", "added part requires a content type", {
+      part_name = part_name,
+    })
+  end
+  if self:_effective_exists(zip_name) then
+    raise("opc.add-part-collision", "a part with this name already exists", {
+      part_name = part_name,
+    })
+  end
+  local collision = self:_effective_case_collision(zip_name)
+  if collision then
+    raise("opc.add-part-case-collision",
+      "a name differing only in ASCII case already exists", {
+        part_name = part_name,
+        existing = collision,
+      })
+  end
+  self:_register_content_type_override(part_name, content_type)
+  self._additions[zip_name] = bytes
+  self._content_type_overrides[normalize_percent_hex(zip_name)] = content_type
+end
+
 function Package:write_atomic(output_path, options)
   return require("writer").write_atomic(
     self, output_path, options)
