@@ -1,7 +1,7 @@
 local diagnostic = require("lib.diagnostic")
 local fixture = require("lib.fixture")
-local opc = require("archive.opc")
-local libdeflate = require("archive.vendor.libdeflate.LibDeflate")
+local opc = require("opc")
+local libdeflate = require("inflate.vendor.libdeflate.LibDeflate")
 
 local runner_here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
 local root = pandoc.path.normalize(pandoc.path.join({
@@ -642,7 +642,7 @@ return {
       end)
 
       local source = fixture.read_bytes(pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "archive", "opc.lua",
+        root, "_extensions", "docstyle", "vnext", "package-core", "opc.lua",
       }))
       assert(not source:find("pandoc%.zip%.Archive%s*%("),
         "OPC seam must not use pandoc.zip for untrusted content")

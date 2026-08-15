@@ -1,4 +1,4 @@
-local common = require("candidates.common")
+local common = require("xml.common")
 local diagnostic = require("lib.diagnostic")
 
 local M = {}

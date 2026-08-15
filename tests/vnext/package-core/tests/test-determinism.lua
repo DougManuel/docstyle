@@ -6,14 +6,11 @@ local root = pandoc.path.normalize(pandoc.path.join({
 }))
 
 local SOURCE = pandoc.path.join({
-  root, "tests", "vnext", "xml-spike", "fixtures", "office",
+  root, "tests", "vnext", "package-core", "fixtures", "office",
   "libreoffice-produced.docx",
 })
 local CHILD = pandoc.path.join({
-  root, "tests", "vnext", "xml-spike", "lib", "child.lua",
-})
-local RESULTS = pandoc.path.join({
-  root, "dev", "vnext", "xml-spike", "determinism-results.json",
+  root, "tests", "vnext", "package-core", "lib", "child.lua",
 })
 
 local function trim(value)
@@ -22,8 +19,8 @@ end
 
 local function run_child(output_path)
   local environment = pandoc.system.environment()
-  environment.DOCSTYLE_SPIKE_CHILD_SOURCE = SOURCE
-  environment.DOCSTYLE_SPIKE_CHILD_OUTPUT = output_path
+  environment.DOCSTYLE_PACKAGE_CORE_CHILD_SOURCE = SOURCE
+  environment.DOCSTYLE_PACKAGE_CORE_CHILD_OUTPUT = output_path
   local stdout = pandoc.system.with_environment(environment, function()
     return pandoc.pipe("quarto", { "run", CHILD }, "")
   end)
@@ -71,23 +68,6 @@ return {
               "archive hash differs in process " .. index)
           end
         end
-
-        local evidence = pandoc.json.decode(
-          fixture.read_bytes(RESULTS), false)
-        assert(evidence.decision == "pass")
-        assert(evidence.process_count == 10)
-        assert(evidence.runtime.quarto == "1.9.26")
-        assert(evidence.runtime.pandoc == tostring(PANDOC_VERSION))
-        assert(evidence.runtime.lua == _VERSION)
-        assert(evidence.runtime.os == pandoc.system.os)
-        assert(evidence.runtime.arch == pandoc.system.arch)
-        assert(evidence.source_sha256 ==
-          "3fb9ec751404c2e66e8e81a066fe2c0ab87dfb367756a2987bd99fecb909cec4")
-        assert(evidence.edited_part_sha256 ==
-          baseline.edited_part_sha256)
-        assert(joined_names(evidence.entry_names) ==
-          baseline.entry_names)
-        assert(evidence.archive_sha256 == baseline.archive_sha256)
       end)
     end,
   },

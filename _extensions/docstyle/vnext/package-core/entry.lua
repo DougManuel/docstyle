@@ -1,6 +1,6 @@
 local binary = require("lib.binary")
 local diagnostic = require("lib.diagnostic")
-local inflate = require("archive.inflate_limited")
+local inflate = require("inflate")
 
 local M = {}
 local CHUNK_SIZE = 8192

@@ -1,8 +1,8 @@
 -- LuaXML adapter for the bounded WP2 XML experiment.
 local diagnostic = require("lib.diagnostic")
-local strictness = require("candidates.luaxml.strictness")
-local overlay = require("candidates.luaxml.token_overlay")
-local luaxml = require("candidates.luaxml.vendor.luaxml-mod-xml")
+local strictness = require("xml.strictness")
+local overlay = require("xml.token_overlay")
+local luaxml = require("xml.vendor.luaxml-mod-xml")
 
 local M = {}
 

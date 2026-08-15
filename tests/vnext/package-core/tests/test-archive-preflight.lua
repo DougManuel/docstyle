@@ -1,7 +1,7 @@
 local binary = require("lib.binary")
 local diagnostic = require("lib.diagnostic")
 local fixture = require("lib.fixture")
-local preflight = require("archive.zip_preflight")
+local preflight = require("zip")
 
 local runner_here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
 local vectors = dofile(pandoc.path.join({

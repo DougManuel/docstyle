@@ -1,5 +1,5 @@
 -- Candidate-local strictness layer. It does not import the oracle or SLAXML.
-local common = require("candidates.common")
+local common = require("xml.common")
 local diagnostic = require("lib.diagnostic")
 
 local M = {}

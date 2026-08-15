@@ -1,5 +1,5 @@
 local diagnostic = require("lib.diagnostic")
-local libdeflate = require("archive.vendor.libdeflate.LibDeflate")
+local libdeflate = require("inflate.vendor.libdeflate.LibDeflate")
 
 local M = {}
 

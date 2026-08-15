@@ -1,7 +1,7 @@
 -- LuaXML-specific semantic cross-check and byte-preserving overlay.
-local common = require("candidates.common")
+local common = require("xml.common")
 local diagnostic = require("lib.diagnostic")
-local strictness = require("candidates.luaxml.strictness")
+local strictness = require("xml.strictness")
 
 local M = {}
 

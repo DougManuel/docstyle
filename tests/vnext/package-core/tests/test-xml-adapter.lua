@@ -1,8 +1,8 @@
-local common = require("candidates.common")
+local common = require("xml.common")
 local diagnostic = require("lib.diagnostic")
 local fixture = require("lib.fixture")
 local fixtures = require("fixtures.xml.cases")
-local oracle = require("candidates.oracle")
+local oracle = require("lib.oracle")
 
 local here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
 local root = pandoc.path.normalize(pandoc.path.join({
@@ -11,7 +11,7 @@ local root = pandoc.path.normalize(pandoc.path.join({
 
 local adapter
 local function subject()
-  if not adapter then adapter = require("candidates.luaxml.adapter") end
+  if not adapter then adapter = require("xml.adapter") end
   return adapter
 end
 
@@ -66,7 +66,8 @@ local cases = {
         root, "tests", "vnext", "conformance", "lib", "sha256.lua",
       }))
       local vendor = pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "candidates", "luaxml", "vendor",
+        root, "_extensions", "docstyle", "vnext", "package-core",
+        "xml", "vendor",
       })
       assert(sha256.hex(fixture.read_bytes(pandoc.path.join({
         vendor, "luaxml-mod-xml.lua",
@@ -97,7 +98,7 @@ local cases = {
     stage = "xml",
     fn = function()
       local candidate_root = pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "candidates", "luaxml",
+        root, "_extensions", "docstyle", "vnext", "package-core", "xml",
       })
       for _, filename in ipairs({
         "adapter.lua", "strictness.lua", "token_overlay.lua",
@@ -122,8 +123,8 @@ local cases = {
       assert(rawget(_G, "kpse") == nil)
       assert(rawget(_G, "unicode") == nil)
       local source = pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "candidates", "luaxml",
-        "vendor", "luaxml-mod-xml.lua",
+        root, "_extensions", "docstyle", "vnext", "package-core",
+        "xml", "vendor", "luaxml-mod-xml.lua",
       })
       local parser_module = assert(dofile(source))
       local events = {}
@@ -344,13 +345,13 @@ cases[#cases + 1] = {
     assert(type(evidence.docstyle_owned_lines) == "number")
     assert(evidence.docstyle_owned_lines ==
       line_count(pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "candidates", "luaxml",
+        root, "_extensions", "docstyle", "vnext", "package-core", "xml",
         "adapter.lua",
       })) + line_count(pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "candidates", "luaxml",
+        root, "_extensions", "docstyle", "vnext", "package-core", "xml",
         "strictness.lua",
       })) + line_count(pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "candidates", "luaxml",
+        root, "_extensions", "docstyle", "vnext", "package-core", "xml",
         "token_overlay.lua",
       })))
     assert(type(evidence.unsupported_constructs) == "table")
@@ -379,13 +380,6 @@ cases[#cases + 1] = {
       evidence.unsupported_constructs))
     assert(same_array(recorded.rejected_fixture_rows,
       evidence.rejected_fixture_rows))
-    assert(provenance.xml_candidate_selection.selected == "LuaXML")
-    assert(provenance.xml_candidate_selection.status ==
-      "conditional-go")
-    assert(same_array(
-      provenance.xml_candidate_selection.production_prerequisites, {
-      "performance-characterization-and-xml-part-limit",
-    }))
   end,
 }
 

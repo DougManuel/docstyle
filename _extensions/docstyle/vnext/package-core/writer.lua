@@ -157,7 +157,7 @@ local function publish(pkg, output_path, options)
     end
     write_bytes(temporary_path, archive_bytes)
     maybe_fail(options, "after_close")
-    local verified = require("archive.opc").open_path(
+    local verified = require("opc").open_path(
       temporary_path, pkg._limits)
     if #verified.entries ~= #pkg.entries then
       raise("publication.verification",

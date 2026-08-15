@@ -1,7 +1,7 @@
-local adapter = require("candidates.luaxml.adapter")
+local adapter = require("xml.adapter")
 local fixture = require("lib.fixture")
-local opc = require("archive.opc")
-local oracle = require("candidates.oracle")
+local opc = require("opc")
+local oracle = require("lib.oracle")
 
 local runner_here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
 local root = pandoc.path.normalize(pandoc.path.join({
@@ -26,7 +26,7 @@ local LIMITS = {
 }
 
 local OFFICE_DIR = pandoc.path.join({
-  root, "tests", "vnext", "xml-spike", "fixtures", "office",
+  root, "tests", "vnext", "package-core", "fixtures", "office",
 })
 
 local function office_path(...)

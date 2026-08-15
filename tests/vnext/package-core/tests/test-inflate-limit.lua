@@ -1,9 +1,9 @@
 local diagnostic = require("lib.diagnostic")
 local fixture = require("lib.fixture")
-local inflate = require("archive.inflate_limited")
-local reader = require("archive.entry_reader")
-local preflight = require("archive.zip_preflight")
-local libdeflate = require("archive.vendor.libdeflate.LibDeflate")
+local inflate = require("inflate")
+local reader = require("entry")
+local preflight = require("zip")
+local libdeflate = require("inflate.vendor.libdeflate.LibDeflate")
 
 local runner_here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
 local archive_vectors = dofile(pandoc.path.join({

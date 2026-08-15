@@ -1,23 +1,24 @@
 -- Fresh-process Task 9 publication child.
 local here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
-local spike_root = pandoc.path.normalize(pandoc.path.join({
+local core_test_root = pandoc.path.normalize(pandoc.path.join({
   here, "..",
 }))
 local root = pandoc.path.normalize(pandoc.path.join({
   here, "..", "..", "..", "..",
 }))
+local core = root .. "/_extensions/docstyle/vnext/package-core"
 
 package.path = table.concat({
-  spike_root .. "/?.lua",
-  spike_root .. "/?/init.lua",
-  root .. "/dev/vnext/xml-spike/?.lua",
-  root .. "/dev/vnext/xml-spike/?/init.lua",
+  core_test_root .. "/?.lua",
+  core_test_root .. "/?/init.lua",
+  core .. "/?.lua",
+  core .. "/?/init.lua",
 }, ";")
 
-local adapter = require("candidates.luaxml.adapter")
+local adapter = require("xml.adapter")
 local fixture = require("lib.fixture")
-local opc = require("archive.opc")
-local oracle = require("candidates.oracle")
+local opc = require("opc")
+local oracle = require("lib.oracle")
 
 local sha256 = dofile(pandoc.path.join({
   root, "tests", "vnext", "conformance", "lib", "sha256.lua",
@@ -78,9 +79,9 @@ local function edit_first_text(source)
 end
 
 local source_path =
-  required_environment("DOCSTYLE_SPIKE_CHILD_SOURCE")
+  required_environment("DOCSTYLE_PACKAGE_CORE_CHILD_SOURCE")
 local output_path =
-  required_environment("DOCSTYLE_SPIKE_CHILD_OUTPUT")
+  required_environment("DOCSTYLE_PACKAGE_CORE_CHILD_OUTPUT")
 local pkg = opc.open_path(source_path, LIMITS)
 local source = pkg:part(pkg.office_document_part)
 local edited = edit_first_text(source)

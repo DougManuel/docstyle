@@ -1,5 +1,5 @@
-local common = require("candidates.common")
-local oracle = require("candidates.oracle")
+local common = require("xml.common")
+local oracle = require("lib.oracle")
 local diagnostic = require("lib.diagnostic")
 local fixtures = require("fixtures.xml.cases")
 local file_fixture = require("lib.fixture")
@@ -99,7 +99,7 @@ local cases = {
         here, "..", "..", "..",
       }))
       local source = file_fixture.read_bytes(pandoc.path.join({
-        root, "dev", "vnext", "xml-spike", "candidates", "oracle.lua",
+        root, "tests", "vnext", "package-core", "lib", "oracle.lua",
       }))
       assert(not source:lower():match("require%s*%(%s*[\"'].-slaxml"))
       assert(not source:lower():match("require%s*%(%s*[\"'].-luaxml"))

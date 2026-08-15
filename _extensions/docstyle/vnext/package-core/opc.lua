@@ -1,8 +1,8 @@
 -- Spike-only bounded OPC package seam. Task 8 adds atomic publication.
 local diagnostic = require("lib.diagnostic")
-local entry_reader = require("archive.entry_reader")
-local zip_preflight = require("archive.zip_preflight")
-local xml_adapter = require("candidates.luaxml.adapter")
+local entry_reader = require("entry")
+local zip_preflight = require("zip")
+local xml_adapter = require("xml.adapter")
 
 local M = {}
 
@@ -263,7 +263,7 @@ function Package:replace_part(part_name, bytes)
 end
 
 function Package:write_atomic(output_path, options)
-  return require("archive.writer").write_atomic(
+  return require("writer").write_atomic(
     self, output_path, options)
 end
 
