@@ -1134,4 +1134,30 @@ function M.verify_edit(original, edited, golden_range, expected_change)
   }
 end
 
+-- Verify a multi-edit result: every byte outside the reported ranges is
+-- unchanged, and each replacement occupies its shifted position exactly.
+-- edits is the document's ordered edit list ({range, replacement}, original
+-- coordinates); this function is independent of the overlay's serializer
+-- application order because it walks both byte strings once, left to right.
+function M.verify_edits(original, edited, edits)
+  local ordered = {}
+  for index, edit in ipairs(edits) do ordered[index] = edit end
+  table.sort(ordered, function(a, b) return a.range.start < b.range.start end)
+  local source_cursor, edited_cursor = 0, 0
+  for _, edit in ipairs(ordered) do
+    local unchanged_length = edit.range.start - source_cursor
+    assert(original:sub(source_cursor + 1, source_cursor + unchanged_length)
+      == edited:sub(edited_cursor + 1, edited_cursor + unchanged_length),
+      "bytes before an edit range changed")
+    edited_cursor = edited_cursor + unchanged_length
+    assert(edited:sub(edited_cursor + 1, edited_cursor + #edit.replacement)
+      == edit.replacement, "replacement bytes do not match")
+    source_cursor = edit.range.finish
+    edited_cursor = edited_cursor + #edit.replacement
+  end
+  assert(original:sub(source_cursor + 1) == edited:sub(edited_cursor + 1),
+    "bytes after the last edit range changed")
+  return true
+end
+
 return M

@@ -133,9 +133,13 @@ function M.bind(source, strict_document, backend_events, version)
     luaxml_version = version,
     nodes = {},
     events = backend_events,
-    edit = nil,
+    edits = nil,
   }
   local nodes_by_id = {}
+  -- Mirrors the strictness parser's own element-nesting stack: pushed on
+  -- every "start" event, popped on every matching "end" event. Because XML
+  -- is well-nested, the popped node is always the one this "end" closes.
+  local open_stack = {}
   for index, strict_event in ipairs(strict_document.events) do
     local backend_event = backend_events[index]
     assert_event_match(strict_event, backend_event, index)
@@ -168,6 +172,16 @@ function M.bind(source, strict_document, backend_events, version)
         document.root = node
       end
       backend_event.node = node
+      open_stack[#open_stack + 1] = node
+    elseif strict_event.kind == "end" then
+      local closed = open_stack[#open_stack]
+      open_stack[#open_stack] = nil
+      -- A self-closing "<tag/>" reuses the start tag's own range for its
+      -- paired end event (empty = true); there is no separate end tag to
+      -- record, so end_tag_range stays unset for those nodes.
+      if closed and not strict_event.empty then
+        closed.end_tag_range = strict_event.range
+      end
     elseif strict_event.kind == "text" then
       local parent = assert(nodes_by_id[strict_event.parent_id])
       parent.direct_text[#parent.direct_text + 1] = {
@@ -212,12 +226,54 @@ function M.text_replacement(value, encoding)
   return strictness.encode(escape_text(value), encoding)
 end
 
+-- Exported for the insertion primitive: attribute-value escaping rules
+-- (append_element assembles its own attribute markup by hand, so it needs
+-- the same escaping attribute_replacement uses internally).
+M.escape_attribute = escape_attribute
+
+-- Encode a fully assembled, already-escaped XML fragment (e.g. an inserted
+-- element's markup) into the document's recorded encoding. Reuses the same
+-- encoding path attribute_replacement/text_replacement thread through
+-- strictness.encode -- a raw UTF-8 splice would corrupt UTF-16 parts.
+function M.encode_insertion(utf8_text, encoding)
+  return strictness.encode(utf8_text, encoding)
+end
+
 function M.serialize(document)
-  if not document.edit then return document.source, {} end
-  local edit = document.edit
-  return replace_range(document.source, edit.range, edit.replacement), {
-    common.range(edit.range.start, edit.range.finish),
-  }
+  local edits = document.edits or {}
+  if #edits == 0 then return document.source, {} end
+  local ordered = {}
+  for index, edit in ipairs(edits) do ordered[index] = edit end
+  table.sort(ordered, function(a, b)
+    if a.range.start ~= b.range.start then
+      return a.range.start < b.range.start
+    end
+    return a.seq < b.seq
+  end)
+  -- Half-open interval intersection; zero-width insertions never intersect.
+  for index = 2, #ordered do
+    local previous, current = ordered[index - 1], ordered[index]
+    if math.max(previous.range.start, current.range.start) <
+        math.min(previous.range.finish, current.range.finish) then
+      raise("xml.overlapping-edits", "XML edits overlap", {
+        first = previous.range,
+        second = current.range,
+      })
+    end
+  end
+  -- Apply from the highest offset down so earlier replacements do not shift
+  -- offsets still to be applied. Same-offset insertions: the later list
+  -- position is applied first, which leaves them in registration order.
+  local result = document.source
+  for index = #ordered, 1, -1 do
+    result = replace_range(result, ordered[index].range,
+      ordered[index].replacement)
+  end
+  local ranges = {}
+  for _, edit in ipairs(ordered) do
+    ranges[#ranges + 1] = common.range(edit.range.start, edit.range.finish)
+  end
+  return result, ranges
 end
 
 return M

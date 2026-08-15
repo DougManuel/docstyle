@@ -904,6 +904,21 @@ function M.inspect(bytes, options)
   }
 end
 
+-- Non-throwing NCName check for the insertion primitive: wraps the same
+-- Name-production validator the parser uses internally (validate_ncname),
+-- rather than a second regex.
+function M.is_ncname(name)
+  if type(name) ~= "string" then return false end
+  return pcall(validate_ncname, name, {})
+end
+
+-- Non-throwing qualified-name check (optional single colon), reusing the
+-- parser's own split_qname validator.
+function M.is_qname(name)
+  if type(name) ~= "string" then return false end
+  return pcall(split_qname, name, {})
+end
+
 function M.encode(text, encoding)
   if type(text) ~= "string" then
     raise("xml.invalid-input", "replacement value must be a string")

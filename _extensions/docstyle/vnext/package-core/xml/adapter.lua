@@ -36,11 +36,15 @@ local function matching_attribute(node, namespace_uri, local_name)
 end
 
 local function register_edit(document, target, range, replacement, value)
-  if document.edit and document.edit.target ~= target then
-    raise("xml.edit-target", "the spike adapter permits one owned edit")
+  document.edits = document.edits or {}
+  for _, existing in ipairs(document.edits) do
+    if existing.target == target then
+      raise("xml.edit-target", "a token may be edited at most once")
+    end
   end
-  document.edit = {
+  document.edits[#document.edits + 1] = {
     target = target,
+    seq = #document.edits + 1,
     range = range,
     replacement = replacement,
     value = value,
@@ -117,6 +121,66 @@ function M.replace_text(node, new_text)
   text.value = new_text
 end
 
+function M.append_element(node, local_name, attributes)
+  assert_node(node)
+  local document = node.document
+  -- Validate the local name against the XML Name production WITHOUT a
+  -- colon (an NCName): the child's prefix comes from the parent, never the
+  -- caller.
+  if type(local_name) ~= "string" or
+      not strictness.is_ncname(local_name) then
+    raise("xml.invalid-input", "element name must be a valid NCName", {
+      name = tostring(local_name),
+    })
+  end
+  if not node.end_tag_range then
+    raise("xml.edit-target",
+      "append_element requires an element with a separate end tag", {})
+  end
+  -- Reuse the validated parent's namespace prefix, so the child lands in
+  -- the parent's namespace whether the manifest root is prefixed
+  -- (<ct:Types>) or default-namespaced (<Types xmlns="…">).
+  -- An unprefixed element's prefix is the empty string, which is truthy in
+  -- Lua: the check must be explicitly non-empty or the child name becomes
+  -- ":Override".
+  local prefix = node.name.prefix or ""
+  local child_name = prefix ~= "" and
+    (prefix .. ":" .. local_name) or local_name
+  if attributes ~= nil and type(attributes) ~= "table" then
+    raise("xml.invalid-input", "attributes must be a list", {})
+  end
+  local pieces = { "<", child_name }
+  for _, attribute in ipairs(attributes or {}) do
+    if type(attribute) ~= "table" then
+      raise("xml.invalid-input", "each attribute must be a record", {})
+    end
+    if type(attribute.name) ~= "string" or
+        not strictness.is_qname(attribute.name) then
+      raise("xml.invalid-input",
+        "attribute name must be a valid qualified name", {
+          name = tostring(attribute.name),
+        })
+    end
+    if type(attribute.value) ~= "string" then
+      raise("xml.invalid-input", "attribute value must be a string", {
+        name = attribute.name,
+      })
+    end
+    pieces[#pieces + 1] = (' %s="%s"'):format(
+      attribute.name, overlay.escape_attribute(attribute.value, '"'))
+  end
+  pieces[#pieces + 1] = "/>"
+  -- Encode the complete insertion into the document's recorded encoding
+  -- before registration -- exactly how attribute_replacement and
+  -- text_replacement thread node.document.encoding. A raw UTF-8 splice
+  -- corrupts UTF-16 parts.
+  local replacement = overlay.encode_insertion(
+    table.concat(pieces), document.encoding)
+  local offset = node.end_tag_range.start
+  register_edit(document, { insertion = true, at = offset },
+    { start = offset, finish = offset }, replacement)
+end
+
 function M.serialize(document)
   assert_document(document)
   return overlay.serialize(document)
@@ -127,7 +191,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1305,
+  docstyle_owned_lines = 1440,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",
