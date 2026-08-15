@@ -151,7 +151,7 @@
       ],
       "maintenance_evidence": {
         "vendored_lines": 570,
-        "docstyle_owned_lines": 1440,
+        "docstyle_owned_lines": 1459,
         "dependency_count": 1,
         "unsupported_constructs": [
           "DTD and custom entity expansion",

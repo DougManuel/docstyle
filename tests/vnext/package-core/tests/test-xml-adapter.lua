@@ -220,6 +220,24 @@ for _, row in ipairs(fixtures.limit_boundaries) do
   }
 end
 
+do
+  -- Consumer-specific: see fixtures.adapter_input_bytes_boundary's comment
+  -- in fixtures/xml/cases.lua for why adapter.parse and oracle.parse now
+  -- diverge on the max_input_bytes boundary's error code.
+  local row = fixtures.adapter_input_bytes_boundary
+  cases[#cases + 1] = {
+    name = "enforces adapter boundary " .. row.name,
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      subject().parse(row.bytes, { [row.option] = row.exact })
+      expect_diagnostic(row.code, function()
+        subject().parse(row.bytes, { [row.option] = row.exact - 1 })
+      end)
+    end,
+  }
+end
+
 for _, row in ipairs(fixtures.invalid_limits) do
   cases[#cases + 1] = {
     name = "rejects shared parse limit " .. row.name,

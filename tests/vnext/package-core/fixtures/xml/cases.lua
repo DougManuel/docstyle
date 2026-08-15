@@ -411,9 +411,12 @@ M.capability_boundaries = {
 
 local limit_bytes = "<root xmlns:p='urn:p' xmlns:q='urn:q'>" ..
   "<p:child a='1' b='2'>t</p:child></root>"
+-- Limit boundaries shared identically by both consumers of this fixture
+-- file: xml.adapter.parse (production) and lib/oracle.lua's independent
+-- verifier. Neither Task 5's adapter.parse guard nor anything else here
+-- changes how strictness.inspect enforces these, so one row per limit
+-- serves both test-xml-adapter.lua and test-oracle.lua.
 M.limit_boundaries = {
-  { name = "input-bytes", bytes = limit_bytes, option = "max_input_bytes",
-    exact = #limit_bytes, code = "xml.input-limit" },
   { name = "element-depth", bytes = limit_bytes, option = "max_depth",
     exact = 2, code = "xml.depth-limit" },
   { name = "total-tokens", bytes = limit_bytes, option = "max_tokens",
@@ -422,6 +425,21 @@ M.limit_boundaries = {
     option = "max_attributes", exact = 2, code = "xml.attribute-limit" },
   { name = "namespace-declarations-per-element", bytes = limit_bytes,
     option = "max_namespaces", exact = 2, code = "xml.namespace-limit" },
+}
+
+-- The max_input_bytes boundary diverges by consumer as of Task 5:
+-- adapter.parse's hard guard reads the same override and runs BEFORE
+-- strictness.inspect ever sees the bytes, so it always intercepts this
+-- boundary first and raises xml.input-too-large. oracle.parse has no such
+-- guard, so strictness.inspect's own xml.input-limit check is the one that
+-- fires there. One shared row can no longer describe both.
+M.adapter_input_bytes_boundary = {
+  name = "input-bytes", bytes = limit_bytes, option = "max_input_bytes",
+  exact = #limit_bytes, code = "xml.input-too-large",
+}
+M.oracle_input_bytes_boundary = {
+  name = "input-bytes", bytes = limit_bytes, option = "max_input_bytes",
+  exact = #limit_bytes, code = "xml.input-limit",
 }
 
 M.invalid_limits = {

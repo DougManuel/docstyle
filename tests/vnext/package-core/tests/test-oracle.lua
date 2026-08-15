@@ -166,6 +166,24 @@ for _, row in ipairs(fixtures.limit_boundaries) do
   }
 end
 
+do
+  -- Consumer-specific: see fixtures.oracle_input_bytes_boundary's comment
+  -- in fixtures/xml/cases.lua. oracle.parse has no Task 5 pre-parse guard,
+  -- so strictness.inspect's own xml.input-limit check is what fires here.
+  local row = fixtures.oracle_input_bytes_boundary
+  cases[#cases + 1] = {
+    name = "accepts exact " .. row.name .. " limit and rejects one below",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      oracle.parse(row.bytes, { [row.option] = row.exact })
+      expect_diagnostic(row.code, function()
+        oracle.parse(row.bytes, { [row.option] = row.exact - 1 })
+      end)
+    end,
+  }
+end
+
 for _, row in ipairs(fixtures.invalid_limits) do
   cases[#cases + 1] = {
     name = "rejects " .. row.name .. " parse limit",

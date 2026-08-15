@@ -51,7 +51,26 @@ local function register_edit(document, target, range, replacement, value)
   }
 end
 
+M.MAX_INPUT_BYTES = 1048576  -- XML-part input-byte limit (WP2 design; decision provenance)
+
 function M.parse(xml_bytes, options)
+  options = options or {}
+  local limit = options.max_input_bytes
+  if limit == nil then
+    limit = M.MAX_INPUT_BYTES
+  elseif math.type(limit) ~= "integer" or limit < 0 then
+    raise("xml.invalid-limit",
+      "max_input_bytes must be a non-negative integer", {
+        max_input_bytes = tostring(limit),
+      })
+  end
+  if #xml_bytes > limit then
+    raise("xml.input-too-large",
+      "XML part exceeds the input-byte limit; rejected before parsing", {
+        actual = #xml_bytes,
+        limit = limit,
+      })
+  end
   local strict_document = strictness.inspect(xml_bytes, options)
   local backend_events = overlay.luaxml_events(
     luaxml, strict_document.semantic_xml)
@@ -191,7 +210,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1440,
+  docstyle_owned_lines = 1459,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",
