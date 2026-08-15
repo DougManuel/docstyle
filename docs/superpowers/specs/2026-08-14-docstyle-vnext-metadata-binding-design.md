@@ -15,7 +15,7 @@ WP1 established identifiers, the v4 field envelope, the generic document
 model and the record registries. An external architecture review (source of
 record: `dev/vnext/metadata-binding-notes.md`) supported the flow —
 
-```
+```text
 QMD/YAML authority
     -> normalized semantic document model
         -> DOCSTYLE field envelope: identity, kind, policy, hash
@@ -66,10 +66,12 @@ target and WP4 a precise field-code and catalogue rendering contract.
 The WP1 schemas are merged v1 contracts. Every change in this specification
 is an **additive v1 revision**: new optional fields, new record types added
 to the record dispatch, and new `$defs`. No existing required field changes
-meaning and no existing valid instance becomes invalid, with two deliberate,
-declared exceptions: the abstract canonical-form rule (a warning only)
-and the closed table/figure attribute core (a true narrowing
-for those two node types, reviewed below). Each change ships with
+meaning and no existing valid instance becomes invalid, with one deliberate,
+declared exception: the abstract canonical-form rule (a warning only).
+The typed table and figure semantics live in a **new** closed `semantics`
+node field rather than closing the existing open `attrs` object — closing
+`attrs` would have invalidated previously valid v1 documents, contradicting
+this rule. Each change ships with
 valid and invalid examples under `schemas/examples/`, which the WP1
 conformance runner validates automatically. A future change that would
 break an existing valid instance mints a v2 schema; nothing in this
@@ -158,10 +160,20 @@ The rendered region's field envelope uses the **same id** as the view
 record, `role: "metadata-value"`, `policy: "generated-replace"`. That
 identity equation is the binding: a cold DOCX import reads the envelope id,
 finds the view record in the embedded catalogue, and knows which value
-generated the region and where authority lives. Author plates, affiliation
-blocks, date and version spans, version-summary blocks and version-history
-tables all become metadata views; WP4 renders them from records and must
-not invent unbound generated regions.
+generated the region and where authority lives.
+
+**One view record per rendered occurrence.** A view record identifies one
+region, so its id obeys WP1's one-id-per-region rule. When the same value
+is displayed twice — `{{< meta version >}}` in two paragraphs — each
+occurrence gets its own uniquely identified view record; the records share
+`sourceRecord` and `path` but never an id. Occurrence ids follow the WP1
+identifier rules: explicit when the author names the region, otherwise
+generated (`g-span-…`) and persisted in durable state. A repeated-inline
+fixture is part of the conformance evidence.
+
+Author plates, affiliation blocks, date and version spans, version-summary
+blocks and version-history tables all become metadata views; WP4 renders
+them from records and must not invent unbound generated regions.
 
 **Decision (product behaviour, explicit).** A Word-side edit inside a
 `generated-replace` metadata display — author plate, date, version,
@@ -192,7 +204,7 @@ per-document authorship:
   "position": 1,
   "roles": ["conceptualization", "methodology"],
   "corresponding": true,
-  "email": "jane.smith@example.org",
+  "contact": "rec-contact-1",
   "equalContributionGroup": "first-authors",
   "affiliations": ["rec-org-1"]
 }
@@ -200,10 +212,23 @@ per-document authorship:
 
 Required: `id`, `recordType`, `schemaVersion`, `document`, `person`,
 `position` (integer, 1-based; unique per document). Optional: `roles`
-(the CRediT enum moves here), `corresponding`, `email`,
+(the CRediT enum moves here), `corresponding`, `contact` (see below),
 `equalContributionGroup` (contributions sharing a group string contributed
 equally), `affiliations` (organization record ids, ordered). This closes
-the email and equal-contributor gaps the legacy audit deferred.
+the equal-contributor gap the legacy audit deferred.
+
+**Email is restricted PII and never lives on a public record.** The WP1
+audit classifies author email as restricted-privacy; record-level privacy
+cannot publish authorship while concealing one field. Email therefore
+lives on a separate `contact` record —
+`{id, recordType: "contact", schemaVersion, privacy, email}` — whose
+privacy **defaults to `restricted`**. A contribution references it through
+the optional `contact` field. Publishing an email is an explicit consent
+action: the author sets that contact record's privacy to `public`. The
+catalogue embedder prunes the `contact` reference whenever the target
+record is restricted (see the closure rules in the catalogue section), so
+the public authorship record ships without the email and the display
+degrades gracefully.
 
 `person.roles` and `person.corresponding` are deprecated in place: still
 valid, warned on, and migrated to contribution records by the WP3
@@ -212,31 +237,35 @@ generic relationship triple stays minimal; ordered or qualified
 associations get typed records, and contribution is the pattern for any
 future case.
 
-The author plate is a metadata view with an empty `path` over the ordered
-contribution set. Downstream payoff: this is JATS `<contrib>` semantics,
-so the WP6 JATS backend maps directly.
+The author plate is a metadata view over the contribution
+`sourceCollection` ordered by `position` (collection views have no `path`).
+Downstream payoff: this is JATS `<contrib>` semantics, so the WP6 JATS
+backend maps directly.
 
 ## 4. Typed table and figure attributes
 
-**Decision.** `document-model.v1` gains `$defs/table-attrs` and
-`$defs/figure-attrs`, applied conditionally by node type (`if type ==
-"table" then attrs matches table-attrs`; likewise `figure`). The core
-attribute set is **closed** (`additionalProperties: false`) so typos and
-collisions fail validation; extension happens only through a namespaced
-container: an optional `profiles` object keyed by registered profile
-identifier, whose values are validated by that profile's manifest. A
-profile extends a table or figure by adding records under its own key,
-never by inventing loose core attributes.
+**Decision.** The typed semantics live in a **new optional node field**,
+`semantics`, validated conditionally by node type against
+`$defs/table-semantics` and `$defs/figure-semantics`. The existing open
+`attrs` object is untouched — it remains the home for loose, harvested or
+transitional data — so every previously valid v1 document stays valid and
+the change is genuinely additive. The `semantics` object is **closed**
+(`additionalProperties: false`) so typos and collisions fail validation;
+extension happens only through a namespaced container: an optional
+`profiles` object keyed by registered profile identifier, whose values are
+validated by that profile's manifest. A profile extends a table or figure
+by adding records under its own key, never by inventing loose core fields.
 
-Semantic attributes only:
+Semantic fields only:
 
-- **table-attrs:** `label` (crossref label text), `caption` (node id of
-  the caption), `summary` (accessibility summary), `notes` (array of node
-  ids — table notes are authored content nodes, not metadata strings),
-  `provenance` (`oneOf [string, {record: <id>}]` — a simple statement or a
-  reference to a catalogue record when the provenance is itself a
-  structured scholarly object), `profiles` (namespaced extensions).
-- **figure-attrs:** `label`, `caption` (node id), `alt` (alt text —
+- **table-semantics:** `label` (crossref label text), `caption` (node id
+  of the caption), `summary` (accessibility summary), `notes` (array of
+  node ids — table notes are authored content nodes, not metadata
+  strings), `provenance` (`oneOf [string, {record: <id>}]` — a simple
+  statement or a reference to a catalogue record when the provenance is
+  itself a structured scholarly object), `profiles` (namespaced
+  extensions).
+- **figure-semantics:** `label`, `caption` (node id), `alt` (alt text —
   required for the catalogue embedder when the figure is public),
   `asset` (asset registry id), `credit` (`oneOf [string, {record: <id>}]`),
   `profiles` (namespaced extensions).
@@ -265,10 +294,19 @@ state, per the WP1 privacy rule.
   `policy: "structural"`, with authored descendants recoverable through
   their own node identity and hashes.
 
-Consequences, fixed here so WP4 and WP5 build against them: Word-side edits
-to cell content are authored edits and become proposed QMD patches; adding
-or removing rows or columns is a structural change, reported by
-reconciliation but never silently patched or discarded. The migration
+**This policy applies to authored QMD tables only.** A *generated* table —
+a version-history table or any other metadata view rendered as a table —
+is `generated-replace` throughout: the table, its rows, its cells and all
+descendants regenerate from the source records, and no edit inside one
+ever produces a patch (it is a conflict, per the generated-views
+decision). The two policies never mix within one table: a table is either
+an authored region or a generated view.
+
+Consequences for authored tables, fixed here so WP4 and WP5 build against
+them: Word-side edits to cell content are authored edits and become
+proposed QMD patches; adding or removing rows or columns is a structural
+change, reported by reconciliation but never silently patched or
+discarded. The migration
 audit's `legacy table -> authored-preserve` row is amended to this contract
 (the audit row described the whole-table envelope, which is now structural
 with authored descendants; the audit file gains a correction note rather
@@ -281,10 +319,26 @@ than a rewritten history).
 ```json
 {
   "schemaVersion": 1,
-  "generator": "docstyle <version>",
+  "generator": "docstyle 1.0.0",
   "document": "rec-document",
-  "records": { "<id>": { … } },
-  "views": { "<id>": { … } }
+  "records": {
+    "rec-document": { "id": "rec-document", "recordType": "document",
+      "schemaVersion": 1, "privacy": "public",
+      "type": "protocol", "title": "Example protocol", "version": "2.1" },
+    "rec-person-1": { "id": "rec-person-1", "recordType": "person",
+      "schemaVersion": 1, "privacy": "public",
+      "name": { "given": "Jane", "family": "Smith" } },
+    "contrib-1": { "id": "contrib-1", "recordType": "contribution",
+      "schemaVersion": 1, "privacy": "public",
+      "document": "rec-document", "person": "rec-person-1", "position": 1 }
+  },
+  "views": {
+    "view-document-version": { "id": "view-document-version",
+      "recordType": "metadata-view", "schemaVersion": 1,
+      "privacy": "public",
+      "sourceRecord": "rec-document", "path": "version",
+      "presentation": "span" }
+  }
 }
 ```
 
@@ -295,6 +349,28 @@ than a rewritten history).
   in the document.
 - Validated by a new `catalogue.v1.json` schema that reuses the
   metadata-core record definitions by reference.
+
+**Reference closure.** The embedded catalogue must be reference-closed: a
+semantic validator (running beside the JSON Schema check, which cannot
+express this) walks every reference in every embedded record and view —
+`sourceRecord`, `sourceCollection` members, contribution `document`,
+`person`, `affiliations` and `contact`, `provenance.record`,
+`credit.record`, figure `asset` — and requires the target to be present.
+Reference fields are classified once, in the schema descriptions:
+
+- **Closure-required** (`person`, `affiliations`, `document`,
+  `sourceRecord`, collection members, `asset`): a public record whose
+  closure reaches a restricted record is an **embed-time error**; the
+  author resolves it by making the target public or removing the
+  reference. Embedding must fail closed, never ship a dangling id.
+- **Prunable** (`contact`, `provenance.record`, `credit.record`): when the
+  target is restricted, the embedder removes the reference field from the
+  embedded copy and ships the record without it. This is how a public
+  contribution ships without its restricted email.
+
+A negative fixture with a dangling restricted reference (a public
+contribution whose `person` is restricted) is part of the conformance
+evidence and must fail embedding.
 
 Carrier: an OPC part `/docstyle/catalogue.json`, content type
 `application/vnd.docstyle.catalogue+json`, with a relationship from
@@ -310,6 +386,29 @@ if present, then bind envelopes to records by id; a document with
 envelopes but no catalogue degrades to WP1 behaviour (identity and policy
 known, rich metadata unknown).
 
+## Legacy authority migration
+
+The claim that nothing but the WP3 compiler reads author YAML holds for the
+vNext engine, and two legacy-engine paths currently contradict it. They are
+designated here so WP4 and WP5 replace rather than accidentally preserve
+them:
+
+- **`R/metadata_inject.R` (`inject_title_page_metadata`,
+  `inject_version_history_table`)** renders title-page and version-history
+  content directly from YAML into the DOCX. Legacy path: replaced in WP4
+  by metadata views rendered from records. It remains frozen legacy-engine
+  behaviour until then, per the programme's legacy freeze.
+- **`inst/schema/docstyle-field-codes.json` `version_summary.*` harvest
+  rows** read displayed date/version values back out of generated
+  regions. Legacy path: superseded by the view binding. In the vNext
+  return path, generated metadata displays are **observation-only and
+  conflict-only on harvest** — their displayed values are never harvested
+  into authority.
+
+Any other code path found reading YAML metadata or harvesting generated
+display values during WP3/WP4 implementation gets the same treatment:
+designate, replace, never silently coexist.
+
 ## QMD bindings
 
 The last mile between author-facing QMD and the normalized model. The WP3
@@ -321,9 +420,9 @@ compiler implements exactly these mappings; nothing else reads author YAML.
 | `author:` + `affiliations:` (standard Quarto) | one `person` record per author (identity only), `organization` records, one ordered `contribution` record per author | Author plate: metadata view over `sourceCollection` contribution/position |
 | `date: 2026-08-14`, `version: "2.1"` | document record `dates.*`, `version` | Generated spans bound by metadata views (`sourceRecord` + path) |
 | `version-history:` YAML list | document record `versionHistory[]` | Generated section or table, view path `versionHistory` |
-| `{{< meta version >}}` inline | no model change — resolves to a metadata view over the named document-record path | Generated span, `role: "metadata-value"` |
-| pipe/grid table + `: Caption {#tbl-outcomes}` | `table` node (id `tbl-outcomes`, structural) + caption node (authored) + `table-attrs` (`label`, `caption`, optional `summary`/`notes`/`provenance`) | Structural table envelope with authored descendants |
-| `![Caption](flow.png){#fig-flow fig-alt="..."}` | `figure` node (id `fig-flow`, authored) + `figure-attrs` (`alt` from `fig-alt`, `caption`, `asset`) + asset record (path, mediaType, hash) | Authored figure envelope |
+| `{{< meta version >}}` inline | no source-record change — registers one metadata view per occurrence over the named document-record path | Generated span, `role: "metadata-value"` |
+| pipe/grid table + `: Caption {#tbl-outcomes}` | `table` node (id `tbl-outcomes`, structural) + caption node (authored) + `semantics` (`label`, `caption`, optional `summary`/`notes`/`provenance`) | Structural table envelope with authored descendants |
+| `![Caption](flow.png){#fig-flow fig-alt="..."}` | `figure` node (id `fig-flow`, authored) + `semantics` (`alt` from `fig-alt`, `caption`, `asset`) + asset record (path, mediaType, hash) | Authored figure envelope |
 | `licence:`, `status:`, `type:`, `identifiers:` | document record fields (WP1 core vocabulary) | Metadata views where displayed |
 | profile fields (PICOS, PCC — future) | profile records under the profile's registered key | Per the profile's own specification |
 
@@ -345,7 +444,7 @@ affiliations:
     name: University of Ottawa
 ```
 
-The normalizer produces `person` `{id: "rec-person-1", name: {given: "Jane", family: "Smith"}, orcid: …}`, `organization` `{id: "rec-org-uottawa", name: "University of Ottawa"}`, and `contribution` `{id: "contrib-1", document: "rec-document", person: "rec-person-1", position: 1, roles: […], corresponding: true, email: …, affiliations: ["rec-org-uottawa"]}`. Author order in YAML is `position` order; nothing else encodes it.
+The normalizer produces `person` `{id: "rec-person-1", name: {given: "Jane", family: "Smith"}, orcid: …}`, `organization` `{id: "rec-org-uottawa", name: "University of Ottawa"}`, `contact` `{id: "rec-contact-1", privacy: "restricted", email: "jane.smith@example.org"}` (restricted by default — publishing it is an explicit consent action), and `contribution` `{id: "contrib-1", document: "rec-document", person: "rec-person-1", position: 1, roles: […], corresponding: true, contact: "rec-contact-1", affiliations: ["rec-org-uottawa"]}`. Author order in YAML is `position` order; nothing else encodes it. The embedder prunes the `contact` reference while the contact record stays restricted.
 
 Version display — the author writes `version: "2.1"` and, in prose,
 `Protocol version {{< meta version >}}.` The normalizer stores
@@ -360,11 +459,12 @@ the record and every view of it.
 | File | Change | Kind |
 |---|---|---|
 | `metadata-core.v1.json` | `document.abstract` becomes `oneOf [string, {region}]` | additive (widening) |
-| `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection), `$defs/contribution`; both join the record dispatch | additive |
+| `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection; one record per rendered occurrence), `$defs/contribution` (with `contact` reference), `$defs/contact` (privacy defaults restricted); all join the record dispatch | additive |
 | `metadata-core.v1.json` | `person.roles`, `person.corresponding` marked deprecated in descriptions | additive |
-| `document-model.v1.json` | `$defs/table-attrs`, `$defs/figure-attrs` (closed core + namespaced `profiles` container; `notes` as node ids; `provenance`/`credit` as `oneOf [string, {record}]`) + conditional application to `node.attrs` | **narrowing for table/figure nodes** — declared exception; existing examples re-validated and updated where loose attributes were used |
+| `document-model.v1.json` | new optional `node.semantics` field + `$defs/table-semantics`, `$defs/figure-semantics` (closed; namespaced `profiles` container; `notes` as node ids; `provenance`/`credit` as `oneOf [string, {record}]`); the open `attrs` object is untouched | additive |
 | `document-model.v1.json` | asset gains optional `credit` | additive |
 | `catalogue.v1.json` | new schema | new file |
+| conformance runner | semantic reference-closure validator (closure-required vs prunable reference classes) beside the JSON Schema checks | new validator |
 | `schemas/examples/…` | valid + invalid examples for every change above | new files |
 | `field-envelope.v4.json` | none | — |
 | `dev/vnext/wp1-legacy-coverage.md` | correction note on the table-policy row | audit amendment |
@@ -379,18 +479,36 @@ the record and every view of it.
    `section/abstract/authored-preserve`, and the string form refused by
    the catalogue embedder.
 3. A fixture catalogue containing a document record, two contributions in
-   order, one metadata view and one restricted record validates against
-   `catalogue.v1.json`, and the restricted record is absent from the
-   embedded output.
-4. The table-policy fixture shows a structural table envelope with
-   authored cell-content descendants, and the audit correction note is in
-   place.
-5. This specification names no WP3/WP4 implementation behaviour beyond the
+   order, one metadata view, one restricted contact record and one
+   restricted unrelated record validates against `catalogue.v1.json`; the
+   restricted records are absent from the embedded output and the
+   contributions' `contact` references are pruned.
+4. A negative closure fixture — a public contribution whose `person` is
+   restricted — **fails** embedding through the semantic closure
+   validator.
+5. A repeated-inline fixture with `{{< meta version >}}` in two
+   paragraphs produces two view records with distinct ids sharing
+   `sourceRecord` and `path`.
+6. The table-policy fixture shows a structural authored table envelope
+   with authored cell-content descendants AND a generated version-history
+   table that is `generated-replace` throughout; the audit correction
+   note is in place.
+7. This specification names no WP3/WP4 implementation behaviour beyond the
    contracts above (scope check at review).
+
+Fixture homes and commands: schema examples live under
+`schemas/examples/<schema-name>/` (`valid-*.json` / `invalid-*.json`, the
+naming the WP1 runner already dispatches on); binding fixtures live under
+`tests/vnext/conformance/fixtures/metadata-binding/`. The whole set runs
+inside the existing conformance command:
+
+```bash
+quarto run tests/vnext/conformance/run.lua
+```
 
 ## References
 
 - Source of record for the gap analysis: `dev/vnext/metadata-binding-notes.md`.
 - WP1 contracts: `docs/superpowers/specs/2026-07-14-docstyle-vnext-wp1-schemas-state-design.md`; schemas under `schemas/`.
-- WP2 package-core write primitives (catalogue carrier consumer): `docs/superpowers/specs/2026-08-06-docstyle-vnext-wp2-package-core-design.md` (PR #48).
+- WP2 package-core write primitives (catalogue carrier consumer): PR #48, which carries `docs/superpowers/specs/2026-08-06-docstyle-vnext-wp2-package-core-design.md` (the path lands on `main` when #48 merges).
 - Programme specification: `docs/superpowers/specs/2026-07-12-docstyle-vnext-rebuild-design.md`.

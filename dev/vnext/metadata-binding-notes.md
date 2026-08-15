@@ -12,7 +12,7 @@ The metadata architecture is fundamentally sound, but it is not yet specified de
 
 The intended flow is:
 
-```
+```text
 QMD/YAML authority
     → normalized semantic document model
         → DOCSTYLE field envelope: identity, kind, policy, hash
