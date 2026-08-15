@@ -22,6 +22,14 @@ R package + Quarto extension for Word document styling with CSS and YAML configu
 
 **For rendering and harvesting instructions, see the `/docstyle` skill (`~/.claude/skills/docstyle/SKILL.md`).**
 
+## Git worktrees
+
+Worktrees live in `~/github/worktrees/docstyle/<task-name>/` (the shared `~/github/worktrees/<repo>/<task>/` convention used across repos — see `popcorn-review/`, `bll-ops/` for examples). Do not create worktrees inside the repo: the legacy `.worktrees/` entries are historical spike worktrees from the vNext WP2 feasibility phase.
+
+```bash
+git worktree add ~/github/worktrees/docstyle/<task-name> -b <branch> origin/main
+```
+
 ## Development commands
 
 ```r
