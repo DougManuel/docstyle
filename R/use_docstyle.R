@@ -492,15 +492,25 @@ path <- normalizePath(path, mustWork = FALSE)
     dir.create(ext_parent, recursive = TRUE)
   }
 
-  # Copy extension files
+  # Copy extension files. Copy top-level source entries individually rather
+  # than the whole ext_source directory in one recursive file.copy(), so that
+  # vnext/ -- the WP2 package core, deliberately isolated from the legacy
+  # extension contract, see EXTENSION_LEGACY_EXCLUDED -- is never shipped to
+  # a downstream project on init.
+  ok <- dir.create(ext_dest, recursive = TRUE, showWarnings = FALSE)
+  if (!ok && !dir.exists(ext_dest)) {
+    stop("Cannot create extension directory: ", ext_dest,
+         "\nCheck file permissions.", call. = FALSE)
+  }
+  source_entries <- list_legacy_extension_entries(ext_source, recursive = FALSE)
   success <- file.copy(
-    from = ext_source,
-    to = ext_parent,
+    from = file.path(ext_source, source_entries),
+    to = ext_dest,
     recursive = TRUE,
     overwrite = TRUE
   )
 
-  if (!success) {
+  if (!all(success)) {
     stop("Failed to copy extension files to: ", ext_dest, call. = FALSE)
   }
 

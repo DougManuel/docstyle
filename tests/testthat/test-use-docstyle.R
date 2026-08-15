@@ -218,6 +218,23 @@ test_that("update_extension copies files from package", {
   expect_true(length(result$added) > 0)
 })
 
+test_that("update_extension's fresh-install path (use_docstyle()) never ships vnext/", {
+  # A brand-new project has no existing extension, so update_extension()
+  # delegates to use_docstyle() -- the same init-copy path use_docstyle()
+  # itself uses. vnext/ (the WP2 package core) must never land in either
+  # case; see EXTENSION_LEGACY_EXCLUDED.
+  proj <- create_test_project(with_extension = FALSE)
+  on.exit(unlink(proj, recursive = TRUE))
+  dir.create(file.path(proj, "_extensions"), recursive = TRUE)
+
+  update_extension(proj, backup = FALSE, verbose = FALSE)
+
+  ext_dir <- file.path(proj, "_extensions", "docstyle")
+  # Not vacuous: a known legacy file must actually have been installed.
+  expect_true(file.exists(file.path(ext_dir, "_extension.yml")))
+  expect_false(dir.exists(file.path(ext_dir, "vnext")))
+})
+
 test_that("update_extension creates backup", {
   proj <- create_test_project(with_extension = TRUE)
   on.exit(unlink(proj, recursive = TRUE))
