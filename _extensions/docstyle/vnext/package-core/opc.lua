@@ -164,6 +164,73 @@ local function is_relationship_part(zip_name)
     zip_name:match("/_rels/[^/]+%.rels$") ~= nil
 end
 
+-- Effective package state: originals, replacements and additions as one
+-- ordered, name-indexed view. Every lookup, collision check, relationship
+-- resolution, size validation and the writer consult these helpers.
+function Package:_effective_bytes(zip_name)
+  if self._additions[zip_name] ~= nil then return self._additions[zip_name] end
+  if self._replacements[zip_name] ~= nil then return self._replacements[zip_name] end
+  return self:_read_zip_entry(zip_name)
+end
+
+function Package:_effective_exists(zip_name)
+  local normalized = normalize_percent_hex(zip_name)
+  if self._entries_by_normalized_name[normalized] then return true end
+  for added in pairs(self._additions) do
+    if normalize_percent_hex(added) == normalized then return true end
+  end
+  return false
+end
+
+function Package:_effective_case_collision(zip_name)
+  local folded = ascii_lower(normalize_percent_hex(zip_name))
+  for _, entry in ipairs(self.entries) do
+    if ascii_lower(normalize_percent_hex(entry.name)) == folded then
+      return entry.name
+    end
+  end
+  for added in pairs(self._additions) do
+    if ascii_lower(normalize_percent_hex(added)) == folded then
+      return added
+    end
+  end
+  return nil
+end
+
+-- The single iterator every consumer uses: ordered effective entries with
+-- name, kind and bytes. The writer derives modtime from kind (original
+-- entries keep their backend modtime; added entries use the fixed constant).
+function Package:_effective_entries()
+  local result = {}
+  for _, entry in ipairs(self.entries) do
+    result[#result + 1] = { name = entry.name, kind = "original" }
+  end
+  local added = {}
+  for zip_name in pairs(self._additions) do added[#added + 1] = zip_name end
+  table.sort(added)
+  for _, zip_name in ipairs(added) do
+    result[#result + 1] = { name = zip_name, kind = "added" }
+  end
+  return result
+end
+
+function Package:_effective_names()
+  local names = {}
+  for _, entry in ipairs(self:_effective_entries()) do
+    names[#names + 1] = entry.name
+  end
+  return names
+end
+
+-- Effective analogue of require_entry: an added part is a first-class part.
+-- Returns the zip name, raising opc.part-not-found when the part exists in
+-- neither the originals nor the additions.
+function Package:_require_effective(part_name)
+  local zip_name = zip_name_for_part(part_name)
+  if self._additions[zip_name] ~= nil then return zip_name end
+  return require_entry(self, part_name)
+end
+
 local function attribute(node, name)
   return xml_adapter.get_attribute(node, "", name)
 end
@@ -227,13 +294,10 @@ function Package:_read_zip_entry(zip_name, missing_code)
 end
 
 function Package:part(part_name)
-  local zip_name = require_entry(self, part_name)
-  if self._replacements[zip_name] ~= nil then
-    return self._replacements[zip_name]
-  end
-  local bytes = self:_read_zip_entry(zip_name)
+  local zip_name = self:_require_effective(part_name)
+  local bytes = self:_effective_bytes(zip_name)
   local evidence = self._evidence[zip_name]
-  evidence.part_name = part_name
+  if evidence then evidence.part_name = part_name end
   return bytes
 end
 
@@ -247,7 +311,7 @@ function Package:remaining_materialization_bytes()
 end
 
 function Package:replace_part(part_name, bytes)
-  local zip_name = require_entry(self, part_name)
+  local zip_name = self:_require_effective(part_name)
   if is_relationship_part(zip_name) then
     raise("opc.metadata-replacement",
       "relationship metadata is immutable after package open", {
@@ -259,7 +323,11 @@ function Package:replace_part(part_name, bytes)
       part_name = part_name,
     })
   end
-  self._replacements[zip_name] = bytes
+  if self._additions[zip_name] ~= nil then
+    self._additions[zip_name] = bytes
+  else
+    self._replacements[zip_name] = bytes
+  end
 end
 
 function Package:write_atomic(output_path, options)
@@ -330,7 +398,7 @@ local function parse_content_types(self)
 end
 
 function Package:content_type(part_name)
-  local zip_name = require_entry(self, part_name)
+  local zip_name = self:_require_effective(part_name)
   local override = self._content_type_overrides[
     normalize_percent_hex(zip_name)]
   if override then return override end
@@ -459,13 +527,14 @@ local function resolve_literal_target(self, source_part, target, context)
 end
 
 function Package:relationships(source_part)
-  if source_part ~= "/" then require_entry(self, source_part) end
+  if source_part ~= "/" then self:_require_effective(source_part) end
   local relationship_zip = relationship_zip_name(source_part)
   if self._relationship_cache[relationship_zip] then
     return self._relationship_cache[relationship_zip]
   end
   local entry = self._entries_by_name[relationship_zip]
-  if not entry then
+  local added = self._additions[relationship_zip]
+  if not entry and not added then
     if source_part == "/" then
       raise("opc.relationships-missing",
         "package-root relationships are required", {
@@ -475,7 +544,7 @@ function Package:relationships(source_part)
     self._relationship_cache[relationship_zip] = {}
     return self._relationship_cache[relationship_zip]
   end
-  local document = xml_adapter.parse(self:_read_zip_entry(relationship_zip))
+  local document = xml_adapter.parse(self:_effective_bytes(relationship_zip))
   assert_root(document, RELATIONSHIPS_NS, "Relationships",
     "opc.relationships-root", "relationships part")
   local records, ids = {}, {}
@@ -526,6 +595,50 @@ function Package:relationships(source_part)
   end
   self._relationship_cache[relationship_zip] = records
   return records
+end
+
+local function is_metadata_stream(zip_name)
+  return zip_name == "[Content_Types].xml" or is_relationship_part(zip_name)
+end
+
+local function copy_relationship_records(records)
+  local copies = {}
+  for index, record in ipairs(records) do
+    local copy = {}
+    for key, value in pairs(record) do copy[key] = value end
+    copies[index] = copy
+  end
+  return copies
+end
+
+function Package:inventory()
+  local metadata, parts, content_types = {}, {}, {}
+  for _, zip_name in ipairs(self:_effective_names()) do
+    if is_metadata_stream(zip_name) then
+      metadata[#metadata + 1] = "/" .. zip_name
+    else
+      local part_name = "/" .. zip_name
+      parts[#parts + 1] = part_name
+      content_types[part_name] = self:content_type(part_name)
+    end
+  end
+  local relationships = {}
+  local root_records = self:relationships("/")
+  if #root_records > 0 then
+    relationships["/"] = copy_relationship_records(root_records)
+  end
+  for _, part_name in ipairs(parts) do
+    local records = self:relationships(part_name)  -- malformed metadata raises
+    if #records > 0 then
+      relationships[part_name] = copy_relationship_records(records)
+    end
+  end
+  return {
+    metadata = metadata,
+    parts = parts,
+    content_types = content_types,
+    relationships = relationships,
+  }
 end
 
 local function initialize_package(self)
@@ -613,6 +726,7 @@ function M.open_path(path, limits)
     _cache = {},
     _evidence = {},
     _replacements = {},
+    _additions = {},
     _relationship_cache = {},
   }, Package)
   initialize_package(package)
