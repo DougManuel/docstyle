@@ -236,13 +236,22 @@ local core_ok, core_output = pcall(function()
   return pandoc.pipe("quarto", { "run", core_runner }, "")
 end)
 if core_ok then
-  -- Per-gate lines ("archive: PASS 38 | …") precede the total; keep the LAST
-  -- match, which is the suite total, not the first gate's line.
+  -- The suite total is a whole line of exactly "PASS n | FAIL n | SKIP n";
+  -- per-gate lines carry a "gate: " prefix and never match the anchors. A
+  -- missing total is a hard failure, not a shrugged-off success — a child
+  -- that exited zero without printing its total is broken evidence.
   local summary
-  for line in tostring(core_output):gmatch("PASS %d+ | FAIL %d+ | SKIP %d+") do
-    summary = line
+  for line in (tostring(core_output) .. "\n"):gmatch("([^\n]*)\n") do
+    if line:match("^PASS %d+ | FAIL %d+ | SKIP %d+$") then
+      summary = line
+    end
   end
-  print("package-core: " .. (summary or "PASS (summary line not captured)"))
+  if summary then
+    print("package-core: " .. summary)
+  else
+    fail_hard("runner/package-core",
+      "package-core total summary line not found in child output")
+  end
 else
   fail_hard("runner/package-core", tostring(core_output))
 end
@@ -543,6 +552,21 @@ return {
       xml.replace_text(t, "world")
       local out, ranges = xml.serialize(doc)
       assert(#ranges == 3, "three edit ranges expected, got " .. #ranges)
+      -- The returned ranges must BE the registered edits' original
+      -- coordinates, in order — a serializer returning three wrong ranges
+      -- must fail here, not slip past a length check.
+      local expected = {}
+      for index, edit in ipairs(doc.edits) do expected[index] = edit end
+      table.sort(expected, function(a, b)
+        return a.range.start < b.range.start
+      end)
+      for index, range in ipairs(ranges) do
+        assert(range.start == expected[index].range.start and
+          range.finish == expected[index].range.finish,
+          ("range %d mismatch: got [%d,%d), expected [%d,%d)"):format(
+            index, range.start, range.finish,
+            expected[index].range.start, expected[index].range.finish))
+      end
       -- Independent multi-edit verification (Step 6 adds verify_edits to the
       -- test-lib oracle; the single-edit verify_edit signature takes one
       -- range plus an expected-change record and cannot verify this case).
@@ -600,7 +624,10 @@ return {
         { name = "w:val", value = 'a&b<c>"d' },
       })
       local out = xml.serialize(doc)
-      assert(out:find('<w:extra w:val="a&amp;b&lt;c&gt;&quot;d"/></w:p>', 1, true),
+      -- The promoted escape_attribute escapes &, <, whitespace and the
+      -- active quote; XML does not require escaping > in attribute values,
+      -- so the literal > is expected.
+      assert(out:find('<w:extra w:val="a&amp;b&lt;c>&quot;d"/></w:p>', 1, true),
         "prefixed, escaped insertion before the parent close tag: " .. out)
       xml.parse(out)  -- the result must still be strict-valid
     end,
@@ -770,16 +797,31 @@ function M.append_element(node, local_name, attributes)
   -- (<ct:Types>) or default-namespaced (<Types xmlns="…">). The parent's
   -- prefix is on the bound node (confirm the field name in overlay.bind;
   -- the strictness events carry the qualified name split).
-  local child_name = node.name.prefix and
-    (node.name.prefix .. ":" .. local_name) or local_name
+  -- An unprefixed element's prefix is the empty string, which is truthy in
+  -- Lua: the check must be explicitly non-empty or the child name becomes
+  -- ":Override".
+  local prefix = node.name.prefix or ""
+  local child_name = prefix ~= "" and
+    (prefix .. ":" .. local_name) or local_name
+  if attributes ~= nil and type(attributes) ~= "table" then
+    raise("xml.invalid-input", "attributes must be a list", {})
+  end
   local pieces = { "<", child_name }
   for _, attribute in ipairs(attributes or {}) do
+    if type(attribute) ~= "table" then
+      raise("xml.invalid-input", "each attribute must be a record", {})
+    end
     if type(attribute.name) ~= "string" or
         not strictness.is_qname(attribute.name) then
       raise("xml.invalid-input",
         "attribute name must be a valid qualified name", {
           name = tostring(attribute.name),
         })
+    end
+    if type(attribute.value) ~= "string" then
+      raise("xml.invalid-input", "attribute value must be a string", {
+        name = attribute.name,
+      })
     end
     pieces[#pieces + 1] = (' %s="%s"'):format(
       attribute.name, overlay.escape_attribute(attribute.value, '"'))
@@ -1512,10 +1554,13 @@ function Package:add_relationship(source_part, rel_type, target, mode)
   if mode == "External" then
     attributes[#attributes + 1] = { name = "TargetMode", value = "External" }
   end
-  local current = self._additions[relationship_zip]
-    or self._replacements[relationship_zip]
-    or (self._entries_by_name[relationship_zip]
-        and self:_read_zip_entry(relationship_zip))
+  -- Read through the effective view (single-view invariant); direct map
+  -- access below is only for choosing WHERE to store the update.
+  local current
+  if self._additions[relationship_zip] ~= nil or
+      self._entries_by_name[relationship_zip] ~= nil then
+    current = self:_effective_bytes(relationship_zip)
+  end
   if current then
     local document = xml_adapter.parse(current)
     assert_root(document, RELATIONSHIPS_NS, "Relationships",
@@ -1631,4 +1676,4 @@ Relates to #27"
 
 **Second-round coverage (PR #48 review):** `append_element` is encoding-safe (insertions encoded through `document.encoding` via `encode_insertion`), NCName/QName-validated, and parent-prefix-reusing, with UTF-16, default-namespace, prefixed-parent and invalid-name test cases at the xml level plus prefixed-manifest (Task 6) and prefixed/UTF-16 rels (Task 7) synthetic-package cases; the effective view is genuinely effective — `_effective_entries()` iterator plus `_require_effective` routing for `part`/`content_type`/`replace_part`/`relationships`, the writer consumes only the iterator, and `add_part → inventory` / `add_part → replace_part` are tested; Task 4's tests use the settled node-first API and a real `oracle.verify_edits`; contracts settled as `append_element -> nil` and `serialize -> bytes, ranges` in the spec; content-types root revalidated before every insertion, with a structural-blockage check on `replace_part`; the conformance summary keeps the last (total) match; the 1 MiB limit stops for explicit review if the corpus exceeds it.
 
-**Type consistency:** `document.edits` (list with `seq`) defined in Task 4 and consumed by its serialize; `Package:_effective_names/_effective_bytes/_effective_exists/_effective_case_collision` defined in Task 3, consumed in Tasks 6–7 and the writer; `xml.append_element` defined in Task 4, consumed in Tasks 6–7; `xml.MAX_INPUT_BYTES` defined and asserted in Task 5, overridden in Task 8; `sorted_addition_names` and `ADDED_ENTRY_MODTIME` defined and used in Task 6. Field names taken from the spike source (`self.entries`, `entry.name`, `_entries_by_name`, `_entries_by_normalized_name`, `_relationship_cache`, `RELATIONSHIPS_NS`, `document.root`) with confirm-notes where a field must be checked before editing.
+**Type consistency:** `document.edits` (list with `seq`) defined in Task 4 and consumed by its serialize; `Package:_effective_names/_effective_bytes/_effective_exists/_effective_case_collision` defined in Task 3, consumed in Tasks 6–7 and the writer; `xml.append_element` defined in Task 4, consumed in Tasks 6–7; `xml.MAX_INPUT_BYTES` defined and asserted in Task 5, overridden in Task 8; `_effective_entries` (Task 3) and `ADDED_ENTRY_MODTIME` (Task 6) defined before use. Field names taken from the spike source (`self.entries`, `entry.name`, `_entries_by_name`, `_entries_by_normalized_name`, `_relationship_cache`, `RELATIONSHIPS_NS`, `document.root`) with confirm-notes where a field must be checked before editing.
