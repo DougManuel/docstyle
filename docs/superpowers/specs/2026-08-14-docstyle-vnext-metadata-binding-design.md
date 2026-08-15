@@ -125,6 +125,10 @@ region to its source:
 }
 ```
 
+(This example is an author-named display region, so it keeps its explicit
+id; an unnamed occurrence carries a generated id per the occurrence rule
+below.)
+
 A view has exactly one source, in one of two forms:
 
 - **Single record:** `sourceRecord` (record id) plus `path` — a dotted path
@@ -217,18 +221,41 @@ Required: `id`, `recordType`, `schemaVersion`, `document`, `person`,
 equally), `affiliations` (organization record ids, ordered). This closes
 the equal-contributor gap the legacy audit deferred.
 
-**Email is restricted PII and never lives on a public record.** The WP1
-audit classifies author email as restricted-privacy; record-level privacy
-cannot publish authorship while concealing one field. Email therefore
-lives on a separate `contact` record —
-`{id, recordType: "contact", schemaVersion, privacy, email}` — whose
-privacy **defaults to `restricted`**. A contribution references it through
-the optional `contact` field. Publishing an email is an explicit consent
-action: the author sets that contact record's privacy to `public`. The
-catalogue embedder prunes the `contact` reference whenever the target
-record is restricted (see the closure rules in the catalogue section), so
-the public authorship record ships without the email and the display
-degrades gracefully.
+**Email is restricted PII and never lives on the public contribution
+record.** The WP1 audit classifies author email as restricted-privacy;
+record-level privacy cannot publish authorship while concealing one field.
+Email therefore lives on a separate `contact` record —
+`{id, recordType: "contact", schemaVersion, privacy, email}`. Because WP1
+defines a *missing* `privacy` field as public for metadata records, and a
+JSON Schema `default` annotation applies no value, relying on a default
+would silently publish emails. So the contract is explicit at three
+levels:
+
+1. **Schema:** `contact.privacy` is **required**. A contact record without
+   it is invalid (a missing-privacy invalid fixture is part of the
+   conformance evidence).
+2. **Normalizer:** every YAML-derived contact record is written with
+   `privacy: "restricted"` unless the author has consented (below). The
+   normalizer never emits a contact without the field.
+3. **Renderer (WP4):** a restricted email is never displayed, regardless
+   of author-plate styling configuration — the render config can only
+   choose whether to show a *public* contact, never override privacy.
+
+A contribution references the contact through the optional `contact`
+field. **Consent is author-facing and explicit:** the author sub-field
+`email-public: true` (see QMD bindings) makes the normalizer write the
+contact record with `privacy: "public"`; nothing else does. The catalogue
+embedder prunes the `contact` property whenever the target record is
+restricted (see the closure rules), so the public authorship record ships
+without the email and the display degrades gracefully.
+
+**Reconciliation against the projection.** The embedded catalogue is
+compared with `public_projection(local state)`, never with raw local
+records: the projection drops restricted records and applies the same
+pruning the embedder applies, and embedded-record hashes are computed over
+the projected form. A pruned contribution in the catalogue therefore
+matches its projected local counterpart — same id, same projected bytes —
+and is not a WP1 identifier contradiction.
 
 `person.roles` and `person.corresponding` are deprecated in place: still
 valid, warned on, and migrated to contribution records by the WP3
@@ -246,7 +273,12 @@ backend maps directly.
 
 **Decision.** The typed semantics live in a **new optional node field**,
 `semantics`, validated conditionally by node type against
-`$defs/table-semantics` and `$defs/figure-semantics`. The existing open
+`$defs/table-semantics` and `$defs/figure-semantics`. The conditional is
+encoded with the conformance validator's **supported vocabulary** — a
+`oneOf` over node shapes (table node with table semantics, figure node
+with figure semantics, any other node without a `semantics` constraint) —
+because the WP1 Lua validator implements `oneOf`/`anyOf` but not
+`if`/`then` or `allOf`; no validator extension is required. The existing open
 `attrs` object is untouched — it remains the home for loose, harvested or
 transitional data — so every previously valid v1 document stays valid and
 the change is genuinely additive. The `semantics` object is **closed**
@@ -333,20 +365,42 @@ than a rewritten history).
       "document": "rec-document", "person": "rec-person-1", "position": 1 }
   },
   "views": {
-    "view-document-version": { "id": "view-document-version",
+    "g-span-k3m7ap": { "id": "g-span-k3m7ap",
       "recordType": "metadata-view", "schemaVersion": 1,
       "privacy": "public",
       "sourceRecord": "rec-document", "path": "version",
       "presentation": "span" }
+  },
+  "objects": {
+    "tbl-outcomes": { "id": "tbl-outcomes", "type": "table",
+      "semantics": { "label": "Table 1",
+        "caption": "g-caption-x2r9qa", "summary": "Outcomes by arm" } }
+  },
+  "assets": {
+    "asset-flow": { "id": "asset-flow", "path": "media/flow.png",
+      "mediaType": "image/png",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000" }
   }
 }
 ```
+
+(View ids in examples follow the occurrence-id rule: an unnamed inline
+occurrence carries a generated `g-span-…` id; an author-named region keeps
+its explicit id.)
 
 - `records` — every **public** record (privacy separation is enforced at
   embed time: a `privacy: "restricted"` record never enters the catalogue;
   restricted data stays in local state).
 - `views` — the metadata-view records for every generated region present
   in the document.
+- `objects` — the public projection of table and figure node semantics,
+  keyed by node id: `{id, type, semantics}`. Without this container a cold
+  DOCX import could not recover table provenance, notes bindings, figure
+  credit or profile data — the semantics live in the document model, and
+  the catalogue is their only DOCX carrier.
+- `assets` — the public asset records (`path`, `mediaType`, `hash`,
+  optional `credit`), so asset identity and integrity survive a cold
+  import.
 - Validated by a new `catalogue.v1.json` schema that reuses the
   metadata-core record definitions by reference.
 
@@ -359,14 +413,26 @@ express this) walks every reference in every embedded record and view —
 Reference fields are classified once, in the schema descriptions:
 
 - **Closure-required** (`person`, `affiliations`, `document`,
-  `sourceRecord`, collection members, `asset`): a public record whose
-  closure reaches a restricted record is an **embed-time error**; the
-  author resolves it by making the target public or removing the
-  reference. Embedding must fail closed, never ship a dangling id.
-- **Prunable** (`contact`, `provenance.record`, `credit.record`): when the
-  target is restricted, the embedder removes the reference field from the
-  embedded copy and ships the record without it. This is how a public
-  contribution ships without its restricted email.
+  `sourceRecord`, collection members, `asset`): a public record or object
+  whose closure reaches a restricted or absent target is an **embed-time
+  error**; the author resolves it by making the target public or removing
+  the reference. Embedding must fail closed, never ship a dangling id.
+  Resolution scopes: record ids resolve against the catalogue's `records`
+  and `views`; `asset` resolves against the catalogue's `assets`
+  container; node-id references inside `semantics` (`caption`, `notes`)
+  resolve against the document's field-envelope ids at embed time — the
+  content tree is carried by the document itself, never duplicated into
+  the catalogue.
+- **Prunable** (`contact`, `provenance`, `credit`): when the referenced
+  target is restricted, the embedder removes the **entire property** from
+  the embedded copy — never just the nested `record` key, which would
+  leave an invalid empty object — and ships the record without it. This is
+  how a public contribution ships without its restricted email.
+
+The semantic validator also enforces what JSON Schema cannot:
+contribution `position` values are unique per document (a
+duplicate-position fixture must fail), and reconciliation compares the
+catalogue with `public_projection(local state)`.
 
 A negative fixture with a dangling restricted reference (a public
 contribution whose `person` is restricted) is part of the conformance
@@ -417,7 +483,8 @@ compiler implements exactly these mappings; nothing else reads author YAML.
 | Author writes (QMD/YAML) | Normalizes to | Rendered as |
 |---|---|---|
 | `abstract: "Background..."` or a `::: {#abstract}` div | `#abstract` section node (role `abstract`, authored-preserve); document record `{"abstract": {"region": "abstract"}}` | Authored section, envelope id `abstract` |
-| `author:` + `affiliations:` (standard Quarto) | one `person` record per author (identity only), `organization` records, one ordered `contribution` record per author | Author plate: metadata view over `sourceCollection` contribution/position |
+| `author:` + `affiliations:` (standard Quarto) | one `person` record per author (identity only), `organization` records, one ordered `contribution` record per author; `email` becomes a `contact` record with explicit `privacy: "restricted"` | Author plate: metadata view over `sourceCollection` contribution/position |
+| author sub-field `email-public: true` | the author's `contact` record is written `privacy: "public"` — the explicit consent action; absent, email stays restricted and is never displayed | Public contact rendered per author-plate config |
 | `date: 2026-08-14`, `version: "2.1"` | document record `dates.*`, `version` | Generated spans bound by metadata views (`sourceRecord` + path) |
 | `version-history:` YAML list | document record `versionHistory[]` | Generated section or table, view path `versionHistory` |
 | `{{< meta version >}}` inline | no source-record change — registers one metadata view per occurrence over the named document-record path | Generated span, `role: "metadata-value"` |
@@ -444,13 +511,14 @@ affiliations:
     name: University of Ottawa
 ```
 
-The normalizer produces `person` `{id: "rec-person-1", name: {given: "Jane", family: "Smith"}, orcid: …}`, `organization` `{id: "rec-org-uottawa", name: "University of Ottawa"}`, `contact` `{id: "rec-contact-1", privacy: "restricted", email: "jane.smith@example.org"}` (restricted by default — publishing it is an explicit consent action), and `contribution` `{id: "contrib-1", document: "rec-document", person: "rec-person-1", position: 1, roles: […], corresponding: true, contact: "rec-contact-1", affiliations: ["rec-org-uottawa"]}`. Author order in YAML is `position` order; nothing else encodes it. The embedder prunes the `contact` reference while the contact record stays restricted.
+The normalizer produces `person` `{id: "rec-person-1", name: {given: "Jane", family: "Smith"}, orcid: …}`, `organization` `{id: "rec-org-uottawa", name: "University of Ottawa"}`, `contact` `{id: "rec-contact-1", privacy: "restricted", email: "jane.smith@example.org"}` (the normalizer always writes `privacy` explicitly, `restricted` unless consented), and `contribution` `{id: "contrib-1", document: "rec-document", person: "rec-person-1", position: 1, roles: […], corresponding: true, contact: "rec-contact-1", affiliations: ["rec-org-uottawa"]}`. Author order in YAML is `position` order; nothing else encodes it. The embedder prunes the `contact` property while the contact record stays restricted. Adding `email-public: true` to that author's YAML entry is the consent action: the normalizer then writes the contact record with `privacy: "public"` and the email ships in the catalogue and may be displayed.
 
 Version display — the author writes `version: "2.1"` and, in prose,
 `Protocol version {{< meta version >}}.` The normalizer stores
-`version: "2.1"` on the document record, registers the
-`view-document-version` metadata view, and WP4 renders the span wrapped in
-an envelope whose id is the view id. Editing the rendered "2.1" in Word is
+`version: "2.1"` on the document record and registers one metadata view
+per occurrence — this unnamed inline occurrence gets a generated id
+(e.g. `g-span-k3m7ap`), per the occurrence-id rule — and WP4 renders the
+span wrapped in an envelope whose id is the view id. Editing the rendered "2.1" in Word is
 a conflict (see the generated-views decision); editing the YAML changes
 the record and every view of it.
 
@@ -459,12 +527,12 @@ the record and every view of it.
 | File | Change | Kind |
 |---|---|---|
 | `metadata-core.v1.json` | `document.abstract` becomes `oneOf [string, {region}]` | additive (widening) |
-| `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection; one record per rendered occurrence), `$defs/contribution` (with `contact` reference), `$defs/contact` (privacy defaults restricted); all join the record dispatch | additive |
+| `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection; one record per rendered occurrence), `$defs/contribution` (with `contact` reference; `position` unique per document via the semantic validator), `$defs/contact` (**`privacy` required** — the normalizer writes `restricted` explicitly unless `email-public` consent); all join the record dispatch | additive |
 | `metadata-core.v1.json` | `person.roles`, `person.corresponding` marked deprecated in descriptions | additive |
-| `document-model.v1.json` | new optional `node.semantics` field + `$defs/table-semantics`, `$defs/figure-semantics` (closed; namespaced `profiles` container; `notes` as node ids; `provenance`/`credit` as `oneOf [string, {record}]`); the open `attrs` object is untouched | additive |
+| `document-model.v1.json` | new optional `node.semantics` field + `$defs/table-semantics`, `$defs/figure-semantics` (closed; namespaced `profiles` container; `notes` as node ids; `provenance`/`credit` as `oneOf [string, {record}]`); conditional typing encoded as `oneOf` over node shapes (the WP1 Lua validator has `oneOf`/`anyOf`, no `if`/`then`/`allOf`); the open `attrs` object is untouched | additive |
 | `document-model.v1.json` | asset gains optional `credit` | additive |
-| `catalogue.v1.json` | new schema | new file |
-| conformance runner | semantic reference-closure validator (closure-required vs prunable reference classes) beside the JSON Schema checks | new validator |
+| `catalogue.v1.json` | new schema: `records`, `views`, `objects` (public projection of table/figure node semantics) and `assets` containers | new file |
+| conformance runner | semantic validator beside the JSON Schema checks: reference closure (closure-required vs prunable classes, scoped resolution), whole-property pruning, contribution-position uniqueness, catalogue-vs-`public_projection(local state)` reconciliation | new validator |
 | `schemas/examples/…` | valid + invalid examples for every change above | new files |
 | `field-envelope.v4.json` | none | — |
 | `dev/vnext/wp1-legacy-coverage.md` | correction note on the table-policy row | audit amendment |
@@ -493,7 +561,14 @@ the record and every view of it.
    with authored cell-content descendants AND a generated version-history
    table that is `generated-replace` throughout; the audit correction
    note is in place.
-7. This specification names no WP3/WP4 implementation behaviour beyond the
+7. A contact record without `privacy` is an invalid example and fails
+   schema validation; a document with two contributions sharing a
+   `position` fails the semantic validator.
+8. A cold-recovery fixture starts from the DOCX alone (no QMD, no local
+   state) and recovers the table and figure semantics and asset identity
+   (path, media type, hash) through the catalogue's `objects` and
+   `assets` containers.
+9. This specification names no WP3/WP4 implementation behaviour beyond the
    contracts above (scope check at review).
 
 Fixture homes and commands: schema examples live under
