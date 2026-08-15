@@ -709,6 +709,27 @@ EXTENSION_SOURCE_FILES <- c(
   "zotero-inject.lua"
 )
 
+#' Top-level entries under `_extensions/docstyle/` that the legacy
+#' extension-inventory machinery (EXTENSION_SOURCE_FILES, [update_extension()],
+#' [check_project()]) must never manage. The vNext package core lives at
+#' `_extensions/docstyle/vnext/` (production home per the WP2 package-core
+#' design spec) but is deliberately isolated from the legacy Quarto-extension
+#' contract: it is not part of the file set synced to downstream projects
+#' (POPCORN, PDP) and downstream projects are not expected to have it.
+#' Do not add "vnext" to EXTENSION_SOURCE_FILES -- that would ship the whole
+#' package core downstream, which is premature. See
+#' `test-use-docstyle.R` for the pinning test.
+#' @noRd
+EXTENSION_LEGACY_EXCLUDED <- c("vnext")
+
+#' List the top-level entries of an extension directory that belong to the
+#' legacy extension-inventory contract, excluding entries the vNext package
+#' core intentionally keeps out of it (see EXTENSION_LEGACY_EXCLUDED).
+#' @noRd
+list_legacy_extension_entries <- function(ext_dir, recursive = FALSE) {
+  setdiff(list.files(ext_dir, recursive = recursive), EXTENSION_LEGACY_EXCLUDED)
+}
+
 
 # --- Internal helpers --------------------------------------------------------
 
@@ -864,8 +885,10 @@ compare_extension_files <- function(source_dir, dest_dir, inventory) {
     }
   }
 
-  # Files in dest not in inventory (and not generated)
-  dest_files <- list.files(dest_dir, recursive = FALSE)
+  # Files in dest not in inventory (and not generated). vnext/ is excluded --
+  # it is not part of the legacy sync contract (EXTENSION_LEGACY_EXCLUDED),
+  # so its presence or absence downstream is never flagged as "extra".
+  dest_files <- list_legacy_extension_entries(dest_dir, recursive = FALSE)
   generated <- c("reference.docx", "reference.docx.hash")
   extra <- setdiff(dest_files, c(inventory, generated))
   # For inventory entries that are directories, also flag stale files inside them
@@ -1150,7 +1173,10 @@ check_project <- function(project_dir = ".",
   # --- Check 2: Extension completeness ---
   ext_dir <- file.path(project_dir, "_extensions", "docstyle")
   if (checks$extension_installed) {
-    ext_files <- list.files(ext_dir, recursive = FALSE)
+    # vnext/ is excluded -- it is not part of the legacy extension contract
+    # (EXTENSION_LEGACY_EXCLUDED), so its presence or absence never affects
+    # completeness checks here.
+    ext_files <- list_legacy_extension_entries(ext_dir, recursive = FALSE)
     missing_files <- setdiff(EXTENSION_SOURCE_FILES, ext_files)
     # For directory entries, also verify the directory is non-empty
     empty_dirs <- character()
