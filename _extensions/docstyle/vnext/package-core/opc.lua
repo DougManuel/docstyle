@@ -564,7 +564,9 @@ local function resolve_literal_target(self, source_part, target, context)
   local zip_name = zip_name_for_part(resolved)
   local entry = self._entries_by_normalized_name[
     normalize_percent_hex(zip_name)]
-  if not entry then
+  -- Effective-aware: a target that resolves only to an added part (no
+  -- original zip entry) is still a valid relationship target.
+  if not entry and not self:_effective_exists(zip_name) then
     raise("opc.relationship-target-missing",
       "internal relationship target was not found", {
         relationship_part = context.relationship_part,
@@ -573,8 +575,11 @@ local function resolve_literal_target(self, source_part, target, context)
         resolved_part = resolved,
       })
   end
-  return "/" .. entry.name, fragment,
-    table.concat(normalized_segments, "/")
+  if entry then
+    return "/" .. entry.name, fragment,
+      table.concat(normalized_segments, "/")
+  end
+  return resolved, fragment, table.concat(normalized_segments, "/")
 end
 
 function Package:relationships(source_part)
@@ -646,6 +651,87 @@ function Package:relationships(source_part)
   end
   self._relationship_cache[relationship_zip] = records
   return records
+end
+
+local function next_relationship_id(records)
+  local max = 0
+  for _, record in ipairs(records) do
+    local n = tonumber(record.id:match("^rId(%d+)$"))
+    if n and n > max then max = n end
+  end
+  return "rId" .. (max + 1)
+end
+
+-- The only sanctioned rels mutation: replace_part on any rels part still
+-- raises opc.metadata-replacement (see is_relationship_part above).
+-- source_part == "/" is rejected -- root-relationship addition is deferred
+-- until a consumer exists.
+function Package:add_relationship(source_part, rel_type, target, mode)
+  mode = mode or "Internal"
+  if source_part == "/" then
+    raise("opc.metadata-replacement",
+      "package-root relationship addition is not supported", {})
+  end
+  if mode ~= "Internal" and mode ~= "External" then
+    raise("opc.invalid-target-mode", "mode must be Internal or External", {
+      mode = mode,
+    })
+  end
+  if type(rel_type) ~= "string" or rel_type == "" or
+      type(target) ~= "string" or target == "" then
+    raise("opc.invalid-relationship",
+      "relationship requires a type and a target", {
+        source_part = source_part,
+      })
+  end
+  local records = self:relationships(source_part)
+  local rid = next_relationship_id(records)
+  if mode == "Internal" then
+    -- Validates and resolves against the effective view; raises
+    -- opc.relationship-target-missing when nothing matches.
+    resolve_literal_target(self, source_part, target, {
+      relationship_part = relationship_zip_name(source_part),
+      relationship_id = rid,
+    })
+  end
+  local relationship_zip = relationship_zip_name(source_part)
+  local attributes = {
+    { name = "Id", value = rid },
+    { name = "Type", value = rel_type },
+    { name = "Target", value = target },
+  }
+  if mode == "External" then
+    attributes[#attributes + 1] = { name = "TargetMode", value = "External" }
+  end
+  -- Read through the effective view (single-view invariant); direct map
+  -- access below is only for choosing WHERE to store the update.
+  local current
+  if self._additions[relationship_zip] ~= nil or
+      self._entries_by_name[relationship_zip] ~= nil then
+    current = self:_effective_bytes(relationship_zip)
+  end
+  if current then
+    local document = xml_adapter.parse(current)
+    assert_root(document, RELATIONSHIPS_NS, "Relationships",
+      "opc.relationships-root", "relationships part")
+    xml_adapter.append_element(document.root, "Relationship", attributes)
+    local updated = xml_adapter.serialize(document)
+    if self._additions[relationship_zip] then
+      self._additions[relationship_zip] = updated
+    else
+      self._replacements[relationship_zip] = updated
+    end
+  else
+    local pieces = {
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+      '<Relationships xmlns="', RELATIONSHIPS_NS, '">',
+    }
+    local document = xml_adapter.parse(table.concat(pieces) .. "</Relationships>")
+    xml_adapter.append_element(document.root, "Relationship", attributes)
+    self._additions[relationship_zip] = xml_adapter.serialize(document)
+  end
+  self._relationship_cache[relationship_zip] = nil
+  return rid
 end
 
 local function is_metadata_stream(zip_name)
