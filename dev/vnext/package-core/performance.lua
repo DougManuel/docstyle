@@ -311,17 +311,14 @@ local function measure_reference()
     known_limitations = {
       {
         id = "luaxml-quadratic-single-attribute-value",
-        note = "The vendored LuaXML backend is O(n^2) on a single large " ..
-          "attribute value (verified in Task 5's review: a ~40KB " ..
-          "attribute took approximately 21 seconds, scaling " ..
-          "quadratically -- consistent with the ~71s at 80,000 bytes " ..
-          "measured separately in the Task 5 override test). This " ..
-          "benchmark's scaling fixtures follow the spike's shape " ..
-          "instead: many elements and attributes of ordinary size, " ..
-          "scaling by element count. The 1,048,576-byte input-byte " ..
-          "limit therefore bounds total part size but does not bound " ..
-          "worst-case CPU for an adversarial single-attribute part " ..
-          "within that limit. A tracked issue follows at branch finish.",
+        note = "The vendored LuaXML backend parses a single large " ..
+          "attribute value in quadratic time (recorded during Task 5: " ..
+          "an 80,000-byte attribute value took ~71 seconds, scaling as " ..
+          "size^2; independent review probes at 5k-40k confirmed the " ..
+          "quadratic shape -- see the WP2 plan ledger). The XML-part " ..
+          "input-byte limit bounds bytes, not CPU: an adversarial " ..
+          "sub-limit part with one large attribute value remains a " ..
+          "CPU-exhaustion risk. Tracked follow-up planned.",
       },
     },
   }
