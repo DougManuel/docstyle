@@ -1,4 +1,4 @@
--- LuaXML adapter for the bounded WP2 XML experiment.
+-- WP2 package core: LuaXML adapter for the bounded OPC XML seam.
 local diagnostic = require("lib.diagnostic")
 local strictness = require("xml.strictness")
 local overlay = require("xml.token_overlay")

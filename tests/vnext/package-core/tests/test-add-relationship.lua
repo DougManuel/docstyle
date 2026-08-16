@@ -244,4 +244,143 @@ return {
       end)
     end,
   },
+  {
+    name = "two added relationships from one source publish and reopen with distinct ids and resolved parts",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-rel-multi", function(dir)
+        local out = dir .. "/out.docx"
+        local pkg = core.open(WORD, LIMITS)
+        pkg:add_part("/word/c1.xml", "<a/>",
+          "application/vnd.docstyle-custom-1+xml")
+        pkg:add_part("/word/c2.xml", "<b/>",
+          "application/vnd.docstyle-custom-2+xml")
+        local first = pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "c1.xml", "Internal")
+        local second = pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "c2.xml", "Internal")
+        assert(first ~= second, "ids must differ")
+        pkg:write_atomic(out)
+
+        local reopened = core.open(out, LIMITS)
+        local found = {}
+        for _, record in ipairs(reopened:relationships("/word/document.xml")) do
+          found[record.id] = record
+        end
+        assert(found[first] and found[first].resolved_part == "/word/c1.xml",
+          "first relationship must survive publish and resolve")
+        assert(found[second] and found[second].resolved_part == "/word/c2.xml",
+          "second relationship must survive publish and resolve")
+        assert(reopened:content_type("/word/c1.xml") ==
+          "application/vnd.docstyle-custom-1+xml",
+          "first added part's content type survives publish")
+        assert(reopened:content_type("/word/c2.xml") ==
+          "application/vnd.docstyle-custom-2+xml",
+          "second added part's content type survives publish")
+      end)
+    end,
+  },
+  {
+    name = "add_relationship from a just-added part mints a fresh rels part that survives publish",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-rel-fresh-added", function(dir)
+        local out = dir .. "/out.docx"
+        local pkg = core.open(WORD, LIMITS)
+        -- No _rels file exists yet for a just-added part: this exercises
+        -- the fresh-Relationships-document branch of add_relationship
+        -- (opc.lua's "else" branch when neither an addition nor an
+        -- original entry exists at the relationship zip name).
+        pkg:add_part("/word/catalogue.xml", "<c/>",
+          "application/vnd.docstyle-catalogue+xml")
+        local rid = pkg:add_relationship("/word/catalogue.xml",
+          "http://schemas.example.org/points-at-document", "document.xml",
+          "Internal")
+        assert(rid:match("^rId%d+$"), tostring(rid))
+        pkg:write_atomic(out)
+
+        local reopened = core.open(out, LIMITS)
+        local records = reopened:relationships("/word/catalogue.xml")
+        assert(#records == 1 and records[1].id == rid and
+          records[1].resolved_part == "/word/document.xml",
+          "auto-created rels part must survive publish and resolve")
+        local inv = reopened:inventory()
+        local listed = false
+        for _, name in ipairs(inv.metadata) do
+          if name == "/word/_rels/catalogue.xml.rels" then listed = true end
+        end
+        assert(listed, "auto-created rels part must be classified as metadata")
+      end)
+    end,
+  },
+  {
+    name = "add_relationship from an original part with no rels part mints a fresh rels part that survives publish",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-rel-fresh-original", function(dir)
+        local out = dir .. "/out.docx"
+        local pkg = core.open(WORD, LIMITS)
+        -- docProps/core.xml is an ORIGINAL part with no _rels file of its
+        -- own (confirmed against the fixture's zip listing: only
+        -- _rels/.rels, word/_rels/document.xml.rels and the three
+        -- customXml/_rels/item*.xml.rels exist). This exercises the same
+        -- fresh-rels branch as the case above, but for a part that was
+        -- never add_part-ed -- not just a freshly-added one.
+        local rid = pkg:add_relationship("/docProps/core.xml",
+          "http://schemas.example.org/custom", "https://example.org/",
+          "External")
+        pkg:write_atomic(out)
+
+        local reopened = core.open(out, LIMITS)
+        local records = reopened:relationships("/docProps/core.xml")
+        assert(#records == 1 and records[1].id == rid and
+          records[1].target_mode == "External",
+          "auto-created rels part for an original source must survive publish")
+        local inv = reopened:inventory()
+        local listed = false
+        for _, name in ipairs(inv.metadata) do
+          if name == "/docProps/_rels/core.xml.rels" then listed = true end
+        end
+        assert(listed, "auto-created rels part must be classified as metadata")
+      end)
+    end,
+  },
+  {
+    name = "add_relationship rejects an empty type or target",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      local pkg = core.open(WORD, LIMITS)
+      local ok, err = diagnostic.capture(function()
+        pkg:add_relationship("/word/document.xml", "", "custom.xml",
+          "Internal")
+      end)
+      assert(not ok)
+      assert(err.code == "opc.invalid-relationship", tostring(err))
+
+      local ok2, err2 = diagnostic.capture(function()
+        pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "", "Internal")
+      end)
+      assert(not ok2)
+      assert(err2.code == "opc.invalid-relationship", tostring(err2))
+    end,
+  },
+  {
+    name = "add_relationship rejects an invalid target mode",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      local pkg = core.open(WORD, LIMITS)
+      local ok, err = diagnostic.capture(function()
+        pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "custom.xml", "Bogus")
+      end)
+      assert(not ok)
+      assert(err.code == "opc.invalid-target-mode", tostring(err))
+    end,
+  },
 }

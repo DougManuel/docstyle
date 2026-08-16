@@ -1,4 +1,4 @@
--- Spike-only bounded OPC package seam. Task 8 adds atomic publication.
+-- WP2 package core: bounded OPC package seam (parts, relationships, publish).
 local diagnostic = require("lib.diagnostic")
 local entry_reader = require("entry")
 local zip_preflight = require("zip")

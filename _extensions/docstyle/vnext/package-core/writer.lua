@@ -1,4 +1,4 @@
--- Spike-only deterministic and atomic OPC package publication.
+-- WP2 package core: deterministic, atomic OPC package publication.
 local diagnostic = require("lib.diagnostic")
 
 local M = {}
