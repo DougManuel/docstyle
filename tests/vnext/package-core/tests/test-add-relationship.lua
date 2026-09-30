@@ -37,9 +37,10 @@ local ROOT_RELATIONSHIPS = [[<?xml version="1.0" encoding="UTF-8"?>
 local DOCUMENT = [[<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body/></w:document>]]
 local CORE_PROPERTIES = [[<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"/>]]
 
-local function write_minimal_package(dir, filename, document_relationships)
+local function write_minimal_package(dir, filename, document_relationships,
+    content_types)
   local sources = {
-    { name = "[Content_Types].xml", data = CONTENT_TYPES },
+    { name = "[Content_Types].xml", data = content_types or CONTENT_TYPES },
     { name = "_rels/.rels", data = ROOT_RELATIONSHIPS },
     { name = "word/document.xml", data = DOCUMENT },
     { name = "word/_rels/document.xml.rels", data = document_relationships },
@@ -80,6 +81,21 @@ local function build_utf16_relationships_package(dir)
   return write_minimal_package(
     dir, "utf16-relationships.docx", document_relationships)
 end
+
+-- Content types with no rels Default: every rels part is declared by an
+-- Override instead, which OPC permits.
+local OVERRIDE_ONLY_RELS_CONTENT_TYPES = [[<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/_rels/.rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Override PartName="/word/_rels/document.xml.rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+</Types>]]
+local EMPTY_DOCUMENT_RELATIONSHIPS = [[<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>]]
+local RELATIONSHIPS_CONTENT_TYPE =
+  "application/vnd.openxmlformats-package.relationships+xml"
 
 return {
   {
@@ -381,6 +397,91 @@ return {
       end)
       assert(not ok)
       assert(err.code == "opc.invalid-target-mode", tostring(err))
+    end,
+  },
+  {
+    name = "a new rels part gets a content type when no rels Default exists",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-rel-no-default", function(dir)
+        local source = write_minimal_package(dir, "override-only.docx",
+          EMPTY_DOCUMENT_RELATIONSHIPS, OVERRIDE_ONLY_RELS_CONTENT_TYPES)
+        local pkg = core.open(source, LIMITS)
+        -- core.xml has no rels part, so this creates one.
+        pkg:add_relationship("/docProps/core.xml",
+          "http://schemas.example.org/custom", "../word/document.xml")
+        local new_rels = "/docProps/_rels/core.xml.rels"
+        assert(pkg:content_type(new_rels) == RELATIONSHIPS_CONTENT_TYPE,
+          "before publication: " .. tostring(pkg:content_type(new_rels)))
+        local out = dir .. "/out.docx"
+        pkg:write_atomic(out)
+        local reopened = core.open(out, LIMITS)
+        assert(reopened:content_type(new_rels) == RELATIONSHIPS_CONTENT_TYPE,
+          "after publication: " .. tostring(reopened:content_type(new_rels)))
+      end)
+    end,
+  },
+  {
+    name = "an empty self-closing Relationships root accepts an added relationship",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-rel-self-closing", function(dir)
+        local source = write_minimal_package(dir, "self-closing.docx",
+          [[<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>]])
+        local pkg = core.open(source, LIMITS)
+        local rid = pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "../docProps/core.xml")
+        local out = dir .. "/out.docx"
+        pkg:write_atomic(out)
+        local reopened = core.open(out, LIMITS)
+        local records = reopened:relationships("/word/document.xml")
+        assert(#records == 1 and records[1].id == rid,
+          "exactly the added relationship survives")
+        assert(records[1].resolved_part == "/docProps/core.xml",
+          tostring(records[1].resolved_part))
+      end)
+    end,
+  },
+  {
+    name = "a self-closing Relationships root with ordinary attributes still fails closed",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-rel-self-closing-attr", function(dir)
+        local source = write_minimal_package(dir, "self-closing-attr.docx",
+          [[<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:x="urn:example" x:keep="1"/>]])
+        local pkg = core.open(source, LIMITS)
+        local ok, err = diagnostic.capture(function()
+          pkg:add_relationship("/word/document.xml",
+            "http://schemas.example.org/custom", "../docProps/core.xml")
+        end)
+        assert(not ok, "rebuilding would drop the root attribute")
+        assert(err.code == "xml.edit-target", tostring(err.code))
+      end)
+    end,
+  },
+  {
+    name = "a relationship to an added part with lowercase percent-hex resolves to that part",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      local pkg = core.open(WORD, LIMITS)
+      pkg:add_part("/word/a%c3%a9.xml", "<x/>", "application/vnd.example+xml")
+      local rid = pkg:add_relationship("/word/document.xml",
+        "http://schemas.example.org/custom", "a%c3%a9.xml")
+      local found
+      for _, record in ipairs(pkg:relationships("/word/document.xml")) do
+        if record.id == rid then found = record end
+      end
+      assert(found, "added relationship is listed")
+      assert(pkg:part(found.resolved_part) == "<x/>",
+        "resolved_part names the stored part: " .. tostring(found.resolved_part))
+      assert(pkg:content_type(found.resolved_part) ==
+        "application/vnd.example+xml", "content type follows the resolved name")
     end,
   },
 }

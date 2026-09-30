@@ -22,20 +22,40 @@ local LIMITS = {
   max_materialized_bytes = 256 * 1024 * 1024,
 }
 
+-- Minimal well-formed OPC package with caller-supplied content types, built
+-- from scratch with pandoc.zip.Entry / pandoc.zip.Archive (mirrors
+-- write_distinct_modtime_source in test-publication.lua, which proves a
+-- pandoc.zip-built archive passes preflight): content-types, root
+-- relationships, one document part and one core-properties part.
+local build_package
+
 -- Synthetic package whose [Content_Types].xml uses a namespace prefix
--- (<ct:Types xmlns:ct="…">). Built from scratch with pandoc.zip.Entry /
--- pandoc.zip.Archive (mirrors write_distinct_modtime_source in
--- test-publication.lua, which proves a pandoc.zip-built archive passes
--- preflight), giving a well-formed minimal OPC package: content-types,
--- root relationships, one document part and one core-properties part.
+-- (<ct:Types xmlns:ct="…">).
 local function build_prefixed_content_types_package(dir)
-  local content_types = [[<?xml version="1.0" encoding="UTF-8"?>
+  return build_package(dir, "prefixed-content-types.docx", [[<?xml version="1.0" encoding="UTF-8"?>
 <ct:Types xmlns:ct="http://schemas.openxmlformats.org/package/2006/content-types">
   <ct:Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <ct:Default Extension="xml" ContentType="application/xml"/>
   <ct:Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <ct:Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-</ct:Types>]]
+</ct:Types>]])
+end
+
+-- Content types declaring an Override for /word/<name>.xml although the
+-- archive has no such part. OPC tolerates the orphan; parse_content_types
+-- rejects a second Override for the same (case-folded) name.
+local function orphan_override_content_types(name)
+  return ([[<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/word/%s.xml" ContentType="application/vnd.example.orphan+xml"/>
+</Types>]]):format(name)
+end
+
+build_package = function(dir, filename, content_types)
   local root_relationships = [[<?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
@@ -54,7 +74,7 @@ local function build_prefixed_content_types_package(dir)
   for index, source in ipairs(sources) do
     entries[index] = pandoc.zip.Entry(source.name, source.data, 946684800)
   end
-  local path = pandoc.path.join({ dir, "prefixed-content-types.docx" })
+  local path = pandoc.path.join({ dir, filename })
   fixture.write_bytes(path, pandoc.zip.Archive(entries):bytestring())
   return path
 end
@@ -251,6 +271,46 @@ return {
           outputs[run] = fixture.read_bytes(out)
         end
         assert(outputs[1] == outputs[2], "publication must be deterministic")
+      end)
+    end,
+  },
+  {
+    name = "adding a part whose name already has an orphan Override fails closed at the call",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-part-orphan", function(dir)
+        local source = build_package(dir, "orphan.docx",
+          orphan_override_content_types("new"))
+        local pkg = core.open(source, LIMITS)
+        local ok, err = diagnostic.capture(function()
+          pkg:add_part("/word/new.xml", "<x/>", "application/vnd.example+xml")
+        end)
+        assert(not ok, "add_part must reject the orphan-Override name")
+        assert(err.code == "opc.add-part-content-type-collision",
+          tostring(err.code))
+        -- The rejected call left no partial state: the package still publishes.
+        local out = dir .. "/out.docx"
+        pkg:write_atomic(out)
+        assert(fixture.exists(out), "package remains publishable")
+      end)
+    end,
+  },
+  {
+    name = "an orphan Override differing only in ASCII case also fails closed at the call",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      fixture.with_temp_dir("add-part-orphan-case", function(dir)
+        local source = build_package(dir, "orphan-case.docx",
+          orphan_override_content_types("New"))
+        local pkg = core.open(source, LIMITS)
+        local ok, err = diagnostic.capture(function()
+          pkg:add_part("/word/new.xml", "<x/>", "application/vnd.example+xml")
+        end)
+        assert(not ok, "add_part must reject the case-variant Override name")
+        assert(err.code == "opc.add-part-content-type-collision",
+          tostring(err.code))
       end)
     end,
   },

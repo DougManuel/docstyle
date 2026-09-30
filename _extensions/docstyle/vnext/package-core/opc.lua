@@ -22,6 +22,8 @@ local CONTENT_TYPES_NS =
   "http://schemas.openxmlformats.org/package/2006/content-types"
 local RELATIONSHIPS_NS =
   "http://schemas.openxmlformats.org/package/2006/relationships"
+local RELATIONSHIPS_CONTENT_TYPE =
+  "application/vnd.openxmlformats-package.relationships+xml"
 local OFFICE_DOCUMENT_TYPES = {
   ["http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"] = true,
   ["http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"] = true,
@@ -173,13 +175,20 @@ function Package:_effective_bytes(zip_name)
   return self:_read_zip_entry(zip_name)
 end
 
+-- The stored name of the addition matching zip_name up to percent-hex
+-- case, or nil. Additions keep the spelling add_part received.
+function Package:_added_name(zip_name)
+  local normalized = normalize_percent_hex(zip_name)
+  for added in pairs(self._additions) do
+    if normalize_percent_hex(added) == normalized then return added end
+  end
+  return nil
+end
+
 function Package:_effective_exists(zip_name)
   local normalized = normalize_percent_hex(zip_name)
   if self._entries_by_normalized_name[normalized] then return true end
-  for added in pairs(self._additions) do
-    if normalize_percent_hex(added) == normalized then return true end
-  end
-  return false
+  return self:_added_name(zip_name) ~= nil
 end
 
 function Package:_effective_case_collision(zip_name)
@@ -376,6 +385,19 @@ function Package:add_part(part_name, bytes, content_type)
         existing = collision,
       })
   end
+  local folded = ascii_lower(normalize_percent_hex(zip_name))
+  for declared in pairs(self._content_type_overrides) do
+    if ascii_lower(declared) == folded then
+      -- A second Override for the name would make [Content_Types].xml
+      -- invalid; publication would reject it only after building the
+      -- archive.
+      raise("opc.add-part-content-type-collision",
+        "a content-type Override already declares this part name", {
+          part_name = part_name,
+          existing = "/" .. declared,
+        })
+    end
+  end
   self:_register_content_type_override(part_name, content_type)
   self._additions[zip_name] = bytes
   self._content_type_overrides[normalize_percent_hex(zip_name)] = content_type
@@ -566,7 +588,8 @@ local function resolve_literal_target(self, source_part, target, context)
     normalize_percent_hex(zip_name)]
   -- Effective-aware: a target that resolves only to an added part (no
   -- original zip entry) is still a valid relationship target.
-  if not entry and not self:_effective_exists(zip_name) then
+  local added_name = not entry and self:_added_name(zip_name)
+  if not entry and not added_name then
     raise("opc.relationship-target-missing",
       "internal relationship target was not found", {
         relationship_part = context.relationship_part,
@@ -575,11 +598,14 @@ local function resolve_literal_target(self, source_part, target, context)
         resolved_part = resolved,
       })
   end
+  -- Return the stored spelling, as for originals, so the resolved name
+  -- works with part() and content_type() whatever percent-hex case the
+  -- target used.
   if entry then
     return "/" .. entry.name, fragment,
       table.concat(normalized_segments, "/")
   end
-  return resolved, fragment, table.concat(normalized_segments, "/")
+  return "/" .. added_name, fragment, table.concat(normalized_segments, "/")
 end
 
 function Package:relationships(source_part)
@@ -710,25 +736,49 @@ function Package:add_relationship(source_part, rel_type, target, mode)
       self._entries_by_name[relationship_zip] ~= nil then
     current = self:_effective_bytes(relationship_zip)
   end
+  local document
   if current then
-    local document = xml_adapter.parse(current)
+    document = xml_adapter.parse(current)
     assert_root(document, RELATIONSHIPS_NS, "Relationships",
       "opc.relationships-root", "relationships part")
-    xml_adapter.append_element(document.root, "Relationship", attributes)
-    local updated = xml_adapter.serialize(document)
-    if self._additions[relationship_zip] then
-      self._additions[relationship_zip] = updated
-    else
-      self._replacements[relationship_zip] = updated
+    -- A self-closing root holds no relationships. Without ordinary
+    -- attributes it carries nothing a rebuild would lose, so it takes the
+    -- fresh-part path below; with attributes, append_element fails closed.
+    if not document.root.end_tag_range and #document.root.attributes == 0 then
+      document = nil
     end
+  end
+  local updated
+  if document then
+    xml_adapter.append_element(document.root, "Relationship", attributes)
+    updated = xml_adapter.serialize(document)
   else
     local pieces = {
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
       '<Relationships xmlns="', RELATIONSHIPS_NS, '">',
     }
-    local document = xml_adapter.parse(table.concat(pieces) .. "</Relationships>")
-    xml_adapter.append_element(document.root, "Relationship", attributes)
-    self._additions[relationship_zip] = xml_adapter.serialize(document)
+    local fresh = xml_adapter.parse(table.concat(pieces) .. "</Relationships>")
+    xml_adapter.append_element(fresh.root, "Relationship", attributes)
+    updated = xml_adapter.serialize(fresh)
+  end
+  if current == nil then
+    -- A new rels part needs a declared content type. Packages that declare
+    -- rels parts by Override and have no rels Default get one here; the
+    -- registration runs before any state changes, so a failure leaves the
+    -- package untouched.
+    local normalized = normalize_percent_hex(relationship_zip)
+    local declared = self._content_type_overrides[normalized] or
+      self._content_type_defaults["rels"]
+    if not declared then
+      self:_register_content_type_override(
+        "/" .. relationship_zip, RELATIONSHIPS_CONTENT_TYPE)
+      self._content_type_overrides[normalized] = RELATIONSHIPS_CONTENT_TYPE
+    end
+    self._additions[relationship_zip] = updated
+  elseif self._additions[relationship_zip] then
+    self._additions[relationship_zip] = updated
+  else
+    self._replacements[relationship_zip] = updated
   end
   self._relationship_cache[relationship_zip] = nil
   return rid
