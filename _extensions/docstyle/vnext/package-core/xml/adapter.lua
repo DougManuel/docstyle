@@ -175,6 +175,12 @@ function M.append_element(node, local_name, attributes)
     raise("xml.invalid-input", "attributes must be a list", {})
   end
   local pieces = { "<", child_name }
+  -- The child declares no namespaces, so its attributes resolve in the
+  -- parent's scope. Reject anything the strict layer would refuse on
+  -- reparse, and namespace declarations, which would move the child out of
+  -- the parent's namespace.
+  local bindings = node.namespace_bindings or {}
+  local expanded = {}
   for _, attribute in ipairs(attributes or {}) do
     if type(attribute) ~= "table" then
       raise("xml.invalid-input", "each attribute must be a record", {})
@@ -186,6 +192,31 @@ function M.append_element(node, local_name, attributes)
           name = tostring(attribute.name),
         })
     end
+    local attribute_prefix, attribute_local =
+      attribute.name:match("^([^:]+):(.+)$")
+    if attribute.name == "xmlns" or attribute_prefix == "xmlns" then
+      raise("xml.invalid-input",
+        "append_element cannot add namespace declarations", {
+          name = attribute.name,
+        })
+    end
+    local uri = ""
+    if attribute_prefix then
+      uri = bindings[attribute_prefix]
+      if uri == nil then
+        raise("xml.unbound-prefix",
+          "attribute prefix is not bound at the parent", {
+            name = attribute.name,
+          })
+      end
+    end
+    local key = uri .. "\0" .. (attribute_local or attribute.name)
+    if expanded[key] then
+      raise("xml.duplicate-attribute", "duplicate expanded-name attribute", {
+        name = attribute.name,
+      })
+    end
+    expanded[key] = true
     if type(attribute.value) ~= "string" then
       raise("xml.invalid-input", "attribute value must be a string", {
         name = attribute.name,
@@ -216,7 +247,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1469,
+  docstyle_owned_lines = 1501,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",

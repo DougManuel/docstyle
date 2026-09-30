@@ -287,6 +287,25 @@ cases[#cases + 1] = {
 }
 
 cases[#cases + 1] = {
+  name = "verify_edits rejects overlapping edit ranges instead of passing vacuously",
+  gate = "preservation",
+  stage = "xml",
+  fn = function()
+    -- #52 review: with overlapping ranges the unchanged-span length goes
+    -- negative, and the byte comparisons can then compare empty strings.
+    -- The oracle must refuse the edit list outright.
+    local source = "0123456789"
+    local edits = {
+      { range = { start = 2, finish = 8 }, replacement = "X", seq = 1 },
+      { range = { start = 4, finish = 9 }, replacement = "", seq = 2 },
+    }
+    local ok, err = pcall(oracle.verify_edits, source, "01X9", edits)
+    assert(not ok, "overlapping ranges must not verify")
+    assert(tostring(err):find("overlap", 1, true), tostring(err))
+  end,
+}
+
+cases[#cases + 1] = {
   name = "rejects an undeclared semantic change outside the owned range",
   gate = "preservation",
   stage = "xml",

@@ -1155,6 +1155,9 @@ function M.verify_edits(original, edited, edits)
   end)
   local source_cursor, edited_cursor = 0, 0
   for _, edit in ipairs(ordered) do
+    -- Half-open ranges may touch but never overlap; an overlap would make
+    -- the unchanged length negative and the comparisons below vacuous.
+    assert(edit.range.start >= source_cursor, "overlapping edit ranges")
     local unchanged_length = edit.range.start - source_cursor
     assert(original:sub(source_cursor + 1, source_cursor + unchanged_length)
       == edited:sub(edited_cursor + 1, edited_cursor + unchanged_length),

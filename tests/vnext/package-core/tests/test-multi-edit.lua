@@ -211,4 +211,63 @@ return {
         "inserted element must survive the UTF-16 round trip")
     end,
   },
+  {
+    name = "append_element refuses attributes that would make the output ill-formed",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      -- #52 review: each case below used to serialize into XML that the
+      -- strict layer then rejects, or moved the child out of the parent's
+      -- namespace.
+      local cases = {
+        { code = "xml.duplicate-attribute",
+          attributes = { { name = "w:a", value = "1" },
+            { name = "w:a", value = "2" } } },
+        { code = "xml.duplicate-attribute",  -- same expanded name
+          attributes = { { name = "w:a", value = "1" },
+            { name = "v:a", value = "2" } } },
+        { code = "xml.unbound-prefix",
+          attributes = { { name = "q:id", value = "1" } } },
+        { code = "xml.invalid-input",
+          attributes = { { name = "xmlns", value = "urn:other" } } },
+        { code = "xml.invalid-input",
+          attributes = { { name = "xmlns:p", value = "urn:p" } } },
+      }
+      for index, case in ipairs(cases) do
+        local doc = xml.parse(
+          '<w:p xmlns:w="urn:w" xmlns:v="urn:w"></w:p>')
+        local ok, err = diagnostic.capture(function()
+          xml.append_element(doc.root, "r", case.attributes)
+        end)
+        assert(not ok, "case " .. index .. " must be rejected")
+        assert(err.code == case.code,
+          ("case %d: expected %s, got %s"):format(index, case.code,
+            tostring(err.code)))
+        assert(xml.serialize(doc) ==
+          '<w:p xmlns:w="urn:w" xmlns:v="urn:w"></w:p>',
+          "a rejected insertion leaves the document unchanged")
+      end
+    end,
+  },
+  {
+    name = "append_element accepts attributes bound in scope, including xml:",
+    gate = "functional",
+    stage = "xml",
+    fn = function()
+      local doc = xml.parse(
+        '<w:body xmlns:w="urn:w"><w:p xmlns:o="urn:o"></w:p></w:body>')
+      local p = xml.find_all(doc, "urn:w", "p")[1]
+      xml.append_element(p, "r", {
+        { name = "w:rsidR", value = "00AB" },
+        { name = "o:gfx", value = "x" },
+        { name = "xml:space", value = "preserve" },
+        { name = "plain", value = "y" },
+      })
+      local reparsed = xml.parse(xml.serialize(doc))
+      local r = xml.find_all(reparsed, "urn:w", "r")[1]
+      assert(xml.get_attribute(r, "urn:w", "rsidR") == "00AB")
+      assert(xml.get_attribute(r, "urn:o", "gfx") == "x")
+      assert(xml.get_attribute(r, "", "plain") == "y")
+    end,
+  },
 }

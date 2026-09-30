@@ -150,6 +150,7 @@ function M.bind(source, strict_document, backend_events, version)
         parent_id = strict_event.parent_id,
         name = strict_event.name,
         range = strict_event.range,
+        namespace_bindings = strict_event.namespace_bindings,
         attributes = {},
         direct_text = {},
         has_element_child = false,
