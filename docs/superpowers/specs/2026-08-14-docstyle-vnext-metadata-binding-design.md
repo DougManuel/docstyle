@@ -463,10 +463,29 @@ uniform finite-number or string values. Sort ascending (strings by UTF-8
 byte order), breaking ties by record id. Contribution positions remain
 unique per document. Empty collections are permitted.
 
-Embedding validates local records and reference target types first,
-computes `public_projection` and prunes known restricted prunable targets,
-then validates the resulting catalogue schema, canonical semantics, paths
-and reference closure. Restricted records never validate as embedded output.
+Embedding runs in three ordered steps. The order matters because
+projection removes the evidence that some checks need: once a restricted
+target is pruned, it is indistinguishable from an absent one.
+
+1. **Local validation, before projection.** Validate the local records
+   against their schemas. Validate canonical semantics on every table and
+   figure, and canonical `credit` and `provenance` wherever they occur,
+   including values that projection will later prune. Check
+   reference target types. Resolve every prunable reference and classify
+   its target as public, known restricted or absent; an absent target
+   fails. Select collection members and fail on any restricted member.
+   A malformed or noncanonical value fails here even when its target is
+   restricted, so pruning never discards a value that was not validated.
+2. **Projection.** Compute `public_projection`, drop restricted records
+   and remove the entire property of each prunable reference whose target
+   step 1 classified as known restricted. Pruning acts only on that
+   classification; it never interprets a value itself.
+3. **Embedded validation, after projection.** Validate the resulting
+   catalogue against `catalogue.v1.json`, recheck canonical semantics on
+   the projected objects, and validate `sourceRecord` paths and reference
+   closure against the projected records.
+
+Restricted records never validate as embedded output.
 
 The semantic validator also enforces what JSON Schema cannot:
 contribution `position` values are unique per document (a
@@ -571,6 +590,7 @@ the record and every view of it.
 | `document-model.v1.json` | add canonical `$defs/table-semantics`, `$defs/figure-semantics` (closed, with namespaced profiles); leave `node.semantics` unconstrained at rest; semantic validator and catalogue schema apply the definitions before embedding | additive definitions |
 | `document-model.v1.json` | document canonical asset `credit` as string or record reference; leave existing arbitrary values schema-valid at rest and validate canonical credit before embedding | additive definitions |
 | `catalogue.v1.json` | new schema: `records`, `views`, `objects` (public projection of table/figure node semantics) and `assets` containers | new file |
+| conformance runner | JSON Schema subset validator (`tests/vnext/conformance/lib/jsonschema.lua`): resolve `$ref` values of the form `<registered $id>#/<pointer>`, so `catalogue.v1.json` can reuse `document-model.v1.json` and `metadata-core.v1.json` definitions. Constraints that must accompany a reused definition (such as public-only records) use a wrapper — `properties` beside `anyOf: [{"$ref": …}]` — because the validator ignores keywords beside `$ref`; `allOf`, `not` and `if`/`then` stay unsupported | validator extension (additive: every existing schema resolves as before) |
 | conformance runner | semantic validator: canonical semantics and credit, typed reference closure, terminal view authority, projected path resolution, collection scope and ordering, whole-property pruning, contribution-position uniqueness, catalogue-vs-`public_projection(local state)` reconciliation | new validator |
 | `schemas/examples/…` | valid + invalid examples for every change above | new files |
 | `field-envelope.v4.json` | none | — |
@@ -625,6 +645,12 @@ and fixture locations; it does not claim to implement those fixtures.
     keys and selected restricted members. Positive cases cover empty paths,
     existing false/null values, empty collections, deterministic tie order
     and exclusion of records belonging to a different document.
+12. An embedding-order fixture pairs a malformed record-form asset
+    `credit` with a restricted target. Embedding fails in local
+    validation; the value is not pruned away. The same credit in
+    canonical form is pruned and the asset embeds without it. A
+    cross-file `$ref` into `document-model.v1.json` resolves in the
+    conformance run.
 
 Fixture homes and commands: schema examples live under
 `schemas/examples/<schema-name>/` (`valid-*.json` / `invalid-*.json`, the
