@@ -707,9 +707,10 @@ function Package:add_relationship(source_part, rel_type, target, mode)
       "package-root relationship addition is not supported", {})
   end
   if mode ~= "Internal" and mode ~= "External" then
-    raise("opc.invalid-target-mode", "mode must be Internal or External", {
-      mode = mode,
-    })
+    raise("opc.invalid-relationship-mode",
+      "mode must be Internal or External", {
+        mode = mode,
+      })
   end
   if type(rel_type) ~= "string" or rel_type == "" or
       type(target) ~= "string" or target == "" then

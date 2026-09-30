@@ -396,7 +396,10 @@ return {
           "http://schemas.example.org/custom", "custom.xml", "Bogus")
       end)
       assert(not ok)
-      assert(err.code == "opc.invalid-target-mode", tostring(err))
+      -- #51: distinct from opc.invalid-target-mode, which reports a
+      -- malformed TargetMode attribute in an existing rels stream.
+      assert(err.code == "opc.invalid-relationship-mode", tostring(err))
+      assert(err.context.mode == "Bogus", tostring(err.context.mode))
     end,
   },
   {

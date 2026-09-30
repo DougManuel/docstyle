@@ -122,4 +122,59 @@ return {
         "only the edited attribute changes")
     end,
   },
+  {
+    name = "both limit layers report an invalid limit with one context shape",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      -- #51: the adapter and the strict layer both report {option, value},
+      -- with the value in its original type.
+      local _, adapter_err = diagnostic.capture(function()
+        xml.parse("<r/>", { max_input_bytes = 1.5 })
+      end)
+      assert(adapter_err.code == "xml.invalid-limit", tostring(adapter_err.code))
+      assert(adapter_err.context.option == "max_input_bytes",
+        tostring(adapter_err.context.option))
+      assert(adapter_err.context.value == 1.5, tostring(adapter_err.context.value))
+      local _, strict_err = diagnostic.capture(function()
+        xml.parse("<r/>", { max_depth = 0 })
+      end)
+      assert(strict_err.code == "xml.invalid-limit", tostring(strict_err.code))
+      assert(strict_err.context.option == "max_depth",
+        tostring(strict_err.context.option))
+      assert(strict_err.context.value == 0, tostring(strict_err.context.value))
+    end,
+  },
+  {
+    name = "a zero input-byte limit is valid in both layers",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      -- #51: the design makes max_input_bytes a non-negative integer, so 0
+      -- is a valid (if useless) limit; empty input then fails as XML, not
+      -- as an invalid limit.
+      local _, empty_err = diagnostic.capture(function()
+        xml.parse("", { max_input_bytes = 0 })
+      end)
+      assert(empty_err.code ~= "xml.invalid-limit", tostring(empty_err.code))
+      local _, err = diagnostic.capture(function()
+        xml.parse("<r/>", { max_input_bytes = 0 })
+      end)
+      assert(err.code == "xml.input-too-large", tostring(err.code))
+    end,
+  },
+  {
+    name = "non-string input is a typed diagnostic, not a raw Lua error",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      for _, bad in ipairs({ 42, {}, true }) do
+        local ok, err = diagnostic.capture(function() xml.parse(bad) end)
+        assert(not ok)
+        assert(err.code == "xml.invalid-input", tostring(err.code))
+      end
+      local ok, err = diagnostic.capture(function() xml.parse(nil) end)
+      assert(not ok and err.code == "xml.invalid-input", tostring(err and err.code))
+    end,
+  },
 }

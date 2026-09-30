@@ -34,6 +34,11 @@ function M.expanded_name(uri, local_name, prefix, qname)
   }
 end
 
+-- The input-byte limit is a non-negative integer, as the adapter enforces
+-- (a zero limit admits only empty input); the structural limits are
+-- positive.
+local MINIMUM_LIMITS = { max_input_bytes = 0 }
+
 function M.limits(options)
   options = options or {}
   assert(type(options) == "table", "parse options must be a table")
@@ -41,7 +46,8 @@ function M.limits(options)
   for name, default in pairs(DEFAULT_LIMITS) do
     local value = options[name]
     if value == nil then value = default end
-    if math.type(value) ~= "integer" or value <= 0 then
+    if math.type(value) ~= "integer" or
+        value < (MINIMUM_LIMITS[name] or 1) then
       diagnostic.raise("xml.invalid-limit", "invalid XML parse limit", {
         option = name,
         value = value,

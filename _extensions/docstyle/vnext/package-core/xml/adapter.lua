@@ -54,6 +54,11 @@ end
 M.MAX_INPUT_BYTES = 8 * 1024 * 1024  -- XML-part input-byte limit (raised from 1 MiB by #53; WP2 design)
 
 function M.parse(xml_bytes, options)
+  if type(xml_bytes) ~= "string" then
+    raise("xml.invalid-input", "XML input must be a byte string", {
+      input_type = type(xml_bytes),
+    })
+  end
   options = options or {}
   local limit = options.max_input_bytes
   if limit == nil then
@@ -61,7 +66,8 @@ function M.parse(xml_bytes, options)
   elseif math.type(limit) ~= "integer" or limit < 0 then
     raise("xml.invalid-limit",
       "max_input_bytes must be a non-negative integer", {
-        max_input_bytes = tostring(limit),
+        option = "max_input_bytes",
+        value = limit,
       })
   end
   if #xml_bytes > limit then
@@ -210,7 +216,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1463,
+  docstyle_owned_lines = 1469,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",
