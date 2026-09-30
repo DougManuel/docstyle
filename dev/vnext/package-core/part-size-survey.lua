@@ -8,6 +8,18 @@
 -- report for a human to read and record in the Task 5 commit message.
 --
 -- Usage: quarto run dev/vnext/package-core/part-size-survey.lua
+--
+-- Folder mode (#53): set DOCSTYLE_SURVEY_DIR to survey any directory tree
+-- of .docx files, such as a collaborator's own documents:
+--
+--   DOCSTYLE_SURVEY_DIR=~/Documents \
+--     quarto run dev/vnext/package-core/part-size-survey.lua
+--
+-- Folder mode prints one aggregate JSON object and never a file name, part
+-- name or content, so its output is safe to share or commit. Sizes come
+-- from pandoc.zip, independently of the package core, so documents the
+-- core refuses to open are still measured; the core's verdict is reported
+-- separately by diagnostic code.
 local here = pandoc.path.directory(PANDOC_SCRIPT_FILE)
 local root = pandoc.path.normalize(pandoc.path.join({ here, "..", "..", ".." }))
 local core_dir = root .. "/_extensions/docstyle/vnext/package-core"
@@ -39,6 +51,8 @@ local function is_directory(path)
   return (pcall(pandoc.system.list_directory, path))
 end
 
+local SKIPPED_DIRECTORIES = { node_modules = true, renv = true }
+
 local function collect_docx(dir, found)
   found = found or {}
   local ok, entries = pcall(pandoc.system.list_directory, dir)
@@ -46,12 +60,90 @@ local function collect_docx(dir, found)
   for _, name in ipairs(entries) do
     local full = pandoc.path.join({ dir, name })
     if is_directory(full) then
-      collect_docx(full, found)
-    elseif name:match("%.docx$") then
+      if name:sub(1, 1) ~= "." and not SKIPPED_DIRECTORIES[name] then
+        collect_docx(full, found)
+      end
+    elseif name:match("%.docx$") and name:sub(1, 2) ~= "~$" then
       found[#found + 1] = full
     end
   end
   return found
+end
+
+local MIB = 1024 * 1024
+local THRESHOLDS_MIB = { 1, 2, 4, 8, 16 }
+
+local function largest_xml_part(bytes)
+  local ok, archive = pcall(pandoc.zip.Archive, bytes)
+  if not ok then return nil end
+  local largest = 0
+  for _, entry in ipairs(archive.entries) do
+    if entry.path:match("%.xml$") or entry.path:match("%.rels$") then
+      largest = math.max(largest, #entry:contents())
+    end
+  end
+  return largest
+end
+
+local function survey_directory(dir)
+  local found = collect_docx(dir)
+  table.sort(found)
+  -- Byte-identical copies (checkouts, worktrees, backups) count once.
+  local documents, seen = {}, {}
+  for _, path in ipairs(found) do
+    local handle = assert(io.open(path, "rb"))
+    local bytes = handle:read("a")
+    handle:close()
+    local digest = pandoc.utils.sha1(bytes)
+    if not seen[digest] then
+      seen[digest] = true
+      documents[#documents + 1] = { path = path, bytes = bytes }
+    end
+  end
+  local result = {
+    files_found = #found,
+    documents = #documents,
+    unreadable_archives = 0,
+    largest_xml_part_bytes = 0,
+    documents_with_largest_xml_part_above_mib = {},
+    core_open = { opened = 0, refused_by_code = {} },
+  }
+  for _, threshold in ipairs(THRESHOLDS_MIB) do
+    result.documents_with_largest_xml_part_above_mib[tostring(threshold)] = 0
+  end
+  for _, document in ipairs(documents) do
+    local path = document.path
+    local largest = largest_xml_part(document.bytes)
+    document.bytes = nil
+    if largest == nil then
+      result.unreadable_archives = result.unreadable_archives + 1
+    else
+      result.largest_xml_part_bytes =
+        math.max(result.largest_xml_part_bytes, largest)
+      for _, threshold in ipairs(THRESHOLDS_MIB) do
+        if largest > threshold * MIB then
+          local key = tostring(threshold)
+          result.documents_with_largest_xml_part_above_mib[key] =
+            result.documents_with_largest_xml_part_above_mib[key] + 1
+        end
+      end
+    end
+    local ok, err = pcall(core.open, path, LIMITS)
+    if ok then
+      result.core_open.opened = result.core_open.opened + 1
+    else
+      local code = type(err) == "table" and err.code or "internal.lua-error"
+      result.core_open.refused_by_code[code] =
+        (result.core_open.refused_by_code[code] or 0) + 1
+    end
+  end
+  return result
+end
+
+local survey_dir = os.getenv("DOCSTYLE_SURVEY_DIR")
+if survey_dir and survey_dir ~= "" then
+  print(pandoc.json.encode(survey_directory(survey_dir)))
+  return
 end
 
 local targets = {}

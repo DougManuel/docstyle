@@ -51,7 +51,7 @@ local function register_edit(document, target, range, replacement, value)
   }
 end
 
-M.MAX_INPUT_BYTES = 1048576  -- XML-part input-byte limit (WP2 design; decision provenance)
+M.MAX_INPUT_BYTES = 8 * 1024 * 1024  -- XML-part input-byte limit (raised from 1 MiB by #53; WP2 design)
 
 function M.parse(xml_bytes, options)
   options = options or {}

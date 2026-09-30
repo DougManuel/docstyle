@@ -13,7 +13,11 @@
 --
 -- Usage:
 --   quarto run dev/vnext/package-core/performance.lua \
---     > dev/vnext/package-core/performance-results.json
+--     > dev/vnext/package-core/performance-results-8mib.json
+--
+-- performance-results.json is the Task 8 record at the original 1 MiB
+-- limit and is kept unchanged as provenance; the 8 MiB limit approved in
+-- #53 is recorded in performance-results-8mib.json.
 --
 -- Stdout is exactly the JSON result (print(pandoc.json.encode(result))).
 -- All human-readable output -- the advisory CPU line, an approved-limit
@@ -43,9 +47,9 @@ local TARGET_ATTRIBUTE_VALUE = "00000001"
 local REPLACEMENT_ATTRIBUTE_VALUE = "0000000A"
 local WARMUPS = 1
 local REPETITIONS = 5
--- Every xml.parse call in this benchmark passes this override. The Task 5
--- production default (xml.MAX_INPUT_BYTES) is 1,048,576 bytes and would
--- reject the 5 MiB and 10 MiB scaling cases before they could be measured.
+-- Every xml.parse call in this benchmark passes this override. The
+-- production default (xml.MAX_INPUT_BYTES, 8 MiB since #53) would reject
+-- the 10 MiB scaling case before it could be measured.
 local PARSE_LIMIT_OVERRIDE = 16 * MIB
 
 local PREFIX = table.concat({
@@ -76,8 +80,8 @@ local SUFFIX = '</w:body></w:document>'
 -- pathology unrelated to ordinary WordprocessingML shape or to the
 -- input-byte limit this benchmark exists to characterize.
 local function generate_scaling_fixture(size_mib)
-  assert(size_mib == 1 or size_mib == 5 or size_mib == 10,
-    "scaling size must be one, five or 10 MiB")
+  assert(size_mib == 1 or size_mib == 5 or size_mib == 8 or size_mib == 10,
+    "scaling size must be one, five, eight or 10 MiB")
   local target_bytes = size_mib * MIB
   local parts, length = {}, 0
   local function append(bytes)
@@ -215,11 +219,13 @@ local function measure_reference()
   local rows = {
     measure_size(1),
     measure_size(5),
+    measure_size(8),
     measure_size(10),
   }
-  local one, ten = rows[1], rows[3]
-  assert(one.input_bytes == MIB,
-    "the 1 MiB fixture must be exactly the approved 1,048,576-byte limit")
+  local one, at_limit, ten = rows[1], rows[3], rows[4]
+  assert(one.input_bytes == MIB)
+  assert(at_limit.input_bytes == xml.MAX_INPUT_BYTES,
+    "the 8 MiB fixture must be exactly the approved input-byte limit")
   assert(ten.input_bytes == 10 * MIB)
 
   local ten_mib_cpu = {
@@ -264,7 +270,7 @@ local function measure_reference()
       arch = pandoc.system.arch,
     },
     protocol = {
-      fixture_sizes_mib = { 1, 5, 10 },
+      fixture_sizes_mib = { 1, 5, 8, 10 },
       warmups_per_size = WARMUPS,
       repetitions_per_size = REPETITIONS,
       clock =
@@ -301,12 +307,14 @@ local function measure_reference()
       ten_to_one_mib_retained_heap = ten_to_one_mib_retained_heap,
     },
     decision = decision,
+    -- #53 set the limit so that worst-case latency at it stays within the
+    -- programme's five-second advisory CPU target.
     approved_limit_latency = {
-      limit_bytes = 1048576,
-      observed_median_seconds = one.median_combined_cpu_seconds,
-      observed_maximum_seconds = one.maximum_combined_cpu_seconds,
-      expectation_seconds = 0.75,
-      met = one.maximum_combined_cpu_seconds <= 0.75,
+      limit_bytes = xml.MAX_INPUT_BYTES,
+      observed_median_seconds = at_limit.median_combined_cpu_seconds,
+      observed_maximum_seconds = at_limit.maximum_combined_cpu_seconds,
+      expectation_seconds = 5,
+      met = at_limit.maximum_combined_cpu_seconds <= 5,
     },
     known_limitations = {
       {

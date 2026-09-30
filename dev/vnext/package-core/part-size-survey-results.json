@@ -1,0 +1,29 @@
+{
+  "corpus": "one researcher's local git repositories (~/github): research protocols, manuscripts, reports, CVs and supplementary material; byte-identical copies counted once",
+  "documents_rejected_by_limit": 0,
+  "issue": "#53",
+  "limit_bytes": 8388608,
+  "method": "DOCSTYLE_SURVEY_DIR=<dir> quarto run dev/vnext/package-core/part-size-survey.lua (aggregate only; no file names, part names or content)",
+  "result": {
+    "core_open": {
+      "opened": 210,
+      "refused_by_code": {
+        "opc.invalid-part-name": 4,
+        "zip.invalid-name": 2
+      }
+    },
+    "documents": 216,
+    "documents_with_largest_xml_part_above_mib": {
+      "1": 7,
+      "16": 0,
+      "2": 1,
+      "4": 0,
+      "8": 0
+    },
+    "files_found": 477,
+    "largest_xml_part_bytes": 2704630,
+    "unreadable_archives": 0
+  },
+  "schema_version": 1,
+  "surveyed": "2026-09-30"
+}
