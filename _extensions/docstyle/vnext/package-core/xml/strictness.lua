@@ -805,6 +805,12 @@ local function parse_text(state)
   state.position = finish
 end
 
+-- The text the LuaXML backend parses for its structural cross-check. The
+-- cross-check compares event kinds, qualified names and lexical tokens,
+-- never attribute values, and every attribute value, range and edit comes
+-- from this strict layer. So attribute values reach the backend empty: the
+-- backend's attribute patterns backtrack quadratically inside one long
+-- value (#50), and an empty value gives it nothing to backtrack over.
 local function semantic_xml(state)
   local pieces = {}
   local cursor = 1
@@ -813,7 +819,7 @@ local function semantic_xml(state)
     spans[#spans + 1] = {
       decoded_start = attribute.decoded_value_start,
       decoded_finish = attribute.decoded_value_finish,
-      normalize_attribute_space = true,
+      attribute_value = true,
     }
   end
   for _, separator in ipairs(state.pi_separator_spans) do
@@ -825,10 +831,8 @@ local function semantic_xml(state)
   for _, span in ipairs(spans) do
     pieces[#pieces + 1] = state.decoded.text:sub(
       cursor, span.decoded_start - 1)
-    if span.normalize_attribute_space then
-      pieces[#pieces + 1] = state.decoded.text:sub(
-        span.decoded_start, span.decoded_finish - 1):gsub("[\t\n\r]", " "):gsub(
-          ">", "&gt;")
+    if span.attribute_value then
+      pieces[#pieces + 1] = ""
     else
       pieces[#pieces + 1] = " "
     end

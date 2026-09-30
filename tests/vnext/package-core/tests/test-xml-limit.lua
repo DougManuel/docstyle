@@ -90,4 +90,36 @@ return {
       assert(err.context.limit == 1048576, tostring(err.context.limit))
     end,
   },
+  {
+    name = "a long alphanumeric attribute value parses in linear time",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      -- #50: the vendored backend backtracks quadratically inside one long
+      -- alphanumeric attribute value (recorded: 40,000 bytes took ~21 s).
+      -- The backend only cross-checks structure, so it never sees values.
+      local value = string.rep("a1", 20000)
+      local part = '<r xmlns:w="urn:w" w:v="' .. value .. '"/>'
+      local started = pandoc.system.cputime()
+      local doc = xml.parse(part)
+      local seconds = (pandoc.system.cputime() - started) / 1e12
+      assert(seconds < 1, ("40,000-byte attribute took %.2f s"):format(seconds))
+      assert(xml.get_attribute(doc.root, "urn:w", "v") == value,
+        "the strict layer still reports the full value")
+    end,
+  },
+  {
+    name = "an edit beside a long attribute value preserves its bytes",
+    gate = "preservation",
+    stage = "xml",
+    fn = function()
+      local value = string.rep("Zz9", 100000)
+      local part = '<r xmlns:w="urn:w" w:v="' .. value .. '" w:n="1"/>'
+      local doc = xml.parse(part)
+      xml.set_attribute(doc.root, "urn:w", "n", "2")
+      local edited = xml.serialize(doc)
+      assert(edited == part:gsub('w:n="1"', 'w:n="2"'),
+        "only the edited attribute changes")
+    end,
+  },
 }
