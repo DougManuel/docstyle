@@ -1,0 +1,38 @@
+{
+  "description": "A profile record value naming a public record is allowed: the target ships.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture",
+          "label": "Fixture extension record",
+          "category": "alpha",
+          "region": "rec-org-uottawa"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {
+          "id": "docstyle:fixture",
+          "version": "1.0.0",
+          "schema": "profiles/fixture.v1.json",
+          "recordTypes": ["fixture-record"],
+          "classes": ["fixture-region"],
+          "regionRoles": ["fixture-role"],
+          "predicates": ["fixture-supports"],
+          "migratesFrom": []
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "present": ["records/rec-fx1", "records/rec-org-uottawa"]}
+}

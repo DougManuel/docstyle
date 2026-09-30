@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 11: figure asset resolves against the asset registry only; a record id there is absent.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/content/4/semantics/asset", "value": "rec-org-uottawa"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-absent"]}
+}

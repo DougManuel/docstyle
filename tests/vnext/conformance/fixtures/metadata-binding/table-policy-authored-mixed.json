@@ -1,0 +1,21 @@
+{
+  "description": "Criterion 6 (negative): a generated-replace cell paragraph inside an authored table -- a policy mix, and (section 2) an outermost generated region with no view.",
+  "criteria": [6],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/content/3/children/1/children/0/children/0/classification",
+        "value": "generated"
+      },
+      {
+        "op": "replace",
+        "path": "/content/3/children/1/children/0/children/0/policy",
+        "value": "generated-replace"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["table-policy-mixed", "unbound-generated-region"]}
+}

@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 2: the string form is refused by the catalogue embedder.",
+  "criteria": [2],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/rec-document/abstract",
+        "value": "Background: the abstract text lives only in the content tree."
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["abstract-noncanonical"]}
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 11: a selected restricted member fails closure instead of silently disappearing from the author plate.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "add", "path": "/registries/metadata/contrib-2/privacy", "value": "restricted"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-member-restricted"]}
+}

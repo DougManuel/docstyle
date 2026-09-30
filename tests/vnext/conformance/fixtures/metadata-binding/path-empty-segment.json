@@ -1,0 +1,12 @@
+{
+  "description": "Criterion 11: a dotted path with an empty segment is malformed.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/registries/metadata/g-span-k3m7ap/path", "value": "dates..published"}
+    ]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["view-path-malformed"]}
+}

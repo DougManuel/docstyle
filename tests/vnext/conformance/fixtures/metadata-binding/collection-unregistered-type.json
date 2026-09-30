@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 11: a collection over an unregistered record type fails.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/recordType",
+        "value": "author"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-type-unregistered"]}
+}

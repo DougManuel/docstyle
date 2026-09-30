@@ -1,0 +1,4 @@
+{ "id": "view-document-version", "recordType": "metadata-view", "schemaVersion": 1,
+  "privacy": "public",
+  "sourceRecord": "rec-document", "path": "version",
+  "presentation": "span" }

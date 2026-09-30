@@ -1,0 +1,12 @@
+{
+  "description": "Criterion 2: a region reference that names no envelope fails.",
+  "criteria": [2],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/registries/metadata/rec-document/abstract/region", "value": "abstrakt"}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["abstract-region-unresolved"]}
+}

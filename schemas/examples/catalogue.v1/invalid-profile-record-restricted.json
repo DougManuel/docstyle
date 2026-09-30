@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "generator": "docstyle 1.0.0",
+  "document": "rec-document",
+  "records": {
+    "rec-document": {
+      "id": "rec-document",
+      "recordType": "document",
+      "schemaVersion": 1,
+      "type": "protocol",
+      "title": "Example protocol",
+      "version": "2.1",
+      "abstract": {
+        "region": "abstract"
+      },
+      "versionHistory": [
+        {
+          "version": "2.1",
+          "date": "2026-08-14",
+          "description": "Binding contracts."
+        }
+      ]
+    },
+    "rec-person-1": {
+      "id": "rec-person-1",
+      "recordType": "person",
+      "schemaVersion": 1,
+      "name": {
+        "given": "Jane",
+        "family": "Smith"
+      },
+      "orcid": "0000-0002-1825-0097"
+    },
+    "rec-org-uottawa": {
+      "id": "rec-org-uottawa",
+      "recordType": "organization",
+      "schemaVersion": 1,
+      "name": "University of Ottawa"
+    },
+    "rec-contact-2": {
+      "id": "rec-contact-2",
+      "recordType": "contact",
+      "schemaVersion": 1,
+      "privacy": "public",
+      "email": "consented.author@example.org"
+    },
+    "contrib-1": {
+      "id": "contrib-1",
+      "recordType": "contribution",
+      "schemaVersion": 1,
+      "document": "rec-document",
+      "person": "rec-person-1",
+      "position": 1,
+      "roles": [
+        "conceptualization"
+      ],
+      "corresponding": true,
+      "contact": "rec-contact-2",
+      "affiliations": [
+        "rec-org-uottawa"
+      ]
+    },
+    "rec-fx1": {
+      "id": "rec-fx1",
+      "recordType": "fixture-record",
+      "schemaVersion": 1,
+      "profile": "docstyle:fixture",
+      "label": "Fixture extension record",
+      "privacy": "restricted"
+    }
+  },
+  "views": {
+    "view-author-plate": {
+      "id": "view-author-plate",
+      "recordType": "metadata-view",
+      "schemaVersion": 1,
+      "sourceCollection": {
+        "recordType": "contribution",
+        "orderBy": "position"
+      },
+      "presentation": "block"
+    },
+    "view-version-history": {
+      "id": "view-version-history",
+      "recordType": "metadata-view",
+      "schemaVersion": 1,
+      "sourceRecord": "rec-document",
+      "path": "versionHistory",
+      "presentation": "table"
+    }
+  },
+  "objects": {
+    "tbl-outcomes": {
+      "id": "tbl-outcomes",
+      "type": "table",
+      "semantics": {
+        "label": "Table 1",
+        "caption": "g-caption-x2r9qa",
+        "notes": [
+          "g-paragraph-n4t8qa"
+        ],
+        "provenance": {
+          "record": "rec-org-uottawa"
+        }
+      }
+    },
+    "fig-flow": {
+      "id": "fig-flow",
+      "type": "figure",
+      "semantics": {
+        "label": "Figure 1",
+        "caption": "g-caption-f5k2ma",
+        "alt": "Participant flow diagram",
+        "asset": "asset-flow",
+        "credit": "Adapted from PRISMA 2020"
+      }
+    }
+  },
+  "assets": {
+    "asset-flow": {
+      "id": "asset-flow",
+      "path": "media/flow.png",
+      "mediaType": "image/png",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "credit": {
+        "record": "rec-org-uottawa"
+      }
+    }
+  }
+}

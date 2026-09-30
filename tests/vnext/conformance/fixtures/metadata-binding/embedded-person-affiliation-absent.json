@@ -1,0 +1,11 @@
+{
+  "description": "Cold import: person.affiliations naming an absent organization fails.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [{"op": "add", "path": "/records/rec-person-1/affiliations", "value": ["rec-org-9"]}]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["reference-target-absent"]}
+}

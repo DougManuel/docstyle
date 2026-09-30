@@ -1,0 +1,22 @@
+{
+  "description": "Cold import: a profile record failing its profile schema fails.",
+  "criteria": [3],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/records/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture"
+        }
+      }
+    ]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["profile-record-invalid"]}
+}

@@ -1,0 +1,13 @@
+{
+  "description": "Cold import: a table caption node id with no field envelope in the document fails.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {"op": "replace", "path": "/objects/tbl-outcomes/semantics/caption", "value": "g-caption-zzzzzz"}
+    ]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["semantics-node-ref-unresolved"]}
+}

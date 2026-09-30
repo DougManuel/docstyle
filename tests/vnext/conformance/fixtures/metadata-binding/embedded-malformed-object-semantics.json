@@ -1,0 +1,11 @@
+{
+  "description": "Cold import: noncanonical object semantics fails (schema layer).",
+  "criteria": [10],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [{"op": "replace", "path": "/objects/tbl-outcomes/semantics/label", "value": 5}]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["catalogue-schema"]}
+}

@@ -1,0 +1,15 @@
+{ "schemaVersion": 1, "profiles": {}, "relationships": [],
+  "records": [
+    { "id": "rec-document", "recordType": "document", "schemaVersion": 1,
+      "type": "protocol", "title": "Example protocol", "version": "2.1",
+      "abstract": { "region": "abstract" } },
+    { "id": "rec-person-1", "recordType": "person", "schemaVersion": 1,
+      "name": { "given": "Jane", "family": "Smith" } },
+    { "id": "rec-contact-1", "recordType": "contact", "schemaVersion": 1,
+      "privacy": "restricted", "email": "jane.smith@example.org" },
+    { "id": "contrib-1", "recordType": "contribution", "schemaVersion": 1,
+      "document": "rec-document", "person": "rec-person-1", "position": 1,
+      "contact": "rec-contact-1" },
+    { "id": "view-author-plate", "recordType": "metadata-view", "schemaVersion": 1,
+      "sourceCollection": { "recordType": "contribution", "orderBy": "position" },
+      "presentation": "block" } ] }

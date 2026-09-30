@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 7: a contact without privacy fails schema validation of the local records; it is never treated as public.",
+  "criteria": [7],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "remove", "path": "/registries/metadata/rec-contact-1/privacy"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["record-schema"]}
+}

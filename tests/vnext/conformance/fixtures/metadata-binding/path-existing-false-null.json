@@ -1,0 +1,89 @@
+{
+  "description": "Criterion 11 (positive): path existence is independent of value truthiness -- an existing false value (contrib-2.corresponding) and an existing JSON null (rec-person-2.name.suffix, an open sub-object) both resolve.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-suffix",
+          "type": "span",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-corr",
+          "type": "span",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-nested",
+          "type": "span",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {"op": "add", "path": "/registries/metadata/rec-person-2/name/suffix", "value": null},
+      {"op": "add", "path": "/registries/metadata/contrib-2/corresponding", "value": false},
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-suffix",
+        "value": {
+          "id": "view-suffix",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceRecord": "rec-person-2",
+          "path": "name.suffix",
+          "presentation": "span"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-corr",
+        "value": {
+          "id": "view-corr",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceRecord": "contrib-2",
+          "path": "corresponding",
+          "presentation": "span"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-nested",
+        "value": {
+          "id": "view-nested",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceRecord": "rec-document",
+          "path": "versionHistory",
+          "presentation": "table"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "present": ["views/view-corr", "views/view-suffix", "views/view-nested"]
+  }
+}

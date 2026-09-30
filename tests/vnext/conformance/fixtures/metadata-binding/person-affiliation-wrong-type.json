@@ -1,0 +1,12 @@
+{
+  "description": "person.affiliations must reference organizations.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/metadata/rec-person-1/affiliations", "value": ["rec-person-2"]}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-type"]}
+}

@@ -1,0 +1,17 @@
+{
+  "description": "Criterion 11: a boolean sort key is neither a finite number nor a string.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/metadata/contrib-2/corresponding", "value": false},
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/orderBy",
+        "value": "corresponding"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-sort-key-type"]}
+}

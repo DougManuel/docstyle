@@ -6,7 +6,10 @@
     { "$ref": "#/$defs/document" },
     { "$ref": "#/$defs/person" },
     { "$ref": "#/$defs/organization" },
-    { "$ref": "#/$defs/funding" }
+    { "$ref": "#/$defs/funding" },
+    { "$ref": "#/$defs/contribution" },
+    { "$ref": "#/$defs/contact" },
+    { "$ref": "#/$defs/metadata-view" }
   ],
   "$defs": {
     "document": {
@@ -69,7 +72,22 @@
           }
         },
         "language": { "type": "string" },
-        "abstract": { "type": "string" }
+        "abstract": {
+          "description": "Additive v1 revision (metadata-binding spec, section 1). Canonical form is the region reference {region: <section node id>}, whose target is the section node with role abstract and policy authored-preserve. The string form stays valid at rest as authoring input only: it is not canonical, the semantic validator passes it with a normalization warning, and the catalogue embedder refuses it.",
+          "oneOf": [
+            { "type": "string" },
+            { "$ref": "#/$defs/abstract-region" }
+          ]
+        }
+      }
+    },
+    "abstract-region": {
+      "description": "Canonical abstract: a reference to the content-tree section node that holds the abstract text. Node-id reference; resolves against the document's field-envelope ids at embed time.",
+      "type": "object",
+      "required": ["region"],
+      "additionalProperties": false,
+      "properties": {
+        "region": { "type": "string", "minLength": 1 }
       }
     },
     "person": {
@@ -90,6 +108,8 @@
         },
         "orcid": { "type": "string", "pattern": "^[0-9]{4}[-][0-9]{4}[-][0-9]{4}[-][0-9]{3}[0-9X]$" },
         "roles": {
+          "description": "Deprecated (metadata-binding spec, section 3): still valid, warned on, and migrated by the WP3 normalizer to contribution.roles. The person record keeps identity only.",
+          "deprecated": true,
           "type": "array",
           "items": { "enum": ["conceptualization", "data-curation", "formal-analysis",
             "funding-acquisition", "investigation", "methodology",
@@ -97,8 +117,15 @@
             "validation", "visualization", "writing-original-draft",
             "writing-review-editing"] }
         },
-        "corresponding": { "type": "boolean" },
-        "affiliations": { "type": "array", "items": { "type": "string" } }
+        "corresponding": {
+          "description": "Deprecated (metadata-binding spec, section 3): still valid, warned on, and migrated by the WP3 normalizer to contribution.corresponding.",
+          "deprecated": true,
+          "type": "boolean"
+        },
+        "affiliations": {
+          "description": "Closure-required references to organization records. (Not in the metadata-binding spec's section 6 list; classified closure-required under its fail-closed rule, pending spec review.)",
+          "type": "array", "items": { "type": "string" }
+        }
       }
     },
     "organization": {
@@ -121,9 +148,96 @@
         "recordType": { "const": "funding" },
         "schemaVersion": { "type": "integer", "minimum": 1 },
         "privacy": { "enum": ["public", "restricted"] },
-        "funder": { "type": "string" },
+        "funder": { "description": "Closure-required reference to an organization record. (Not in the metadata-binding spec's section 6 list; classified closure-required under its fail-closed rule, pending spec review.)", "type": "string" },
         "grant": { "type": "string" }
       }
+    },
+    "contribution": {
+      "description": "Additive v1 revision (metadata-binding spec, section 3): one ordered, document-specific authorship fact, separating per-document authorship from person identity. position is unique per document; the semantic validator enforces that, not this schema.",
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "document", "person", "position"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "const": "contribution" },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "privacy": { "enum": ["public", "restricted"] },
+        "document": { "description": "Closure-required reference to a document record.", "type": "string", "minLength": 1 },
+        "person": { "description": "Closure-required reference to a person record.", "type": "string", "minLength": 1 },
+        "position": { "description": "1-based author order; unique per document (semantic validator).", "type": "integer", "minimum": 1 },
+        "roles": {
+          "type": "array",
+          "items": { "enum": ["conceptualization", "data-curation", "formal-analysis",
+            "funding-acquisition", "investigation", "methodology",
+            "project-administration", "resources", "software", "supervision",
+            "validation", "visualization", "writing-original-draft",
+            "writing-review-editing"] }
+        },
+        "corresponding": { "type": "boolean" },
+        "contact": { "description": "Prunable reference to a contact record: the embedder removes the whole property when the contact is restricted.", "type": "string", "minLength": 1 },
+        "equalContributionGroup": { "description": "Contributions sharing a group string contributed equally.", "type": "string", "minLength": 1 },
+        "affiliations": {
+          "description": "Closure-required ordered references to organization records.",
+          "type": "array", "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "contact": {
+      "description": "Additive v1 revision (metadata-binding spec, section 3): restricted PII kept off the public contribution record. privacy is required -- a missing privacy field would otherwise read as public and publish the email. The normalizer writes restricted unless the author sets email-public: true.",
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "privacy", "email"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "const": "contact" },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "privacy": { "enum": ["public", "restricted"] },
+        "email": { "type": "string", "minLength": 1 }
+      }
+    },
+    "metadata-view": {
+      "description": "Additive v1 revision (metadata-binding spec, section 2): binds one rendered generated region (one record per rendered occurrence; its id is the region's field-envelope id) to exactly one source -- a single record plus dotted path, or a typed, document-scoped, ordered collection. Views are terminal: they are never sources of other views. presentation is a rendering hint, never authority.",
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["id", "recordType", "schemaVersion", "sourceRecord", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "recordType": { "const": "metadata-view" },
+            "schemaVersion": { "type": "integer", "minimum": 1 },
+            "privacy": { "enum": ["public", "restricted"] },
+            "sourceRecord": { "description": "Closure-required reference to an authority record (never a metadata-view).", "type": "string", "minLength": 1 },
+            "path": { "description": "Dotted path of nonempty object-property segments into sourceRecord; empty selects the whole record. No array indexing or wildcards. Resolved by the semantic validator against the projected record.", "type": "string" },
+            "presentation": { "$ref": "#/$defs/presentation" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["id", "recordType", "schemaVersion", "sourceCollection"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "recordType": { "const": "metadata-view" },
+            "schemaVersion": { "type": "integer", "minimum": 1 },
+            "privacy": { "enum": ["public", "restricted"] },
+            "sourceCollection": {
+              "description": "Closure-required collection: every record of recordType whose document field equals the catalogue document, sorted ascending by orderBy, ties broken by record id.",
+              "type": "object",
+              "required": ["recordType", "orderBy"],
+              "additionalProperties": false,
+              "properties": {
+                "recordType": { "type": "string", "minLength": 1 },
+                "orderBy": { "type": "string", "minLength": 1 }
+              }
+            },
+            "presentation": { "$ref": "#/$defs/presentation" }
+          }
+        }
+      ]
+    },
+    "presentation": {
+      "description": "Rendering hint for a metadata view; never authority.",
+      "enum": ["span", "block", "section", "table"]
     }
   }
 }

@@ -1,0 +1,17 @@
+{
+  "description": "Section 3: the embedded catalogue is compared with public_projection(local state): the pruned contribution matches its projected local counterpart (same id, same projected bytes) and is not a contradiction.",
+  "criteria": [3],
+  "operation": "reconcile",
+  "model": {"$base": "bases/local-model.json", "$patch": []},
+  "catalogue": {"$base": "bases/pre-embed-catalogue.json", "$patch": []},
+  "expect": {
+    "ok": true,
+    "outcomes": {
+      "records/contrib-1": "agree",
+      "records/contrib-2": "agree",
+      "views/view-author-plate": "agree",
+      "assets/asset-flow": "agree"
+    },
+    "rawDiffers": ["contrib-1"]
+  }
+}

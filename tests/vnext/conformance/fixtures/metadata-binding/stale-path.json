@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 11: a view path whose property does not exist on the source record fails in embedded validation.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/g-span-k3m7ap/path", "value": "edition"}]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["view-path-unresolved"]}
+}

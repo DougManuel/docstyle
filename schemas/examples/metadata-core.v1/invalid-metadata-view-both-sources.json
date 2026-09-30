@@ -1,0 +1,4 @@
+{ "id": "view-author-plate", "recordType": "metadata-view", "schemaVersion": 1,
+  "sourceRecord": "rec-document", "path": "version",
+  "sourceCollection": { "recordType": "contribution", "orderBy": "position" },
+  "presentation": "block" }

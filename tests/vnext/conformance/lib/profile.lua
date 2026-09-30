@@ -84,6 +84,12 @@ local function profile_schema_id(profile_id)
   return SCHEMA_BASE .. "/profiles/" .. name .. ".v1.json"
 end
 
+-- Exported for lib/catalogue.lua, which validates the namespaced
+-- `semantics.profiles` extension values of table and figure nodes against
+-- the same derived profile schema (metadata-binding spec, section 4)
+-- rather than re-deriving the convention.
+M.schema_id = profile_schema_id
+
 -- Accepts either a plain array of ids (integer-keyed, e.g.
 -- {"docstyle:fixture"}) or an already-built set (string key -> truthy).
 -- ipairs() alone would silently see zero entries in a set-shaped table
