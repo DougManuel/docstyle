@@ -15,6 +15,10 @@
 --   DOCSTYLE_SURVEY_DIR=~/Documents \
 --     quarto run dev/vnext/package-core/part-size-survey.lua
 --
+-- DOCSTYLE_SURVEY_FILES names a file listing one .docx path per line
+-- instead, for trees too slow to walk (cloud-synced folders); build it
+-- with Spotlight, e.g. `mdfind -onlyin <dir> 'kMDItemFSName == "*.docx"'`.
+--
 -- Folder mode prints one aggregate JSON object and never a file name, part
 -- name or content, so its output is safe to share or commit. Sizes come
 -- from pandoc.zip, independently of the package core, so documents the
@@ -85,24 +89,11 @@ local function largest_xml_part(bytes)
   return largest
 end
 
-local function survey_directory(dir)
-  local found = collect_docx(dir)
+local function survey_files(found)
   table.sort(found)
-  -- Byte-identical copies (checkouts, worktrees, backups) count once.
-  local documents, seen = {}, {}
-  for _, path in ipairs(found) do
-    local handle = assert(io.open(path, "rb"))
-    local bytes = handle:read("a")
-    handle:close()
-    local digest = pandoc.utils.sha1(bytes)
-    if not seen[digest] then
-      seen[digest] = true
-      documents[#documents + 1] = { path = path, bytes = bytes }
-    end
-  end
   local result = {
     files_found = #found,
-    documents = #documents,
+    documents = 0,
     unreadable_archives = 0,
     largest_xml_part_bytes = 0,
     documents_with_largest_xml_part_above_mib = {},
@@ -111,38 +102,65 @@ local function survey_directory(dir)
   for _, threshold in ipairs(THRESHOLDS_MIB) do
     result.documents_with_largest_xml_part_above_mib[tostring(threshold)] = 0
   end
-  for _, document in ipairs(documents) do
-    local path = document.path
-    local largest = largest_xml_part(document.bytes)
-    document.bytes = nil
-    if largest == nil then
+  -- Streams one document at a time; byte-identical copies (checkouts,
+  -- worktrees, backups) count once.
+  local seen = {}
+  for index, path in ipairs(found) do
+    if index % 100 == 0 then
+      io.stderr:write(("[survey] %d of %d files\n"):format(index, #found))
+    end
+    local handle = io.open(path, "rb")
+    local bytes = handle and handle:read("a")
+    if handle then handle:close() end
+    local digest = bytes and pandoc.utils.sha1(bytes)
+    if bytes == nil then
       result.unreadable_archives = result.unreadable_archives + 1
-    else
-      result.largest_xml_part_bytes =
-        math.max(result.largest_xml_part_bytes, largest)
-      for _, threshold in ipairs(THRESHOLDS_MIB) do
-        if largest > threshold * MIB then
-          local key = tostring(threshold)
-          result.documents_with_largest_xml_part_above_mib[key] =
-            result.documents_with_largest_xml_part_above_mib[key] + 1
+    elseif not seen[digest] then
+      seen[digest] = true
+      result.documents = result.documents + 1
+      local largest = largest_xml_part(bytes)
+      bytes = nil
+      if largest == nil then
+        result.unreadable_archives = result.unreadable_archives + 1
+      else
+        result.largest_xml_part_bytes =
+          math.max(result.largest_xml_part_bytes, largest)
+        for _, threshold in ipairs(THRESHOLDS_MIB) do
+          if largest > threshold * MIB then
+            local key = tostring(threshold)
+            result.documents_with_largest_xml_part_above_mib[key] =
+              result.documents_with_largest_xml_part_above_mib[key] + 1
+          end
         end
       end
-    end
-    local ok, err = pcall(core.open, path, LIMITS)
-    if ok then
-      result.core_open.opened = result.core_open.opened + 1
-    else
-      local code = type(err) == "table" and err.code or "internal.lua-error"
-      result.core_open.refused_by_code[code] =
-        (result.core_open.refused_by_code[code] or 0) + 1
+      local ok, err = pcall(core.open, path, LIMITS)
+      if ok then
+        result.core_open.opened = result.core_open.opened + 1
+      else
+        local code = type(err) == "table" and err.code or "internal.lua-error"
+        result.core_open.refused_by_code[code] =
+          (result.core_open.refused_by_code[code] or 0) + 1
+      end
+      collectgarbage()
     end
   end
   return result
 end
 
+local survey_list = os.getenv("DOCSTYLE_SURVEY_FILES")
+if survey_list and survey_list ~= "" then
+  local found = {}
+  for line in io.lines(survey_list) do
+    if line:match("%.docx$") and not line:match("/~%$[^/]*$") then
+      found[#found + 1] = line
+    end
+  end
+  print(pandoc.json.encode(survey_files(found)))
+  return
+end
 local survey_dir = os.getenv("DOCSTYLE_SURVEY_DIR")
 if survey_dir and survey_dir ~= "" then
-  print(pandoc.json.encode(survey_directory(survey_dir)))
+  print(pandoc.json.encode(survey_files(collect_docx(survey_dir))))
   return
 end
 

@@ -1,29 +1,55 @@
 {
-  "corpus": "one researcher's local git repositories (~/github): research protocols, manuscripts, reports, CVs and supplementary material; byte-identical copies counted once",
-  "documents_rejected_by_limit": 0,
-  "issue": "#53",
-  "limit_bytes": 8388608,
-  "method": "DOCSTYLE_SURVEY_DIR=<dir> quarto run dev/vnext/package-core/part-size-survey.lua (aggregate only; no file names, part names or content)",
-  "result": {
-    "core_open": {
-      "opened": 210,
-      "refused_by_code": {
-        "opc.invalid-part-name": 4,
-        "zip.invalid-name": 2
+  "corpora": [
+    {
+      "description": "one researcher's local git repositories (~/github): protocols, manuscripts, reports, CVs, supplementary material",
+      "documents_rejected_by_limit": 0,
+      "name": "local-repositories",
+      "result": {
+        "core_open": {
+          "opened": 216,
+          "refused_by_code": {}
+        },
+        "documents": 216,
+        "documents_with_largest_xml_part_above_mib": {
+          "1": 7,
+          "16": 0,
+          "2": 1,
+          "4": 0,
+          "8": 0
+        },
+        "files_found": 493,
+        "largest_xml_part_bytes": 2704630,
+        "unreadable_archives": 0
       }
     },
-    "documents": 216,
-    "documents_with_largest_xml_part_above_mib": {
-      "1": 7,
-      "16": 0,
-      "2": 1,
-      "4": 0,
-      "8": 0
-    },
-    "files_found": 477,
-    "largest_xml_part_bytes": 2704630,
-    "unreadable_archives": 0
-  },
-  "schema_version": 1,
+    {
+      "description": "the same researcher's Google Drive .docx files already stored on disk (1,499 of 1,633 local copies, in path order; the remaining 134 and 14,000 cloud-only files were not surveyed -- reads stalled in that region of the sync folder, and a full survey would download 5.4 GB)",
+      "documents_rejected_by_limit": 0,
+      "name": "cloud-drive-local-copies",
+      "result": {
+        "core_open": {
+          "opened": 1213,
+          "refused_by_code": {
+            "opc.invalid-relationship-target": 2
+          }
+        },
+        "documents": 1215,
+        "documents_with_largest_xml_part_above_mib": {
+          "1": 74,
+          "16": 0,
+          "2": 8,
+          "4": 0,
+          "8": 0
+        },
+        "files_found": 1499,
+        "largest_xml_part_bytes": 2672829,
+        "unreadable_archives": 0
+      }
+    }
+  ],
+  "issue": "#53",
+  "limit_bytes": 8388608,
+  "method": "quarto run dev/vnext/package-core/part-size-survey.lua with DOCSTYLE_SURVEY_DIR=<dir> or DOCSTYLE_SURVEY_FILES=<list>; aggregate only, no file names, part names or content; byte-identical copies counted once",
+  "schema_version": 2,
   "surveyed": "2026-09-30"
 }
