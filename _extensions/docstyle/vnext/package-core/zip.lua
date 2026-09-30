@@ -191,6 +191,18 @@ local function validate_entry_name(name, context)
   if count == 0 then raise("zip.invalid-name", "empty OPC part name", context) end
 end
 
+-- Archive entries that are not OPC parts (#54). Word ignores both: empty
+-- directory entries some tools write (`word/`), and the placeholders Word
+-- leaves after some saves, named exactly `[trash]/` + four digits + `.dat`.
+-- Anything that merely resembles the trash form stays an ordinary name.
+local OFFICE_TRASH_NAME = "^%[trash%]/%d%d%d%d%.dat$"
+
+local function ignored_kind(name)
+  if name:sub(-1) == "/" then return "directory" end
+  if name:match(OFFICE_TRASH_NAME) then return "office-trash" end
+  return nil
+end
+
 local function parse_eocd(bytes, offset, comment_length)
   local eocd = {
     start = offset,
@@ -403,7 +415,13 @@ local function parse_central_entries(bytes, eocd, limits)
     local raw_name = binary.slice(bytes, offset + 46, name_length, context)
     context.entry = raw_name
     local name = decode_name(raw_name, flags, context)
-    validate_entry_name(name, context)
+    local ignored = ignored_kind(name)
+    if ignored == "directory" then
+      -- The name must be safe once its trailing separator is removed.
+      validate_entry_name(name:sub(1, -2), context)
+    elseif ignored == nil then
+      validate_entry_name(name, context)
+    end
 
     if exact_names[name] then
       raise("zip.duplicate-name", "duplicate ZIP entry name", { entry = name })
@@ -482,6 +500,12 @@ local function parse_central_entries(bytes, eocd, limits)
     if (unix_mode & 0xF000) == 0xA000 then
       raise("zip.symlink-entry", "symlink ZIP entry is unsupported", { entry = name })
     end
+    if ignored == "directory" and uncompressed_size ~= 0 then
+      raise("zip.invalid-name", "directory entry carries data", {
+        entry = name,
+        uncompressed_size = uncompressed_size,
+      })
+    end
     if uncompressed_size > limits.max_entry_uncompressed_bytes then
       raise("zip.entry-size-limit", "ZIP entry size limit exceeded", {
         entry = name,
@@ -523,6 +547,7 @@ local function parse_central_entries(bytes, eocd, limits)
       uses_zip64 = uses_zip64,
       uses_zip64_sizes = uses_zip64_sizes,
       central_span = { start = offset, finish = record_finish },
+      ignored = ignored,
     }
     offset = record_finish
   end

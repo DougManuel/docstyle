@@ -194,7 +194,8 @@ end
 function Package:_effective_case_collision(zip_name)
   local folded = ascii_lower(normalize_percent_hex(zip_name))
   for _, entry in ipairs(self.entries) do
-    if ascii_lower(normalize_percent_hex(entry.name)) == folded then
+    if not entry.ignored and
+        ascii_lower(normalize_percent_hex(entry.name)) == folded then
       return entry.name
     end
   end
@@ -209,10 +210,17 @@ end
 -- The single iterator every consumer uses: ordered effective entries with
 -- name, kind and bytes. The writer derives modtime from kind (original
 -- entries keep their backend modtime; added entries use the fixed constant).
+-- Ignored archive entries (#54) are not parts and never appear; each
+-- original carries its archive index so the writer can still align it with
+-- the backend's entry list.
 function Package:_effective_entries()
   local result = {}
-  for _, entry in ipairs(self.entries) do
-    result[#result + 1] = { name = entry.name, kind = "original" }
+  for index, entry in ipairs(self.entries) do
+    if not entry.ignored then
+      result[#result + 1] = {
+        name = entry.name, kind = "original", archive_index = index,
+      }
+    end
   end
   local added = {}
   for zip_name in pairs(self._additions) do added[#added + 1] = zip_name end
@@ -798,6 +806,18 @@ local function copy_relationship_records(records)
   return copies
 end
 
+-- Archive entries that are not parts (#54), in archive order. Publication
+-- drops them and reports this same list.
+function Package:ignored_entries()
+  local result = {}
+  for _, entry in ipairs(self.entries) do
+    if entry.ignored then
+      result[#result + 1] = { name = entry.name, kind = entry.ignored }
+    end
+  end
+  return result
+end
+
 function Package:inventory()
   local metadata, parts, content_types = {}, {}, {}
   for _, zip_name in ipairs(self:_effective_names()) do
@@ -825,6 +845,7 @@ function Package:inventory()
     parts = parts,
     content_types = content_types,
     relationships = relationships,
+    ignored = self:ignored_entries(),
   }
 end
 
@@ -887,19 +908,22 @@ function M.open_path(path, limits)
   local entries_by_name = {}
   local entries_by_normalized_name = {}
   for _, entry in ipairs(validated.entries) do
-    if entry.name ~= "[Content_Types].xml" then
-      zip_name_for_part("/" .. entry.name)
+    -- Ignored entries (#54) are not parts: no part-name rules, no lookup.
+    if not entry.ignored then
+      if entry.name ~= "[Content_Types].xml" then
+        zip_name_for_part("/" .. entry.name)
+      end
+      entries_by_name[entry.name] = entry
+      local normalized_name = normalize_percent_hex(entry.name)
+      if entries_by_normalized_name[normalized_name] then
+        raise("opc.duplicate-normalized-part-name",
+          "package entries collide after percent-hex normalization", {
+            entry = entry.name,
+            other = entries_by_normalized_name[normalized_name].name,
+          })
+      end
+      entries_by_normalized_name[normalized_name] = entry
     end
-    entries_by_name[entry.name] = entry
-    local normalized_name = normalize_percent_hex(entry.name)
-    if entries_by_normalized_name[normalized_name] then
-      raise("opc.duplicate-normalized-part-name",
-        "package entries collide after percent-hex normalization", {
-          entry = entry.name,
-          other = entries_by_normalized_name[normalized_name].name,
-        })
-    end
-    entries_by_normalized_name[normalized_name] = entry
   end
   local package = setmetatable({
     path = path,

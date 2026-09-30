@@ -72,9 +72,9 @@ local function reserve_directory(destination_directory)
 end
 
 -- The writer consumes ONLY the effective view (single-view invariant): it
--- never inspects pkg._additions directly. Original entries always precede
--- additions in the iterator, so metadata_archive.entries[index] stays
--- aligned for the kind == "original" prefix.
+-- never inspects pkg._additions directly. Each original entry carries its
+-- archive index, which stays aligned with metadata_archive.entries even
+-- when ignored entries (#54) are skipped.
 local function archive_entries(pkg)
   local metadata_archive = pandoc.zip.Archive(pkg._archive_bytes)
   -- Backend agreement is still checked against the ORIGINAL entries; the
@@ -88,8 +88,9 @@ local function archive_entries(pkg)
   end
 
   local entries = {}
-  for index, effective in ipairs(pkg:_effective_entries()) do
+  for _, effective in ipairs(pkg:_effective_entries()) do
     if effective.kind == "original" then
+      local index = effective.archive_index
       local metadata = metadata_archive.entries[index]
       if metadata.path ~= effective.name then
         raise("publication.backend-mismatch",
@@ -207,6 +208,8 @@ local function publish(pkg, output_path, options)
     return {
       output_path = output_path,
       entry_count = #verified.entries,
+      -- Archive entries that are not parts are dropped, never silently.
+      dropped_entries = pkg:ignored_entries(),
     }
   end)
 
