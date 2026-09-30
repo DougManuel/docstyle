@@ -66,12 +66,14 @@ target and WP4 a precise field-code and catalogue rendering contract.
 The WP1 schemas are merged v1 contracts. Every change in this specification
 is an **additive v1 revision**: new optional fields, new record types added
 to the record dispatch, and new `$defs`. No existing required field changes
-meaning and no existing valid instance becomes invalid, with one deliberate,
-declared exception: the abstract canonical-form rule (a warning only).
-The typed table and figure semantics live in a **new** closed `semantics`
-node field rather than closing the existing open `attrs` object — closing
-`attrs` would have invalidated previously valid v1 documents, contradicting
-this rule. Each change ships with
+meaning and no existing schema-valid instance becomes invalid. The v1 node
+and asset definitions are open, so previously valid values at `semantics`
+and `credit` remain schema-valid at rest. Neither property gains a restrictive
+schema constraint in v1. Canonical normalization and catalogue embedding
+apply the typed contracts below; a noncanonical value produces a warning
+at rest and prevents embedding until explicitly normalized. It is never
+silently discarded or reinterpreted. The abstract string has the same
+at-rest versus canonical distinction. Each implemented change ships with
 valid and invalid examples under `schemas/examples/`, which the WP1
 conformance runner validates automatically. A future change that would
 break an existing valid instance mints a v2 schema; nothing in this
@@ -102,7 +104,7 @@ The DOCX field wraps the visible abstract with `kind: "section"`,
 return, edits to the abstract are authored-content edits and become
 proposed QMD patches like any other authored region.
 
-The exception to strict additivity: a document record whose `abstract` is a
+The canonical-form boundary: a document record whose `abstract` is a
 string is valid at rest but is not canonical; validation passes it with a
 normalization warning rather than failing it. The catalogue embedder
 refuses the string form, because embedding it would duplicate authored
@@ -271,17 +273,23 @@ backend maps directly.
 
 ## 4. Typed table and figure attributes
 
-**Decision.** The typed semantics live in a **new optional node field**,
-`semantics`, validated conditionally by node type against
-`$defs/table-semantics` and `$defs/figure-semantics`. The conditional is
-encoded with the conformance validator's **supported vocabulary** — a
-`oneOf` over node shapes (table node with table semantics, figure node
-with figure semantics, any other node without a `semantics` constraint) —
-because the WP1 Lua validator implements `oneOf`/`anyOf` but not
-`if`/`then` or `allOf`; no validator extension is required. The existing open
-`attrs` object is untouched — it remains the home for loose, harvested or
-transitional data — so every previously valid v1 document stays valid and
-the change is genuinely additive. The `semantics` object is **closed**
+**Decision.** Canonical table and figure nodes use the optional `semantics`
+property. The v1 node schema leaves that property unconstrained. New
+`$defs/table-semantics` and `$defs/figure-semantics` define the canonical
+forms without being attached as restrictive v1 node properties. The
+semantic validator dispatches by node type and validates present semantics
+against the appropriate definition before embedding. The new catalogue
+schema also applies those definitions to its table and figure objects.
+Missing semantics is permitted at rest; public figures must still satisfy
+the embed-time alt-text requirement below.
+
+A legacy table with `semantics: "legacy-value"` therefore remains valid
+against `document-model.v1.json`, produces a normalization warning and
+fails embedding until explicitly normalized. No permissive fallback is
+allowed in canonical validation: malformed newly generated semantics must
+fail too. The same rule applies to a legacy asset `credit` value; canonical
+credit uses the string-or-record-reference form below. The open `attrs`
+object is untouched. Canonical semantics is **closed**
 (`additionalProperties: false`) so typos and collisions fail validation;
 extension happens only through a namespaced container: an optional
 `profiles` object keyed by registered profile identifier, whose values are
@@ -417,8 +425,9 @@ Reference fields are classified once, in the schema descriptions:
   whose closure reaches a restricted or absent target is an **embed-time
   error**; the author resolves it by making the target public or removing
   the reference. Embedding must fail closed, never ship a dangling id.
-  Resolution scopes: record ids resolve against the catalogue's `records`
-  and `views`; `asset` resolves against the catalogue's `assets`
+  Resolution scopes: authority record ids resolve against the catalogue's
+  `records`, which excludes metadata-view records. Views occur only in
+  `views` and cannot be sources of other views. `asset` resolves against the catalogue's `assets`
   container; node-id references inside `semantics` (`caption`, `notes`)
   resolve against the document's field-envelope ids at embed time — the
   content tree is carried by the document itself, never duplicated into
@@ -428,6 +437,36 @@ Reference fields are classified once, in the schema descriptions:
   the embedded copy — never just the nested `record` key, which would
   leave an invalid empty object — and ships the record without it. This is
   how a public contribution ships without its restricted email.
+
+Presence alone is insufficient. The semantic validator enforces these
+target types: `catalogue.document` and `contribution.document` reference
+document records; `person` references a person; `affiliations` references
+organizations; `contact` references a contact; and figure `asset` references
+an asset. It checks contact target types before pruning restricted contacts.
+Missing targets are errors, including for prunable references: only a known
+restricted target permits pruning. Record-reference provenance and credit
+resolve to records, never views.
+
+For `sourceRecord`, an empty path selects the whole authority record.
+Otherwise, a dotted path consists of nonempty object-property segments,
+each of which must exist; array indexing and wildcard queries are unsupported.
+Existence is independent of value truthiness. Path validation runs against
+the projected record, so a path removed by privacy pruning fails embedding.
+View-to-view references, self-references and view cycles are invalid.
+
+Collections select records whose type matches `recordType` and whose
+`document` equals `catalogue.document`. The record type must be registered
+and document-scoped. Selection is evaluated before privacy projection;
+a selected restricted member fails closure instead of silently disappearing.
+Every selected member must have the declared `orderBy` property, with
+uniform finite-number or string values. Sort ascending (strings by UTF-8
+byte order), breaking ties by record id. Contribution positions remain
+unique per document. Empty collections are permitted.
+
+Embedding validates local records and reference target types first,
+computes `public_projection` and prunes known restricted prunable targets,
+then validates the resulting catalogue schema, canonical semantics, paths
+and reference closure. Restricted records never validate as embedded output.
 
 The semantic validator also enforces what JSON Schema cannot:
 contribution `position` values are unique per document (a
@@ -529,15 +568,19 @@ the record and every view of it.
 | `metadata-core.v1.json` | `document.abstract` becomes `oneOf [string, {region}]` | additive (widening) |
 | `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection; one record per rendered occurrence), `$defs/contribution` (with `contact` reference; `position` unique per document via the semantic validator), `$defs/contact` (**`privacy` required** — the normalizer writes `restricted` explicitly unless `email-public` consent); all join the record dispatch | additive |
 | `metadata-core.v1.json` | `person.roles`, `person.corresponding` marked deprecated in descriptions | additive |
-| `document-model.v1.json` | new optional `node.semantics` field + `$defs/table-semantics`, `$defs/figure-semantics` (closed; namespaced `profiles` container; `notes` as node ids; `provenance`/`credit` as `oneOf [string, {record}]`); conditional typing encoded as `oneOf` over node shapes (the WP1 Lua validator has `oneOf`/`anyOf`, no `if`/`then`/`allOf`); the open `attrs` object is untouched | additive |
-| `document-model.v1.json` | asset gains optional `credit` | additive |
+| `document-model.v1.json` | add canonical `$defs/table-semantics`, `$defs/figure-semantics` (closed, with namespaced profiles); leave `node.semantics` unconstrained at rest; semantic validator and catalogue schema apply the definitions before embedding | additive definitions |
+| `document-model.v1.json` | document canonical asset `credit` as string or record reference; leave existing arbitrary values schema-valid at rest and validate canonical credit before embedding | additive definitions |
 | `catalogue.v1.json` | new schema: `records`, `views`, `objects` (public projection of table/figure node semantics) and `assets` containers | new file |
-| conformance runner | semantic validator beside the JSON Schema checks: reference closure (closure-required vs prunable classes, scoped resolution), whole-property pruning, contribution-position uniqueness, catalogue-vs-`public_projection(local state)` reconciliation | new validator |
+| conformance runner | semantic validator: canonical semantics and credit, typed reference closure, terminal view authority, projected path resolution, collection scope and ordering, whole-property pruning, contribution-position uniqueness, catalogue-vs-`public_projection(local state)` reconciliation | new validator |
 | `schemas/examples/…` | valid + invalid examples for every change above | new files |
 | `field-envelope.v4.json` | none | — |
 | `dev/vnext/wp1-legacy-coverage.md` | correction note on the table-policy row | audit amendment |
 
 ## Acceptance criteria
+
+These are implementation acceptance criteria for the subsequent schema,
+normalizer and embedder work. This specification PR defines the contracts
+and fixture locations; it does not claim to implement those fixtures.
 
 1. Every schema change validates its new valid examples and rejects its
    new invalid examples in the WP1 conformance run; every pre-existing
@@ -546,11 +589,13 @@ the record and every view of it.
    in, region-form record + `#abstract` section out, envelope
    `section/abstract/authored-preserve`, and the string form refused by
    the catalogue embedder.
-3. A fixture catalogue containing a document record, two contributions in
-   order, one metadata view, one restricted contact record and one
-   restricted unrelated record validates against `catalogue.v1.json`; the
-   restricted records are absent from the embedded output and the
-   contributions' `contact` references are pruned.
+3. A local pre-embed fixture contains a document record, two ordered
+   contributions, a metadata view, a restricted contact and an unrelated
+   restricted record. Validate the local records, then project and prune.
+   The separate embedded output validates against `catalogue.v1.json` and
+   semantic closure: both restricted records are absent and the associated
+   contribution contact property is absent. The unprojected input must
+   fail embedded-catalogue validation.
 4. A negative closure fixture — a public contribution whose `person` is
    restricted — **fails** embedding through the semantic closure
    validator.
@@ -570,6 +615,16 @@ the record and every view of it.
    `assets` containers.
 9. This specification names no WP3/WP4 implementation behaviour beyond the
    contracts above (scope check at review).
+10. Legacy arbitrary table/figure `semantics` and asset `credit` values
+    still pass v1 schema validation, produce normalization warnings and
+    fail canonical embedding. Explicitly normalized equivalents embed;
+    newly generated malformed semantics fails canonical validation too.
+11. Negative binding fixtures reject wrong target types, absent targets
+    (including prunable ones), stale or pruned paths, view self-references
+    and cycles, unregistered collection types, missing or mixed-type sort
+    keys and selected restricted members. Positive cases cover empty paths,
+    existing false/null values, empty collections, deterministic tie order
+    and exclusion of records belonging to a different document.
 
 Fixture homes and commands: schema examples live under
 `schemas/examples/<schema-name>/` (`valid-*.json` / `invalid-*.json`, the
@@ -585,5 +640,5 @@ quarto run tests/vnext/conformance/run.lua
 
 - Source of record for the gap analysis: `dev/vnext/metadata-binding-notes.md`.
 - WP1 contracts: `docs/superpowers/specs/2026-07-14-docstyle-vnext-wp1-schemas-state-design.md`; schemas under `schemas/`.
-- WP2 package-core write primitives (catalogue carrier consumer): PR #48, which carries `docs/superpowers/specs/2026-08-06-docstyle-vnext-wp2-package-core-design.md` (the path lands on `main` when #48 merges).
+- WP2 package-core write primitives (catalogue carrier consumer): `docs/superpowers/specs/2026-08-06-docstyle-vnext-wp2-package-core-design.md`, merged in PR #48.
 - Programme specification: `docs/superpowers/specs/2026-07-12-docstyle-vnext-rebuild-design.md`.
