@@ -1,0 +1,948 @@
+-- WP2 package core: bounded OPC package seam (parts, relationships, publish).
+local diagnostic = require("lib.diagnostic")
+local entry_reader = require("entry")
+local zip_preflight = require("zip")
+local xml_adapter = require("xml.adapter")
+
+local M = {}
+
+local REQUIRED_LIMITS = {
+  "max_archive_bytes",
+  "max_entries",
+  "max_entry_uncompressed_bytes",
+  "max_total_uncompressed_bytes",
+  "max_compression_ratio",
+  "max_materialized_bytes",
+}
+
+local Package = {}
+Package.__index = Package
+
+local CONTENT_TYPES_NS =
+  "http://schemas.openxmlformats.org/package/2006/content-types"
+local RELATIONSHIPS_NS =
+  "http://schemas.openxmlformats.org/package/2006/relationships"
+local RELATIONSHIPS_CONTENT_TYPE =
+  "application/vnd.openxmlformats-package.relationships+xml"
+local OFFICE_DOCUMENT_TYPES = {
+  ["http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"] = true,
+  ["http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"] = true,
+}
+local CORE_PROPERTIES_TYPE =
+  "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
+
+local function raise(code, message, context)
+  diagnostic.raise(code, message, context)
+end
+
+local function validate_limits(limits)
+  if type(limits) ~= "table" then
+    raise("opc.invalid-limits", "OPC limits object is required", {
+      phase = "limits",
+    })
+  end
+  for _, name in ipairs(REQUIRED_LIMITS) do
+    local value = limits[name]
+    if math.type(value) ~= "integer" or value < 0 then
+      raise("opc.invalid-limits",
+        "OPC limit must be a non-negative integer", {
+          phase = "limits",
+          limit_name = name,
+          value = value,
+        })
+    end
+  end
+end
+
+local function copy_limits(limits)
+  local copied = {}
+  for _, name in ipairs(REQUIRED_LIMITS) do copied[name] = limits[name] end
+  return copied
+end
+
+local function ascii_lower(value)
+  return (value:gsub("[A-Z]", function(char)
+    return string.char(char:byte() + 32)
+  end))
+end
+
+local function is_ascii_unreserved(octet)
+  return (octet >= 0x41 and octet <= 0x5A) or
+    (octet >= 0x61 and octet <= 0x7A) or
+    (octet >= 0x30 and octet <= 0x39) or
+    octet == 0x2D or octet == 0x2E or octet == 0x5F or octet == 0x7E
+end
+
+local function is_ascii_pchar(octet)
+  return is_ascii_unreserved(octet) or
+    octet == 0x21 or octet == 0x24 or octet == 0x26 or octet == 0x27 or
+    octet == 0x28 or octet == 0x29 or octet == 0x2A or octet == 0x2B or
+    octet == 0x2C or octet == 0x3B or octet == 0x3D or octet == 0x3A or
+    octet == 0x40
+end
+
+local function normalize_percent_hex(value)
+  return (value:gsub("%%([0-9A-Fa-f][0-9A-Fa-f])", function(encoded)
+    return "%" .. encoded:upper()
+  end))
+end
+
+local function zip_name_for_part(part_name)
+  if type(part_name) ~= "string" or part_name:sub(1, 1) ~= "/" or
+      part_name:sub(2, 2) == "/" or #part_name < 2 then
+    raise("opc.invalid-part-name",
+      "OPC part name must have exactly one leading slash", {
+        part_name = part_name,
+      })
+  end
+  local zip_name = part_name:sub(2)
+  if zip_name == "[Content_Types].xml" or
+      zip_name:find("\\", 1, true) or zip_name:find("\0", 1, true) or
+      zip_name:find("?", 1, true) or zip_name:find("#", 1, true) or
+      utf8.len(zip_name) == nil then
+    raise("opc.invalid-part-name", "invalid OPC part name", {
+      part_name = part_name,
+    })
+  end
+  for segment in (zip_name .. "/"):gmatch("(.-)/") do
+    if segment == "" or segment == "." or segment == ".." or
+        segment:sub(-1) == "." then
+      raise("opc.invalid-part-name", "invalid OPC part-name segment", {
+        part_name = part_name,
+      })
+    end
+    local cursor = 1
+    while cursor <= #segment do
+      local octet = segment:byte(cursor)
+      if octet == 0x25 then
+        local encoded = segment:sub(cursor + 1, cursor + 2)
+        if #encoded ~= 2 or
+            not encoded:match("^[0-9A-Fa-f][0-9A-Fa-f]$") then
+          raise("opc.invalid-part-name",
+            "OPC part name has malformed percent encoding", {
+              part_name = part_name,
+            })
+        end
+        local decoded = tonumber(encoded, 16)
+        if decoded == 0 or decoded == 0x2F or decoded == 0x5C or
+            decoded < 0x20 or decoded == 0x7F or
+            is_ascii_unreserved(decoded) then
+          raise("opc.invalid-part-name",
+            "OPC part name encodes a forbidden octet", {
+              part_name = part_name,
+            })
+        end
+        cursor = cursor + 3
+      else
+        if octet == 0 or octet < 0x20 or octet == 0x7F or
+            (octet < 0x80 and not is_ascii_pchar(octet)) then
+          raise("opc.invalid-part-name",
+            "OPC part name contains a forbidden byte", {
+              part_name = part_name,
+            })
+        end
+        cursor = cursor + 1
+      end
+    end
+  end
+  return zip_name
+end
+
+local function require_entry(self, part_name)
+  local zip_name = zip_name_for_part(part_name)
+  local entry = self._entries_by_name[zip_name]
+  if not entry then
+    raise("opc.part-not-found", "OPC part was not found", {
+      part_name = part_name,
+      zip_name = zip_name,
+    })
+  end
+  return zip_name, entry
+end
+
+local function is_relationship_part(zip_name)
+  return zip_name == "_rels/.rels" or
+    zip_name:match("^_rels/[^/]+%.rels$") ~= nil or
+    zip_name:match("/_rels/[^/]+%.rels$") ~= nil
+end
+
+-- Effective package state: originals, replacements and additions as one
+-- ordered, name-indexed view. Every lookup, collision check, relationship
+-- resolution, size validation and the writer consult these helpers.
+function Package:_effective_bytes(zip_name)
+  if self._additions[zip_name] ~= nil then return self._additions[zip_name] end
+  if self._replacements[zip_name] ~= nil then return self._replacements[zip_name] end
+  return self:_read_zip_entry(zip_name)
+end
+
+-- The stored name of the addition matching zip_name up to percent-hex
+-- case, or nil. Additions keep the spelling add_part received.
+function Package:_added_name(zip_name)
+  local normalized = normalize_percent_hex(zip_name)
+  for added in pairs(self._additions) do
+    if normalize_percent_hex(added) == normalized then return added end
+  end
+  return nil
+end
+
+function Package:_effective_exists(zip_name)
+  local normalized = normalize_percent_hex(zip_name)
+  if self._entries_by_normalized_name[normalized] then return true end
+  return self:_added_name(zip_name) ~= nil
+end
+
+function Package:_effective_case_collision(zip_name)
+  local folded = ascii_lower(normalize_percent_hex(zip_name))
+  for _, entry in ipairs(self.entries) do
+    if not entry.ignored and
+        ascii_lower(normalize_percent_hex(entry.name)) == folded then
+      return entry.name
+    end
+  end
+  for added in pairs(self._additions) do
+    if ascii_lower(normalize_percent_hex(added)) == folded then
+      return added
+    end
+  end
+  return nil
+end
+
+-- The single iterator every consumer uses: ordered effective entries with
+-- name, kind and bytes. The writer derives modtime from kind (original
+-- entries keep their backend modtime; added entries use the fixed constant).
+-- Ignored archive entries (#54) are not parts and never appear; each
+-- original carries its archive index so the writer can still align it with
+-- the backend's entry list.
+function Package:_effective_entries()
+  local result = {}
+  for index, entry in ipairs(self.entries) do
+    if not entry.ignored then
+      result[#result + 1] = {
+        name = entry.name, kind = "original", archive_index = index,
+      }
+    end
+  end
+  local added = {}
+  for zip_name in pairs(self._additions) do added[#added + 1] = zip_name end
+  table.sort(added)
+  for _, zip_name in ipairs(added) do
+    result[#result + 1] = { name = zip_name, kind = "added" }
+  end
+  return result
+end
+
+function Package:_effective_names()
+  local names = {}
+  for _, entry in ipairs(self:_effective_entries()) do
+    names[#names + 1] = entry.name
+  end
+  return names
+end
+
+-- Effective analogue of require_entry: an added part is a first-class part.
+-- Returns the zip name, raising opc.part-not-found when the part exists in
+-- neither the originals nor the additions.
+function Package:_require_effective(part_name)
+  local zip_name = zip_name_for_part(part_name)
+  if self._additions[zip_name] ~= nil then return zip_name end
+  return require_entry(self, part_name)
+end
+
+local function attribute(node, name)
+  return xml_adapter.get_attribute(node, "", name)
+end
+
+local function require_attribute(node, name, context)
+  local value = attribute(node, name)
+  if type(value) ~= "string" or value == "" then
+    raise("opc.relationship-attribute",
+      "relationship attribute is required", {
+        relationship_part = context,
+        attribute = name,
+      })
+  end
+  return value
+end
+
+local function assert_root(document, namespace_uri, local_name, code, name)
+  local root = document.root
+  if not root or root.name.uri ~= namespace_uri or
+      root.name.local_name ~= local_name then
+    raise(code, name .. " has an invalid document element", {
+      expected_namespace = namespace_uri,
+      expected_local_name = local_name,
+      actual_namespace = root and root.name.uri or nil,
+      actual_local_name = root and root.name.local_name or nil,
+    })
+  end
+end
+
+function Package:_read_zip_entry(zip_name, missing_code)
+  local entry = self._entries_by_name[zip_name]
+  if not entry then
+    raise(missing_code or "opc.part-not-found",
+      "required package item was not found", {
+        zip_name = zip_name,
+      })
+  end
+  if self._cache[zip_name] ~= nil then
+    return self._cache[zip_name]
+  end
+  local bytes, evidence = entry_reader.read_entry(
+    self._archive_bytes,
+    entry,
+    self._limits.max_entry_uncompressed_bytes,
+    self._materialization_remaining)
+  if math.type(evidence.produced) ~= "integer" or
+      evidence.produced < 0 then
+    raise("opc.invalid-read-evidence",
+      "bounded entry reader returned an invalid output byte count", {
+        zip_name = zip_name,
+        produced = evidence.produced,
+      })
+  end
+  self._cache[zip_name] = bytes
+  self._materialization_remaining =
+    self._materialization_remaining - evidence.produced
+  evidence.cache_charge_count = 1
+  evidence.zip_name = zip_name
+  self._evidence[zip_name] = evidence
+  return bytes
+end
+
+function Package:part(part_name)
+  local zip_name = self:_require_effective(part_name)
+  local bytes = self:_effective_bytes(zip_name)
+  local evidence = self._evidence[zip_name]
+  if evidence then evidence.part_name = part_name end
+  return bytes
+end
+
+function Package:part_evidence(part_name)
+  local zip_name = zip_name_for_part(part_name)
+  return self._evidence[zip_name]
+end
+
+function Package:remaining_materialization_bytes()
+  return self._materialization_remaining
+end
+
+function Package:replace_part(part_name, bytes)
+  local zip_name = self:_require_effective(part_name)
+  if is_relationship_part(zip_name) then
+    raise("opc.metadata-replacement",
+      "relationship metadata is immutable after package open", {
+        part_name = part_name,
+      })
+  end
+  if type(bytes) ~= "string" then
+    raise("opc.invalid-replacement", "replacement part must be byte string", {
+      part_name = part_name,
+    })
+  end
+  if self._additions[zip_name] ~= nil then
+    self._additions[zip_name] = bytes
+  else
+    self._replacements[zip_name] = bytes
+  end
+end
+
+function Package:_register_content_type_override(part_name, content_type)
+  local current = self._replacements["[Content_Types].xml"]
+    or self:_read_zip_entry("[Content_Types].xml", "opc.content-types-missing")
+  local document = xml_adapter.parse(current)
+  -- Revalidate before every insertion: open-time validation does not
+  -- guarantee the stream is still a content-types root here.
+  assert_root(document, CONTENT_TYPES_NS, "Types",
+    "opc.content-types-root", "content-types stream")
+  xml_adapter.append_element(document.root, "Override", {
+    { name = "PartName", value = part_name },
+    { name = "ContentType", value = content_type },
+  })
+  self._replacements["[Content_Types].xml"] = xml_adapter.serialize(document)
+end
+
+function Package:add_part(part_name, bytes, content_type)
+  local zip_name = zip_name_for_part(part_name)
+  if is_relationship_part(zip_name) then
+    raise("opc.metadata-replacement",
+      "relationship metadata is not added through add_part", {
+        part_name = part_name,
+      })
+  end
+  if type(bytes) ~= "string" then
+    raise("opc.invalid-addition", "added part must be a byte string", {
+      part_name = part_name,
+    })
+  end
+  if type(content_type) ~= "string" or content_type == "" then
+    raise("opc.invalid-addition", "added part requires a content type", {
+      part_name = part_name,
+    })
+  end
+  if self:_effective_exists(zip_name) then
+    raise("opc.add-part-collision", "a part with this name already exists", {
+      part_name = part_name,
+    })
+  end
+  local collision = self:_effective_case_collision(zip_name)
+  if collision then
+    raise("opc.add-part-case-collision",
+      "a name differing only in ASCII case already exists", {
+        part_name = part_name,
+        existing = collision,
+      })
+  end
+  local folded = ascii_lower(normalize_percent_hex(zip_name))
+  for declared in pairs(self._content_type_overrides) do
+    if ascii_lower(declared) == folded then
+      -- A second Override for the name would make [Content_Types].xml
+      -- invalid; publication would reject it only after building the
+      -- archive.
+      raise("opc.add-part-content-type-collision",
+        "a content-type Override already declares this part name", {
+          part_name = part_name,
+          existing = "/" .. declared,
+        })
+    end
+  end
+  self:_register_content_type_override(part_name, content_type)
+  self._additions[zip_name] = bytes
+  self._content_type_overrides[normalize_percent_hex(zip_name)] = content_type
+end
+
+function Package:write_atomic(output_path, options)
+  return require("writer").write_atomic(
+    self, output_path, options)
+end
+
+local function parse_content_types(self)
+  local bytes = self:_read_zip_entry(
+    "[Content_Types].xml", "opc.content-types-missing")
+  local document = xml_adapter.parse(bytes)
+  assert_root(document, CONTENT_TYPES_NS, "Types",
+    "opc.content-types-root", "content-types stream")
+
+  local defaults = {}
+  for _, node in ipairs(xml_adapter.find_all(
+      document, CONTENT_TYPES_NS, "Default")) do
+    if node.parent_id ~= document.root.id then
+      raise("opc.content-types-structure",
+        "content-type declaration must be a child of Types", {})
+    end
+    local extension = attribute(node, "Extension")
+    local content_type = attribute(node, "ContentType")
+    if type(extension) ~= "string" or extension == "" or
+        extension:find("/", 1, true) or extension:sub(1, 1) == "." or
+        type(content_type) ~= "string" or content_type == "" then
+      raise("opc.content-types-entry",
+        "invalid default content-type declaration", {})
+    end
+    local key = ascii_lower(extension)
+    if defaults[key] then
+      raise("opc.content-types-duplicate",
+        "duplicate default content-type declaration", {
+          extension = extension,
+        })
+    end
+    defaults[key] = content_type
+  end
+
+  local overrides = {}
+  local folded_overrides = {}
+  for _, node in ipairs(xml_adapter.find_all(
+      document, CONTENT_TYPES_NS, "Override")) do
+    if node.parent_id ~= document.root.id then
+      raise("opc.content-types-structure",
+        "content-type declaration must be a child of Types", {})
+    end
+    local part_name = attribute(node, "PartName")
+    local content_type = attribute(node, "ContentType")
+    if type(content_type) ~= "string" or content_type == "" then
+      raise("opc.content-types-entry",
+        "invalid override content-type declaration", {})
+    end
+    local zip_name = zip_name_for_part(part_name)
+    local normalized_name = normalize_percent_hex(zip_name)
+    local folded = ascii_lower(normalized_name)
+    if overrides[normalized_name] or folded_overrides[folded] then
+      raise("opc.content-types-duplicate",
+        "duplicate override content-type declaration", {
+          part_name = part_name,
+        })
+    end
+    overrides[normalized_name] = content_type
+    folded_overrides[folded] = true
+  end
+  self._content_type_defaults = defaults
+  self._content_type_overrides = overrides
+end
+
+function Package:content_type(part_name)
+  local zip_name = self:_require_effective(part_name)
+  local override = self._content_type_overrides[
+    normalize_percent_hex(zip_name)]
+  if override then return override end
+  local extension = zip_name:match("%.([^./]+)$")
+  if not extension then return nil end
+  return self._content_type_defaults[ascii_lower(extension)]
+end
+
+local function relationship_zip_name(source_part)
+  if source_part == "/" then return "_rels/.rels" end
+  local source_zip = zip_name_for_part(source_part)
+  local directory, filename = source_zip:match("^(.-)([^/]+)$")
+  return directory .. "_rels/" .. filename .. ".rels"
+end
+
+local function normalize_target_segment(segment, context)
+  local parts = {}
+  local cursor = 1
+  local encoded_dot = false
+  while cursor <= #segment do
+    local octet = segment:byte(cursor)
+    if octet == 0x25 then
+      local encoded = segment:sub(cursor + 1, cursor + 2)
+      if #encoded ~= 2 or not encoded:match("^[0-9A-Fa-f][0-9A-Fa-f]$") then
+        raise("opc.malformed-percent-encoding",
+          "relationship target has malformed percent encoding", context)
+      end
+      local decoded = tonumber(encoded, 16)
+      if decoded == 0x2F or decoded == 0x5C then
+        raise("opc.encoded-separator",
+          "relationship target encodes a path separator", context)
+      end
+      if decoded == 0 or decoded < 0x20 or decoded == 0x7F then
+        raise("opc.encoded-control",
+          "relationship target encodes a control byte", context)
+      end
+      if is_ascii_unreserved(decoded) then
+        parts[#parts + 1] = string.char(decoded)
+        if decoded == 0x2E then encoded_dot = true end
+      else
+        parts[#parts + 1] = ("%%%02X"):format(decoded)
+      end
+      cursor = cursor + 3
+    else
+      if octet == 0 or octet < 0x20 or octet == 0x7F or octet == 0x5C or
+          (octet < 0x80 and not is_ascii_pchar(octet)) then
+        raise("opc.invalid-relationship-target",
+          "relationship target contains a forbidden byte", context)
+      end
+      parts[#parts + 1] = string.char(octet)
+      cursor = cursor + 1
+    end
+  end
+  local normalized = table.concat(parts)
+  if encoded_dot and (normalized == "." or normalized == "..") then
+    raise("opc.encoded-dot-segment",
+      "relationship target encodes a dot segment", context)
+  end
+  return normalized
+end
+
+local function resolve_literal_target(self, source_part, target, context)
+  local path, fragment = target:match("^([^#]*)#(.*)$")
+  if not path then path = target end
+  if path == "" then
+    if source_part == "/" or fragment == nil then
+      raise("opc.invalid-relationship-target",
+        "internal relationship target does not identify a part", context)
+    end
+    return source_part, fragment, ""
+  end
+  local first_segment = path:match("^([^/]*)")
+  if path:sub(1, 1) == "/" or
+      path:find("?", 1, true) or path:find("\\", 1, true) or
+      path:match("^[A-Za-z][A-Za-z0-9+%.%-]*:") or
+      path:sub(1, 2) == "//" or utf8.len(path) == nil or
+      (first_segment ~= "." and first_segment ~= ".." and
+        first_segment:find(":", 1, true)) then
+    raise("opc.invalid-relationship-target",
+      "internal relationship target is outside the spike subset", context)
+  end
+  local base = {}
+  if source_part ~= "/" then
+    local source_zip = zip_name_for_part(source_part)
+    for segment in source_zip:gmatch("[^/]+") do base[#base + 1] = segment end
+    base[#base] = nil
+  end
+  local normalized_segments = {}
+  for segment in (path .. "/"):gmatch("(.-)/") do
+    local normalized = normalize_target_segment(segment, context)
+    normalized_segments[#normalized_segments + 1] = normalized
+    if normalized == "" or normalized == "." then
+      if normalized == "" then
+        raise("opc.invalid-relationship-target",
+          "relationship target contains an empty segment", context)
+      end
+    elseif normalized == ".." then
+      if #base == 0 then
+        raise("opc.relationship-target-escape",
+          "relationship target escapes the package", context)
+      end
+      base[#base] = nil
+    else
+      base[#base + 1] = normalized
+    end
+  end
+  if #base == 0 then
+    raise("opc.invalid-relationship-target",
+      "relationship target does not identify a part", context)
+  end
+  local resolved = "/" .. table.concat(base, "/")
+  local zip_name = zip_name_for_part(resolved)
+  local entry = self._entries_by_normalized_name[
+    normalize_percent_hex(zip_name)]
+  -- Effective-aware: a target that resolves only to an added part (no
+  -- original zip entry) is still a valid relationship target.
+  local added_name = not entry and self:_added_name(zip_name)
+  if not entry and not added_name then
+    raise("opc.relationship-target-missing",
+      "internal relationship target was not found", {
+        relationship_part = context.relationship_part,
+        relationship_id = context.relationship_id,
+        target = target,
+        resolved_part = resolved,
+      })
+  end
+  -- Return the stored spelling, as for originals, so the resolved name
+  -- works with part() and content_type() whatever percent-hex case the
+  -- target used.
+  if entry then
+    return "/" .. entry.name, fragment,
+      table.concat(normalized_segments, "/")
+  end
+  return "/" .. added_name, fragment, table.concat(normalized_segments, "/")
+end
+
+function Package:relationships(source_part)
+  if source_part ~= "/" then self:_require_effective(source_part) end
+  local relationship_zip = relationship_zip_name(source_part)
+  if self._relationship_cache[relationship_zip] then
+    return self._relationship_cache[relationship_zip]
+  end
+  local entry = self._entries_by_name[relationship_zip]
+  local added = self._additions[relationship_zip]
+  if not entry and not added then
+    if source_part == "/" then
+      raise("opc.relationships-missing",
+        "package-root relationships are required", {
+          zip_name = relationship_zip,
+        })
+    end
+    self._relationship_cache[relationship_zip] = {}
+    return self._relationship_cache[relationship_zip]
+  end
+  local document = xml_adapter.parse(self:_effective_bytes(relationship_zip))
+  assert_root(document, RELATIONSHIPS_NS, "Relationships",
+    "opc.relationships-root", "relationships part")
+  local records, ids = {}, {}
+  for _, node in ipairs(xml_adapter.find_all(
+      document, RELATIONSHIPS_NS, "Relationship")) do
+    if node.parent_id ~= document.root.id then
+      raise("opc.relationships-structure",
+        "Relationship must be a child of Relationships", {
+          relationship_part = relationship_zip,
+        })
+    end
+    local id = require_attribute(node, "Id", relationship_zip)
+    if ids[id] then
+      raise("opc.duplicate-relationship-id",
+        "relationship IDs must be unique within a part", {
+          relationship_part = relationship_zip,
+          relationship_id = id,
+        })
+    end
+    ids[id] = true
+    local relationship_type = require_attribute(node, "Type", relationship_zip)
+    local target = require_attribute(node, "Target", relationship_zip)
+    local mode = attribute(node, "TargetMode")
+    if mode ~= nil and mode ~= "External" then
+      raise("opc.invalid-target-mode",
+        "TargetMode must be External when present", {
+          relationship_part = relationship_zip,
+          relationship_id = id,
+          target_mode = mode,
+        })
+    end
+    local record = {
+      id = id,
+      type = relationship_type,
+      target = target,
+      target_mode = mode or "Internal",
+      external = mode == "External",
+    }
+    if not record.external then
+      record.resolved_part, record.fragment, record.normalized_target =
+        resolve_literal_target(
+        self, source_part, target, {
+          relationship_part = relationship_zip,
+          relationship_id = id,
+        })
+    end
+    records[#records + 1] = record
+  end
+  self._relationship_cache[relationship_zip] = records
+  return records
+end
+
+local function next_relationship_id(records)
+  local max = 0
+  for _, record in ipairs(records) do
+    local n = tonumber(record.id:match("^rId(%d+)$"))
+    if n and n > max then max = n end
+  end
+  return "rId" .. (max + 1)
+end
+
+-- The only sanctioned rels mutation: replace_part on any rels part still
+-- raises opc.metadata-replacement (see is_relationship_part above).
+-- source_part == "/" is rejected -- root-relationship addition is deferred
+-- until a consumer exists.
+function Package:add_relationship(source_part, rel_type, target, mode)
+  mode = mode or "Internal"
+  if source_part == "/" then
+    raise("opc.metadata-replacement",
+      "package-root relationship addition is not supported", {})
+  end
+  if mode ~= "Internal" and mode ~= "External" then
+    raise("opc.invalid-relationship-mode",
+      "mode must be Internal or External", {
+        mode = mode,
+      })
+  end
+  if type(rel_type) ~= "string" or rel_type == "" or
+      type(target) ~= "string" or target == "" then
+    raise("opc.invalid-relationship",
+      "relationship requires a type and a target", {
+        source_part = source_part,
+      })
+  end
+  local records = self:relationships(source_part)
+  local rid = next_relationship_id(records)
+  if mode == "Internal" then
+    -- Validates and resolves against the effective view; raises
+    -- opc.relationship-target-missing when nothing matches.
+    resolve_literal_target(self, source_part, target, {
+      relationship_part = relationship_zip_name(source_part),
+      relationship_id = rid,
+    })
+  end
+  local relationship_zip = relationship_zip_name(source_part)
+  local attributes = {
+    { name = "Id", value = rid },
+    { name = "Type", value = rel_type },
+    { name = "Target", value = target },
+  }
+  if mode == "External" then
+    attributes[#attributes + 1] = { name = "TargetMode", value = "External" }
+  end
+  -- Read through the effective view (single-view invariant); direct map
+  -- access below is only for choosing WHERE to store the update.
+  local current
+  if self._additions[relationship_zip] ~= nil or
+      self._entries_by_name[relationship_zip] ~= nil then
+    current = self:_effective_bytes(relationship_zip)
+  end
+  local document
+  if current then
+    document = xml_adapter.parse(current)
+    assert_root(document, RELATIONSHIPS_NS, "Relationships",
+      "opc.relationships-root", "relationships part")
+    -- A self-closing root holds no relationships. Without ordinary
+    -- attributes it carries nothing a rebuild would lose, so it takes the
+    -- fresh-part path below; with attributes, append_element fails closed.
+    if not document.root.end_tag_range and #document.root.attributes == 0 then
+      document = nil
+    end
+  end
+  local updated
+  if document then
+    xml_adapter.append_element(document.root, "Relationship", attributes)
+    updated = xml_adapter.serialize(document)
+  else
+    local pieces = {
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+      '<Relationships xmlns="', RELATIONSHIPS_NS, '">',
+    }
+    local fresh = xml_adapter.parse(table.concat(pieces) .. "</Relationships>")
+    xml_adapter.append_element(fresh.root, "Relationship", attributes)
+    updated = xml_adapter.serialize(fresh)
+  end
+  if current == nil then
+    -- A new rels part needs a declared content type. Packages that declare
+    -- rels parts by Override and have no rels Default get one here; the
+    -- registration runs before any state changes, so a failure leaves the
+    -- package untouched.
+    local normalized = normalize_percent_hex(relationship_zip)
+    local declared = self._content_type_overrides[normalized] or
+      self._content_type_defaults["rels"]
+    if not declared then
+      self:_register_content_type_override(
+        "/" .. relationship_zip, RELATIONSHIPS_CONTENT_TYPE)
+      self._content_type_overrides[normalized] = RELATIONSHIPS_CONTENT_TYPE
+    end
+    self._additions[relationship_zip] = updated
+  elseif self._additions[relationship_zip] then
+    self._additions[relationship_zip] = updated
+  else
+    self._replacements[relationship_zip] = updated
+  end
+  self._relationship_cache[relationship_zip] = nil
+  return rid
+end
+
+local function is_metadata_stream(zip_name)
+  return zip_name == "[Content_Types].xml" or is_relationship_part(zip_name)
+end
+
+local function copy_relationship_records(records)
+  local copies = {}
+  for index, record in ipairs(records) do
+    local copy = {}
+    for key, value in pairs(record) do copy[key] = value end
+    copies[index] = copy
+  end
+  return copies
+end
+
+-- Archive entries that are not parts (#54), in archive order. Publication
+-- drops them and reports this same list.
+function Package:ignored_entries()
+  local result = {}
+  for _, entry in ipairs(self.entries) do
+    if entry.ignored then
+      result[#result + 1] = { name = entry.name, kind = entry.ignored }
+    end
+  end
+  return result
+end
+
+function Package:inventory()
+  local metadata, parts, content_types = {}, {}, {}
+  for _, zip_name in ipairs(self:_effective_names()) do
+    if is_metadata_stream(zip_name) then
+      metadata[#metadata + 1] = "/" .. zip_name
+    else
+      local part_name = "/" .. zip_name
+      parts[#parts + 1] = part_name
+      content_types[part_name] = self:content_type(part_name)
+    end
+  end
+  local relationships = {}
+  local root_records = self:relationships("/")
+  if #root_records > 0 then
+    relationships["/"] = copy_relationship_records(root_records)
+  end
+  for _, part_name in ipairs(parts) do
+    local records = self:relationships(part_name)  -- malformed metadata raises
+    if #records > 0 then
+      relationships[part_name] = copy_relationship_records(records)
+    end
+  end
+  return {
+    metadata = metadata,
+    parts = parts,
+    content_types = content_types,
+    relationships = relationships,
+    ignored = self:ignored_entries(),
+  }
+end
+
+local function initialize_package(self)
+  parse_content_types(self)
+  local relationships = self:relationships("/")
+  local office
+  for _, relationship in ipairs(relationships) do
+    if OFFICE_DOCUMENT_TYPES[relationship.type] then
+      if relationship.external then
+        raise("opc.office-document-root",
+          "office-document relationship must be internal", {
+            relationship_id = relationship.id,
+          })
+      end
+      if office then
+        raise("opc.ambiguous-office-document",
+          "package has more than one office-document root", {})
+      end
+      office = relationship.resolved_part
+    elseif relationship.type == CORE_PROPERTIES_TYPE and
+        not relationship.external then
+      if self.core_properties_part then
+        raise("opc.ambiguous-core-properties",
+          "package has more than one core-properties root", {})
+      end
+      self.core_properties_part = relationship.resolved_part
+    end
+  end
+  if not office then
+    raise("opc.office-document-root",
+      "package must have one internal office-document root", {})
+  end
+  self.office_document_part = office
+  if not self:content_type(office) then
+    raise("opc.content-type-missing",
+      "office-document root has no declared content type", {
+        part_name = office,
+      })
+  end
+  if self.core_properties_part and
+      not self:content_type(self.core_properties_part) then
+    raise("opc.content-type-missing",
+      "core-properties root has no declared content type", {
+        part_name = self.core_properties_part,
+      })
+  end
+end
+
+function M.open_path(path, limits)
+  validate_limits(limits)
+  limits = copy_limits(limits)
+  local archive_bytes
+  local validated = zip_preflight.open_path(path, limits, {
+    backend_factory = function(bytes)
+      archive_bytes = bytes
+      return { kind = "docstyle-bounded-entry-reader" }
+    end,
+  })
+  local entries_by_name = {}
+  local entries_by_normalized_name = {}
+  for _, entry in ipairs(validated.entries) do
+    -- Ignored entries (#54) are not parts: no part-name rules, no lookup.
+    if not entry.ignored then
+      if entry.name ~= "[Content_Types].xml" then
+        zip_name_for_part("/" .. entry.name)
+      end
+      entries_by_name[entry.name] = entry
+      local normalized_name = normalize_percent_hex(entry.name)
+      if entries_by_normalized_name[normalized_name] then
+        raise("opc.duplicate-normalized-part-name",
+          "package entries collide after percent-hex normalization", {
+            entry = entry.name,
+            other = entries_by_normalized_name[normalized_name].name,
+          })
+      end
+      entries_by_normalized_name[normalized_name] = entry
+    end
+  end
+  local package = setmetatable({
+    path = path,
+    entries = validated.entries,
+    archive = validated,
+    _archive_bytes = assert(archive_bytes),
+    _entries_by_name = entries_by_name,
+    _entries_by_normalized_name = entries_by_normalized_name,
+    _limits = limits,
+    _materialization_remaining = limits.max_materialized_bytes,
+    _cache = {},
+    _evidence = {},
+    _replacements = {},
+    _additions = {},
+    _relationship_cache = {},
+  }, Package)
+  initialize_package(package)
+  return package
+end
+
+return M
