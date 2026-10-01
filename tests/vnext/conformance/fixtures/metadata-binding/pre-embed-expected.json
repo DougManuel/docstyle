@@ -1,0 +1,8 @@
+{
+  "description": "Criterion 3: the separate embedded output validates against catalogue.v1.json and semantic closure (with the document's envelopes).",
+  "criteria": [3],
+  "operation": "validate-embedded",
+  "catalogue": {"$base": "bases/pre-embed-catalogue.json", "$patch": []},
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": true, "stage": "embedded", "errors": []}
+}

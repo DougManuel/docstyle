@@ -1,0 +1,36 @@
+{
+  "description": "Criterion 11 (positive): string sort keys compare by UTF-8 byte order, not locale collation ('zeta' < U+00E9 'equipe').",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-groups",
+          "type": "section",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {"op": "add", "path": "/registries/metadata/contrib-1/equalContributionGroup", "value": "équipe"},
+      {"op": "add", "path": "/registries/metadata/contrib-2/equalContributionGroup", "value": "zeta"},
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-groups",
+        "value": {
+          "id": "view-groups",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceCollection": {"recordType": "contribution", "orderBy": "equalContributionGroup"},
+          "presentation": "block"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "order": {"view-groups": ["contrib-2", "contrib-1"]}}
+}

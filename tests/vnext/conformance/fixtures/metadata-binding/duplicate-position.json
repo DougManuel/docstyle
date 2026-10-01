@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 7: two contributions to one document sharing position 1 fail the semantic validator at embed time.",
+  "criteria": [7],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/contrib-2/position", "value": 1}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["contribution-position-duplicate"]}
+}

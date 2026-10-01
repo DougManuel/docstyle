@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "content": [
+    {
+      "id": "abstract",
+      "type": "section",
+      "classification": "authored",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "role": "abstract",
+      "children": [
+        {
+          "id": "g-paragraph-a2b3c4",
+          "type": "paragraph",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "text": "Background: the abstract text lives only in the content tree."
+        }
+      ]
+    },
+    {
+      "id": "view-author-plate",
+      "type": "section",
+      "classification": "generated",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "role": "metadata-value"
+    },
+    {
+      "id": "g-paragraph-v2w3x4",
+      "type": "paragraph",
+      "classification": "authored",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "children": [
+        {
+          "id": "g-span-k3m7ap",
+          "type": "span",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value",
+          "text": "2.1"
+        }
+      ]
+    },
+    {
+      "id": "tbl-outcomes",
+      "type": "table",
+      "classification": "structural",
+      "policy": "structural",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "children": [
+        {
+          "id": "g-caption-x2r9qa",
+          "type": "caption",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "text": "Outcomes by arm"
+        },
+        {
+          "id": "g-table-row-r2s3t4",
+          "type": "table-row",
+          "classification": "structural",
+          "policy": "structural",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "children": [
+            {
+              "id": "g-table-cell-c2d3e4",
+              "type": "table-cell",
+              "classification": "structural",
+              "policy": "structural",
+              "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+              "children": [
+                {
+                  "id": "g-paragraph-p2q3r4",
+                  "type": "paragraph",
+                  "classification": "authored",
+                  "policy": "authored-preserve",
+                  "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                  "text": "Mortality"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-paragraph-n4t8qa",
+          "type": "paragraph",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "text": "Note: intention-to-treat population."
+        }
+      ],
+      "semantics": {
+        "label": "Table 1",
+        "caption": "g-caption-x2r9qa",
+        "summary": "Outcomes by arm",
+        "notes": ["g-paragraph-n4t8qa"]
+      }
+    },
+    {
+      "id": "fig-flow",
+      "type": "figure",
+      "classification": "authored",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "children": [
+        {
+          "id": "g-caption-f5k2ma",
+          "type": "caption",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "text": "Participant flow"
+        }
+      ],
+      "semantics": {
+        "label": "Figure 1",
+        "caption": "g-caption-f5k2ma",
+        "alt": "Participant flow diagram",
+        "asset": "asset-flow",
+        "credit": "Adapted from PRISMA 2020"
+      }
+    },
+    {
+      "id": "view-version-history",
+      "type": "table",
+      "classification": "generated",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "role": "metadata-value",
+      "children": [
+        {
+          "id": "g-table-row-h2i3j4",
+          "type": "table-row",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "children": [
+            {
+              "id": "g-table-cell-h3i4j5",
+              "type": "table-cell",
+              "classification": "generated",
+              "policy": "generated-replace",
+              "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+              "children": [
+                {
+                  "id": "g-paragraph-h4i5j6",
+                  "type": "paragraph",
+                  "classification": "generated",
+                  "policy": "generated-replace",
+                  "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                  "text": "2.1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "registries": {
+    "metadata": {
+      "rec-document": {
+        "id": "rec-document",
+        "recordType": "document",
+        "schemaVersion": 1,
+        "privacy": "public",
+        "type": "protocol",
+        "title": "Example protocol",
+        "version": "2.1",
+        "abstract": {"region": "abstract"},
+        "versionHistory": [{"version": "2.1", "date": "2026-08-14", "description": "Binding contracts."}]
+      },
+      "rec-person-1": {
+        "id": "rec-person-1",
+        "recordType": "person",
+        "schemaVersion": 1,
+        "name": {"given": "Jane", "family": "Smith"},
+        "orcid": "0000-0002-1825-0097"
+      },
+      "rec-person-2": {
+        "id": "rec-person-2",
+        "recordType": "person",
+        "schemaVersion": 1,
+        "name": {"given": "Amal", "family": "Haddad"}
+      },
+      "rec-org-uottawa": {
+        "id": "rec-org-uottawa",
+        "recordType": "organization",
+        "schemaVersion": 1,
+        "name": "University of Ottawa"
+      },
+      "rec-contact-1": {
+        "id": "rec-contact-1",
+        "recordType": "contact",
+        "schemaVersion": 1,
+        "privacy": "restricted",
+        "email": "jane.smith@example.org"
+      },
+      "rec-org-internal": {
+        "id": "rec-org-internal",
+        "recordType": "organization",
+        "schemaVersion": 1,
+        "privacy": "restricted",
+        "name": "Internal review panel (unrelated, restricted)"
+      },
+      "contrib-1": {
+        "id": "contrib-1",
+        "recordType": "contribution",
+        "schemaVersion": 1,
+        "document": "rec-document",
+        "person": "rec-person-1",
+        "position": 1,
+        "roles": ["conceptualization", "methodology"],
+        "corresponding": true,
+        "contact": "rec-contact-1",
+        "affiliations": ["rec-org-uottawa"]
+      },
+      "contrib-2": {
+        "id": "contrib-2",
+        "recordType": "contribution",
+        "schemaVersion": 1,
+        "document": "rec-document",
+        "person": "rec-person-2",
+        "position": 2,
+        "affiliations": ["rec-org-uottawa"]
+      },
+      "g-span-k3m7ap": {
+        "id": "g-span-k3m7ap",
+        "recordType": "metadata-view",
+        "schemaVersion": 1,
+        "privacy": "public",
+        "sourceRecord": "rec-document",
+        "path": "version",
+        "presentation": "span"
+      },
+      "view-author-plate": {
+        "id": "view-author-plate",
+        "recordType": "metadata-view",
+        "schemaVersion": 1,
+        "privacy": "public",
+        "sourceCollection": {"recordType": "contribution", "orderBy": "position"},
+        "presentation": "block"
+      },
+      "view-version-history": {
+        "id": "view-version-history",
+        "recordType": "metadata-view",
+        "schemaVersion": 1,
+        "sourceRecord": "rec-document",
+        "path": "versionHistory",
+        "presentation": "table"
+      }
+    },
+    "profiles": {},
+    "relationships": {},
+    "assets": {
+      "asset-flow": {
+        "id": "asset-flow",
+        "path": "media/flow.png",
+        "mediaType": "image/png",
+        "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  }
+}

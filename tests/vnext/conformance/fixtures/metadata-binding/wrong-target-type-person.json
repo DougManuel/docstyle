@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 11: contribution.person naming an organization is a wrong target type.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/contrib-2/person", "value": "rec-org-uottawa"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-type"]}
+}

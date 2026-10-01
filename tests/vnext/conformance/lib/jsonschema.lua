@@ -7,7 +7,8 @@
 -- against the given subschema -- the id-keyed registries in
 -- document-model.v1 depend on the latter), enum, const, pattern,
 -- minLength/maxLength, minimum/maximum, items, minItems/maxItems, oneOf,
--- anyOf, $ref, $defs.
+-- anyOf, $ref (fragment `#/...`, absolute `$id`, and absolute
+-- `$id#/<pointer>`), $defs.
 --
 -- Object vs. array distinction: pandoc.json.decode(s, false) (see lib/json.lua)
 -- decodes JSON without converting to pandoc AST types, so both `{}` and `[]`
@@ -142,17 +143,81 @@ local validate_node -- forward declaration
 --- an absolute id switches the root to the referenced schema document, so
 --- that document's own `#/$defs/...` refs resolve against its `$defs`.
 --- On failure returns nil plus an error message.
-local function resolve_ref(ref, root)
-  local frag = ref:match("^#(/.*)$")
-  if frag then
-    local node = root
-    for seg in frag:gmatch("/([^/]+)") do
-      seg = seg:gsub("~1", "/"):gsub("~0", "~")
-      if type(node) ~= "table" then return nil, "cannot resolve $ref " .. ref end
+---
+--- A third form, `<registered $id>#/<pointer>` (metadata-binding spec,
+--- schema-change manifest, "conformance runner" row), walks the pointer
+--- inside the registered document and switches the root to that document,
+--- exactly as a bare absolute id does; `<registered $id>#` (empty
+--- fragment) is the whole document. This is additive: fragment-only and
+--- bare absolute refs resolve exactly as before. Keywords beside `$ref`
+--- are still ignored (see validate_node), so a constraint that must
+--- accompany a reused definition uses the wrapper pattern instead --
+--- `properties` beside `anyOf: [{"$ref": ...}]`.
+-- JSON Pointer (RFC 6901) evaluation. The pointer arrives in URI-fragment
+-- form, so each segment is percent-decoded first (section 6), then
+-- tilde-decoded with ~1 -> "/" before ~0 -> "~" (section 4, so "~01" is the
+-- key "~1"). Segments may be empty (the "" key). Against an array, a
+-- segment must be a canonical zero-based index ("0", "7"; no leading zeros,
+-- no "-"), mapped onto Lua's 1-based array.
+local function percent_decode(seg)
+  return (seg:gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end))
+end
+
+--- Decodes a JSON Pointer ("" or "/a/b") into its segments. Exported for
+--- lib/jsonpatch.lua so fixture patches use the same pointer semantics.
+--- Percent-decoding is idempotent for pointers that carry no "%", so plain
+--- (non-fragment) pointers decode identically.
+function M.pointer_segments(pointer)
+  local segs = {}
+  if pointer == "" then return segs end
+  assert(pointer:sub(1, 1) == "/", "JSON Pointer must be empty or start with /: " .. pointer)
+  -- split on every "/" so empty segments survive
+  for seg in (pointer:sub(2) .. "/"):gmatch("([^/]*)/") do
+    segs[#segs + 1] = (percent_decode(seg):gsub("~1", "/"):gsub("~0", "~"))
+  end
+  return segs
+end
+
+--- True when `seg` is a canonical zero-based array index ("0", "7"; no
+--- leading zeros, no "-").
+function M.is_array_index(seg)
+  return seg == "0" or seg:match("^[1-9]%d*$") ~= nil
+end
+
+local function walk_pointer(doc, frag, ref)
+  local node = doc
+  for _, seg in ipairs(M.pointer_segments(frag)) do
+    if type(node) ~= "table" then return nil, "cannot resolve $ref " .. ref end
+    if next(node) ~= nil and not has_string_key(node) then
+      if not M.is_array_index(seg) then return nil, "unresolved $ref " .. ref end
+      node = node[tonumber(seg) + 1]
+    else
       node = node[seg]
     end
     if node == nil then return nil, "unresolved $ref " .. ref end
+  end
+  return node
+end
+
+local function resolve_ref(ref, root)
+  local frag = ref:match("^#(/.*)$")
+  if frag then
+    local node, err = walk_pointer(root, frag, ref)
+    if node == nil then return nil, err end
     return node, root
+  end
+
+  local base, pointer = ref:match("^([^#]+)#(.*)$")
+  if base then
+    local target = registry[base]
+    if target == nil then return nil, "unresolved $ref " .. ref end
+    if pointer == "" then return target, target end
+    if pointer:sub(1, 1) ~= "/" then
+      return nil, "unsupported $ref fragment (only JSON Pointers) " .. ref
+    end
+    local node, err = walk_pointer(target, pointer, ref)
+    if node == nil then return nil, err end
+    return node, target
   end
 
   local target = registry[ref]

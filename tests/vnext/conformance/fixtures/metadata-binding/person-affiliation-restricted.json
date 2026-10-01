@@ -1,0 +1,12 @@
+{
+  "description": "person.affiliations is closure-required: a public person naming a restricted organization fails rather than shipping a dangling id.",
+  "criteria": [4, 11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/metadata/rec-person-1/affiliations", "value": ["rec-org-internal"]}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["closure-target-restricted"]}
+}

@@ -1,0 +1,11 @@
+{
+  "description": "Cold import: a figure object naming an asset absent from assets fails.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [{"op": "replace", "path": "/objects/fig-flow/semantics/asset", "value": "asset-missing"}]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["reference-target-absent"]}
+}

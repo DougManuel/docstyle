@@ -1,0 +1,23 @@
+{
+  "description": "Criterion 11: two views naming each other (a cycle) are invalid -- views are terminal and never sources of other views.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/g-span-k3m7ap/sourceRecord",
+        "value": "view-version-history"
+      },
+      {"op": "replace", "path": "/registries/metadata/g-span-k3m7ap/path", "value": ""},
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-version-history/sourceRecord",
+        "value": "g-span-k3m7ap"
+      },
+      {"op": "replace", "path": "/registries/metadata/view-version-history/path", "value": ""}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["view-source-is-view"]}
+}

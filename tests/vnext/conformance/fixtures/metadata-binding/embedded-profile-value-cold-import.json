@@ -1,0 +1,24 @@
+{
+  "description": "Cold import has no local model, so the unresolved-id check is skipped: the same catalogue validates (the string is opaque profile data there).",
+  "criteria": [8],
+  "operation": "validate-embedded",
+  "envelopesFrom": "pre-embed-local",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/records/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture",
+          "label": "x",
+          "region": "rec-contact-1"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "stage": "embedded", "errors": []}
+}

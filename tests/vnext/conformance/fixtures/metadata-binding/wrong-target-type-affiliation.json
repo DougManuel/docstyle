@@ -1,0 +1,12 @@
+{
+  "description": "Criterion 11: affiliations must reference organizations.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/registries/metadata/contrib-2/affiliations/0", "value": "rec-person-1"}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-type"]}
+}

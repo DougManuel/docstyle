@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 4: a public contribution whose person is restricted fails embedding in local validation (closure-required reference; never pruned).",
+  "criteria": [4],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "add", "path": "/registries/metadata/rec-person-2/privacy", "value": "restricted"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["closure-target-restricted"]}
+}

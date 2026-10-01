@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 11: every selected member must have the declared orderBy property.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/orderBy",
+        "value": "equalContributionGroup"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-sort-key-missing"]}
+}

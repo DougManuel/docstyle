@@ -1,0 +1,35 @@
+{
+  "description": "Criterion 11 (positive): an empty path selects the whole authority record.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-document",
+          "type": "section",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-document",
+        "value": {
+          "id": "view-document",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceRecord": "rec-document",
+          "path": "",
+          "presentation": "block"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "present": ["views/view-document"]}
+}

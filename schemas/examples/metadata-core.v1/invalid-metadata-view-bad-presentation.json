@@ -1,0 +1,3 @@
+{ "id": "view-document-version", "recordType": "metadata-view", "schemaVersion": 1,
+  "sourceRecord": "rec-document", "path": "version",
+  "presentation": "inline" }

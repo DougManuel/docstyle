@@ -1,0 +1,10 @@
+{
+  "description": "Section 6 closure: a semantics node-id reference (notes) must resolve to a field-envelope id.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/content/3/semantics/notes/0", "value": "g-paragraph-zzzzzz"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["semantics-node-ref-unresolved"]}
+}

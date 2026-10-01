@@ -1,0 +1,27 @@
+{ "schemaVersion": 1,
+  "content": [
+    { "id": "tbl-outcomes", "type": "table", "classification": "structural", "policy": "structural",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "semantics": { "label": "Table 1", "caption": "g-caption-x2r9qa", "summary": "Outcomes by arm",
+        "notes": ["g-paragraph-n4t8qa"], "provenance": { "record": "rec-dataset-1" } },
+      "children": [
+        { "id": "g-caption-x2r9qa", "type": "caption", "classification": "authored",
+          "policy": "authored-preserve", "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "text": "Outcomes by arm" },
+        { "id": "g-paragraph-n4t8qa", "type": "paragraph", "classification": "authored",
+          "policy": "authored-preserve", "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "text": "Note: intention-to-treat population." } ] },
+    { "id": "fig-flow", "type": "figure", "classification": "authored", "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "semantics": { "label": "Figure 1", "caption": "g-caption-f5k2ma", "alt": "Participant flow diagram",
+        "asset": "asset-flow", "credit": "Adapted from PRISMA 2020" },
+      "children": [
+        { "id": "g-caption-f5k2ma", "type": "caption", "classification": "authored",
+          "policy": "authored-preserve", "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "text": "Participant flow" } ] }
+  ],
+  "registries": {
+    "metadata": {
+      "rec-dataset-1": { "id": "rec-dataset-1", "recordType": "organization", "schemaVersion": 1,
+        "name": "Example trial data custodian" } },
+    "profiles": {}, "relationships": {},
+    "assets": {
+      "asset-flow": { "id": "asset-flow", "path": "media/flow.png", "mediaType": "image/png",
+        "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "credit": { "record": "rec-dataset-1" } } } } }

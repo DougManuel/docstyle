@@ -1,0 +1,8 @@
+{
+  "description": "Cold import: an outermost generated-replace envelope with no view (and no metadata-value role) fails.",
+  "criteria": [5],
+  "operation": "validate-embedded",
+  "catalogue": {"$base": "bases/pre-embed-catalogue.json", "$patch": []},
+  "envelopesFrom": "generated-region-without-role",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["unbound-generated-region"]}
+}

@@ -4,7 +4,12 @@ This directory is the conformance harness for Docstyle vNext work package 1
 (WP1): the JSON Schema subset validator, the canonical-JSON/hashing/identifier
 /manifest library modules, the legacy-to-vNext migration primitives, the
 reconciliation decision table, and the schema and example files those
-modules validate against.
+modules validate against. It also carries the additive v1 revision from the
+metadata-binding specification
+(`docs/superpowers/specs/2026-08-14-docstyle-vnext-metadata-binding-design.md`):
+`schemas/catalogue.v1.json`, the new metadata-core and document-model
+definitions, and the semantic validator `lib/catalogue.lua` (see
+"Metadata-binding validation" below).
 
 ## Running the suite
 
@@ -132,6 +137,67 @@ rather than duplicate each other:
 See `lib/profile.lua`'s header comment for the full dispatch table and the
 profile-id-to-schema mapping convention, and `tests/test-profile.lua` for
 the adversarial cases, including the missing-`label` bypass case.
+
+## Metadata-binding validation
+
+The metadata-binding contracts are validated in the same two-layer way as
+profiles:
+
+- **Structural gate -- JSON Schema.** `metadata-core.v1` gains the
+  `contribution`, `contact` (with `privacy` required) and `metadata-view`
+  record types and the region-form abstract; `document-model.v1` gains the
+  canonical `table-semantics`, `figure-semantics`, `credit`, `provenance`
+  and `canonical-asset` definitions without attaching them to the at-rest
+  node or asset (so every previously valid instance stays valid);
+  `catalogue.v1` applies them to the embedded catalogue. `catalogue.v1`
+  reuses the other schemas' definitions through cross-file `$ref` of the
+  form `<registered $id>#/<pointer>`, which `lib/jsonschema.lua` now
+  resolves. Keywords beside `$ref` are still ignored and `allOf`, `not` and
+  `if`/`then` stay unsupported, so a constraint that must accompany a
+  reused definition (public-only records, region-form abstract, figure alt
+  text, a closed asset) uses the wrapper pattern: `properties` or
+  `required` beside `anyOf: [{"$ref": ...}]`.
+- **Semantic gate -- `lib/catalogue.lua`.** What JSON Schema cannot
+  express: canonical semantics and credit, typed reference closure,
+  terminal view authority, view-path resolution against the projected
+  record, collection scope and ordering, whole-property pruning,
+  contribution-position uniqueness, the view/region identity equation, the
+  table preservation policy, and reconciliation against
+  `public_projection(local state)`. Profile-typed records embed like any
+  public record: `catalogue.v1`'s `profile-record` branch is only a
+  structural gate (the same bypass shape as `state-metadata.v1`'s branch 2),
+  and the semantic gate validates each one against its profile's own
+  schema, with record types registered only by valid, active
+  `profile-manifest.v1` manifests in `registries.profiles`.
+  `person.affiliations` and `funding.funder` are classified
+  closure-required although the specification's section 6 list omits
+  them (pending spec review). `embed()` runs the specification's
+  three ordered steps (local validation, projection, embedded validation)
+  and fails closed at the first failing step; `validate_at_rest()` reports
+  the same canonical-form issues as normalization warnings. See the
+  module's header comment for the entry points and finding codes.
+
+The binding fixtures live under `fixtures/metadata-binding/`. Each is a
+named base document from its `bases/` subdirectory plus a short patch --
+`{"$base": "bases/<name>.json", "$patch": [...]}`, expanded by
+`lib/jsonpatch.lua` (RFC 6902 `add`/`replace`/`remove` over JSON Pointers,
+decoded exactly as `lib/jsonschema.lua` decodes `$ref` pointers). The bases
+are the local model (`local-model.json`), the embedded catalogue it
+projects to (`pre-embed-catalogue.json`, which doubles as the criterion-3
+expected output) and a cold-import package description
+(`cold-package.json`). Each fixture names the acceptance criteria it
+evidences, an `operation`, and the exact set of error codes it must
+produce, so a fixture cannot pass by failing for an unintended reason. `tests/test-catalogue.lua` drives them
+and checks that every executable criterion has evidence.
+`tests/test-schema-additivity.lua` pins the valid examples that existed
+before the revision (by canonical-JSON hash) and requires each to still
+validate unchanged -- acceptance criterion 1.
+
+Out of scope for this layer: the WP3 normalizer's YAML-to-model compile
+step (the `normalize-contract` fixtures state its target output and check
+only that output), and reading or writing the DOCX container itself (the
+`cold-recover` fixtures start from an already-read package description --
+parts, relationships and field envelopes).
 
 ## Declared bounds
 

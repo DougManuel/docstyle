@@ -1,0 +1,22 @@
+{
+  "description": "funding.funder is closure-required: a restricted funder fails embedding.",
+  "criteria": [4, 11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fund-1",
+        "value": {
+          "id": "rec-fund-1",
+          "recordType": "funding",
+          "schemaVersion": 1,
+          "funder": "rec-org-internal",
+          "grant": "GR-1"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["closure-target-restricted"]}
+}

@@ -1,0 +1,47 @@
+{
+  "description": "A collection over a profile-registered record type is registered but not document-scoped: profile-manifest.v1 has no way to declare that a record type carries a document field, so it cannot be a document-scoped collection member in v1.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/recordType",
+        "value": "fixture-record"
+      },
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/orderBy",
+        "value": "label"
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture",
+          "label": "Fixture extension record",
+          "category": "alpha"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {
+          "id": "docstyle:fixture",
+          "version": "1.0.0",
+          "schema": "profiles/fixture.v1.json",
+          "recordTypes": ["fixture-record"],
+          "classes": ["fixture-region"],
+          "regionRoles": ["fixture-role"],
+          "predicates": ["fixture-supports"],
+          "migratesFrom": []
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-type-not-document-scoped"]}
+}

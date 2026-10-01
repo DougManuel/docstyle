@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 11: array indexing in a view path is unsupported.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-version-history/path",
+        "value": "versionHistory.0.version"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["view-path-unsupported"]}
+}

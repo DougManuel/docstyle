@@ -1,0 +1,21 @@
+{
+  "description": "The same collection with the profile inactive: its record type is not registered at all (registration comes from active manifests).",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/recordType",
+        "value": "fixture-record"
+      },
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/orderBy",
+        "value": "label"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-type-unregistered"]}
+}

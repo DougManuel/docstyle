@@ -35,6 +35,9 @@
         "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
         "attrs": { "type": "object" },
         "text": { "type": "string" },
+        "semantics": {
+          "description": "Additive v1 revision (metadata-binding spec, section 4): semantic attributes for table and figure nodes. Deliberately unconstrained at rest so previously valid values stay valid. Canonical forms are $defs/table-semantics and $defs/figure-semantics; the semantic validator dispatches by node type and applies them before embedding, and catalogue.v1 applies them to its objects. A noncanonical value warns at rest and blocks embedding until explicitly normalized; it is never silently discarded or reinterpreted. Presentation data (widths, alignment, borders, image size, wrapping, anchoring) never belongs here."
+        },
         "source": { "type": "object", "properties": {
           "file": { "type": "string" }, "start": { "type": "integer", "minimum": 1 },
           "end": { "type": "integer", "minimum": 1 } } }
@@ -65,7 +68,73 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 }, "path": { "type": "string", "minLength": 1 },
         "mediaType": { "type": "string", "minLength": 1 },
-        "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "credit": {
+          "description": "Additive v1 revision (metadata-binding spec, section 4). Unconstrained at rest so existing values stay valid; canonical form is $defs/credit, validated by the semantic validator before embedding and by $defs/canonical-asset in catalogue.v1."
+        }
+      }
+    },
+    "record-reference": {
+      "description": "Reference to an authority record by id (never a metadata-view). Used as the structured form of credit and provenance.",
+      "type": "object",
+      "required": ["record"],
+      "additionalProperties": false,
+      "properties": {
+        "record": { "type": "string", "minLength": 1 }
+      }
+    },
+    "credit": {
+      "description": "Canonical credit: a plain statement, or a prunable record reference -- when the referenced record is restricted the embedder removes the whole credit property, never only the nested record key.",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "$ref": "#/$defs/record-reference" }
+      ]
+    },
+    "provenance": {
+      "description": "Canonical provenance: a plain statement, or a prunable record reference (same pruning rule as credit).",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "$ref": "#/$defs/record-reference" }
+      ]
+    },
+    "profile-extensions": {
+      "description": "Namespaced extension container keyed by registered profile identifier (<namespace>:<name>). Each value is validated by that profile's own schema in the semantic validator; a profile never adds loose core fields.",
+      "type": "object"
+    },
+    "table-semantics": {
+      "description": "Canonical table semantics (closed). caption and notes are node-id references resolved against the document's field-envelope ids at embed time.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "description": "Crossref label text.", "type": "string", "minLength": 1 },
+        "caption": { "description": "Node id of the caption.", "type": "string", "minLength": 1 },
+        "summary": { "description": "Accessibility summary.", "type": "string", "minLength": 1 },
+        "notes": { "description": "Node ids of table-note content nodes.", "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "profiles": { "$ref": "#/$defs/profile-extensions" }
+      }
+    },
+    "figure-semantics": {
+      "description": "Canonical figure semantics (closed). alt is required by the catalogue embedder for public figures (catalogue.v1 enforces it on embedded objects). asset is a closure-required reference into the asset registry.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "description": "Crossref label text.", "type": "string", "minLength": 1 },
+        "caption": { "description": "Node id of the caption.", "type": "string", "minLength": 1 },
+        "alt": { "description": "Alternative text.", "type": "string", "minLength": 1 },
+        "asset": { "description": "Closure-required reference to an asset registry id.", "type": "string", "minLength": 1 },
+        "credit": { "$ref": "#/$defs/credit" },
+        "profiles": { "$ref": "#/$defs/profile-extensions" }
+      }
+    },
+    "canonical-asset": {
+      "description": "Canonical, portable asset record (path, mediaType, hash, optional canonical credit) as carried by catalogue.v1. Closed so local-only data such as source paths cannot ride along. Wrapper pattern: the reused $defs/asset sits in anyOf because keywords beside $ref are ignored.",
+      "anyOf": [ { "$ref": "#/$defs/asset" } ],
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {}, "path": {}, "mediaType": {}, "hash": {},
+        "credit": { "$ref": "#/$defs/credit" }
       }
     }
   }

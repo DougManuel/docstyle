@@ -1,0 +1,16 @@
+{
+  "description": "Registration is real: an active profile entry must be a profile-manifest.v1 manifest (recordTypes, schema); an incomplete entry registers nothing and fails.",
+  "criteria": [3],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {"id": "docstyle:fixture", "version": "1.0.0"}
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["profile-manifest-invalid"]}
+}

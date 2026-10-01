@@ -1,0 +1,35 @@
+{
+  "description": "Criterion 11: a view path removed by privacy pruning (contrib-1.contact, restricted contact) fails embedding -- paths resolve against the projected record.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-contact",
+          "type": "span",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-contact",
+        "value": {
+          "id": "view-contact",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceRecord": "contrib-1",
+          "path": "contact",
+          "presentation": "span"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["view-path-unresolved"]}
+}

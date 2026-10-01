@@ -1,0 +1,33 @@
+{
+  "description": "Criterion 5 (negative): the second occurrence has a rendered region but no view record of its own -- one view record cannot bind two regions.",
+  "criteria": [5],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "g-paragraph-y2z3a4",
+          "type": "paragraph",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "children": [
+            {
+              "id": "g-span-p7q2rb",
+              "type": "span",
+              "classification": "generated",
+              "policy": "generated-replace",
+              "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+              "role": "metadata-value",
+              "text": "2.1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["unbound-generated-region"]}
+}

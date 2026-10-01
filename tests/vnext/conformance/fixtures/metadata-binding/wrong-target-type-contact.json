@@ -1,0 +1,23 @@
+{
+  "description": "Criterion 11: contact naming a restricted person is a wrong target type, checked before pruning -- a restricted target never excuses a type error.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/registries/metadata/contrib-1/contact", "value": "rec-person-3"},
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-person-3",
+        "value": {
+          "id": "rec-person-3",
+          "recordType": "person",
+          "schemaVersion": 1,
+          "privacy": "restricted",
+          "name": {"family": "Hidden"}
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-type"]}
+}

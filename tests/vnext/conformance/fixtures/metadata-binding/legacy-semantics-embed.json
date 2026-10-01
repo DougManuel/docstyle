@@ -1,0 +1,17 @@
+{
+  "description": "Criterion 10: the same legacy values fail canonical embedding.",
+  "criteria": [10],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/content/3/semantics", "value": "legacy-value"},
+      {
+        "op": "add",
+        "path": "/registries/assets/asset-flow/credit",
+        "value": {"photographer": "J. Smith", "year": 2019}
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["credit-noncanonical", "semantics-noncanonical"]}
+}

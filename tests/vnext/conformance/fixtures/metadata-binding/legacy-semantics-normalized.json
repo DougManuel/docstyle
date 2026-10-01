@@ -1,0 +1,14 @@
+{
+  "description": "Criterion 10: explicitly normalized equivalents embed.",
+  "criteria": [10],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "remove", "path": "/content/3/semantics/notes"},
+      {"op": "replace", "path": "/content/3/semantics/summary", "value": "legacy-value"},
+      {"op": "add", "path": "/registries/assets/asset-flow/credit", "value": "Photo: J. Smith, 2019"}
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "present": ["assets/asset-flow/credit", "objects/tbl-outcomes"]}
+}

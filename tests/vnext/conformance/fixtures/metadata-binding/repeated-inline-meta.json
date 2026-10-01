@@ -1,0 +1,54 @@
+{
+  "description": "Criterion 5: {{< meta version >}} in two paragraphs -> two view records with distinct generated ids sharing sourceRecord and path; both embed.",
+  "criteria": [5],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "g-paragraph-y2z3a4",
+          "type": "paragraph",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "children": [
+            {
+              "id": "g-span-p7q2rb",
+              "type": "span",
+              "classification": "generated",
+              "policy": "generated-replace",
+              "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+              "role": "metadata-value",
+              "text": "2.1"
+            }
+          ]
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/g-span-p7q2rb",
+        "value": {
+          "id": "g-span-p7q2rb",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceRecord": "rec-document",
+          "path": "version",
+          "presentation": "span"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "present": ["views/g-span-k3m7ap", "views/g-span-p7q2rb"],
+    "sharedSource": {
+      "views": ["g-span-k3m7ap", "g-span-p7q2rb"],
+      "sourceRecord": "rec-document",
+      "path": "version"
+    }
+  }
+}

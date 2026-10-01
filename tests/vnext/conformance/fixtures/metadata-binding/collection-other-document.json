@@ -1,0 +1,41 @@
+{
+  "description": "Criterion 11 (positive): contributions belonging to a different document are excluded from the collection (and their positions do not collide), even when restricted.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-document-other",
+        "value": {
+          "id": "rec-document-other",
+          "recordType": "document",
+          "schemaVersion": 1,
+          "type": "other",
+          "title": "A different document"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/contrib-x",
+        "value": {
+          "id": "contrib-x",
+          "recordType": "contribution",
+          "schemaVersion": 1,
+          "document": "rec-document-other",
+          "person": "rec-person-1",
+          "position": 1,
+          "privacy": "restricted"
+        }
+      }
+    ]
+  },
+  "document": "rec-document",
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "order": {"view-author-plate": ["contrib-1", "contrib-2"]},
+    "absent": ["records/contrib-x"]
+  }
+}

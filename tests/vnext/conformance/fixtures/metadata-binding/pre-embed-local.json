@@ -1,0 +1,21 @@
+{
+  "description": "Criterion 3: a local pre-embed model with a document record, two ordered contributions, metadata views, a restricted contact and an unrelated restricted record. Local validation passes; projection drops both restricted records and prunes the contribution's contact property; the embedded output equals pre-embed-expected-catalogue.json and validates.",
+  "criteria": [3, 11],
+  "operation": "embed",
+  "model": {"$base": "bases/local-model.json", "$patch": []},
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "catalogue": "bases/pre-embed-catalogue.json",
+    "absent": ["records/rec-contact-1", "records/rec-org-internal", "records/contrib-1/contact"],
+    "present": [
+      "records/contrib-1",
+      "records/contrib-2",
+      "views/view-author-plate",
+      "objects/tbl-outcomes",
+      "objects/fig-flow",
+      "assets/asset-flow"
+    ],
+    "order": {"view-author-plate": ["contrib-1", "contrib-2"]}
+  }
+}

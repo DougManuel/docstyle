@@ -1,0 +1,11 @@
+{
+  "description": "Cold import: an asset credit record reference absent from records fails.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [{"op": "add", "path": "/assets/asset-flow/credit", "value": {"record": "rec-missing"}}]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["reference-target-absent"]}
+}

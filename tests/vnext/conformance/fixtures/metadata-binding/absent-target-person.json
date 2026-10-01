@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 11: an absent closure-required target fails.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/contrib-2/person", "value": "rec-person-9"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-absent"]}
+}

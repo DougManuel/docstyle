@@ -1,0 +1,24 @@
+{
+  "description": "A restricted profile record of an inactive profile stays in local state and never embeds; it does not block embedding.",
+  "criteria": [3],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture",
+          "label": "Fixture extension record",
+          "category": "alpha",
+          "privacy": "restricted"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "absent": ["records/rec-fx1"]}
+}

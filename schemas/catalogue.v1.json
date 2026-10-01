@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougmanuel.github.io/docstyle/schemas/catalogue.v1.json",
+  "title": "Docstyle embedded metadata catalogue, version 1",
+  "description": "The embedded catalogue carried in the DOCX OPC part /docstyle/catalogue.json (content type application/vnd.docstyle.catalogue+json, related from /word/document.xml by https://dougmanuel.github.io/docstyle/relationships/catalogue). It is public_projection(local state): restricted records never enter it. JSON Schema cannot express reference closure, view-path resolution, collection scope and ordering, or contribution-position uniqueness; the semantic validator (tests/vnext/conformance/lib/catalogue.lua) enforces those beside this schema. Record definitions are reused from metadata-core.v1 and document-model.v1 by cross-file $ref; constraints that must accompany a reused definition use the wrapper pattern (properties beside anyOf: [{$ref}]) because keywords beside $ref are ignored.",
+  "type": "object",
+  "required": ["schemaVersion", "generator", "document", "records", "views", "objects", "assets"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generator": { "type": "string", "minLength": 1 },
+    "document": { "description": "Closure-required reference to the document record in records.", "type": "string", "minLength": 1 },
+    "records": {
+      "description": "Every public authority record, keyed by id. Excludes metadata-view records, which occur only in views.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/public-record" }
+    },
+    "views": {
+      "description": "The metadata-view record for every generated region present in the document, keyed by id (= the region's field-envelope id).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/public-view" }
+    },
+    "objects": {
+      "description": "Public projection of table and figure node semantics, keyed by node id.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/object" }
+    },
+    "assets": {
+      "description": "Public, portable asset records, keyed by id.",
+      "type": "object",
+      "additionalProperties": { "$ref": "https://dougmanuel.github.io/docstyle/schemas/document-model.v1.json#/$defs/canonical-asset" }
+    }
+  },
+  "$defs": {
+    "public-record": {
+      "description": "A public authority record (privacy absent means public for metadata records): a core record, whose document form carries only the canonical region-form abstract, or a profile-typed record. Every public record is carried.",
+      "anyOf": [
+        { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/document" },
+        { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/person" },
+        { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/organization" },
+        { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/funding" },
+        { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/contribution" },
+        { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/contact" },
+        { "$ref": "#/$defs/profile-record" }
+      ],
+      "type": "object",
+      "properties": {
+        "privacy": { "const": "public" },
+        "abstract": { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/abstract-region" }
+      }
+    },
+    "profile-record": {
+      "description": "Structural gate only for a profile-typed record: any record naming a profile. Like state-metadata.v1's records[] branch 2 it cannot know the profile's real shape, so the semantic validator (lib/catalogue.lua) validates every such record against its profile's own schema and fails closed when that profile is unavailable -- the catalogue never carries a profile record unvalidated.",
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "profile"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "recordType": { "type": "string", "minLength": 1 },
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$" },
+        "privacy": { "enum": ["public", "restricted"] }
+      }
+    },
+    "public-view": {
+      "anyOf": [
+        { "$ref": "https://dougmanuel.github.io/docstyle/schemas/metadata-core.v1.json#/$defs/metadata-view" }
+      ],
+      "type": "object",
+      "properties": {
+        "privacy": { "const": "public" }
+      }
+    },
+    "object": {
+      "description": "{id, type, semantics} for one table or figure node; semantics must be canonical for the node type, and an embedded (public) figure must carry alt text.",
+      "type": "object",
+      "required": ["id", "type", "semantics"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["table", "figure"] },
+        "semantics": {}
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "table" },
+            "semantics": { "$ref": "https://dougmanuel.github.io/docstyle/schemas/document-model.v1.json#/$defs/table-semantics" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "figure" },
+            "semantics": {
+              "anyOf": [
+                { "$ref": "https://dougmanuel.github.io/docstyle/schemas/document-model.v1.json#/$defs/figure-semantics" }
+              ],
+              "required": ["alt"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

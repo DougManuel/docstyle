@@ -1,0 +1,7 @@
+{
+  "description": "Criterion 6: an authored table (table/row/cell structural, caption and cell content authored-preserve) and a generated version-history table (generated-replace throughout, bound by a view) both embed.",
+  "criteria": [6],
+  "operation": "embed",
+  "model": {"$base": "bases/local-model.json", "$patch": []},
+  "expect": {"ok": true, "errors": [], "present": ["objects/tbl-outcomes", "views/view-version-history"]}
+}

@@ -1,0 +1,5 @@
+{ "schemaVersion": 1, "generator": "docstyle 1.0.0", "document": "rec-document",
+  "records": {
+    "rec-document": { "id": "rec-document", "recordType": "document", "schemaVersion": 1,
+      "type": "other", "title": "Untitled" } },
+  "views": {}, "objects": {}, "assets": {} }

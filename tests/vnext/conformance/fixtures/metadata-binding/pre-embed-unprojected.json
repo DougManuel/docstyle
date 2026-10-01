@@ -1,0 +1,34 @@
+{
+  "description": "Criterion 3: the unprojected input -- raw local records copied into a catalogue without public_projection -- fails embedded-catalogue validation (restricted records present; unpruned contact).",
+  "criteria": [3],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {"op": "add", "path": "/records/contrib-1/contact", "value": "rec-contact-1"},
+      {
+        "op": "add",
+        "path": "/records/rec-contact-1",
+        "value": {
+          "id": "rec-contact-1",
+          "recordType": "contact",
+          "schemaVersion": 1,
+          "privacy": "restricted",
+          "email": "jane.smith@example.org"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/records/rec-org-internal",
+        "value": {
+          "id": "rec-org-internal",
+          "recordType": "organization",
+          "schemaVersion": 1,
+          "privacy": "restricted",
+          "name": "Internal review panel (unrelated, restricted)"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["catalogue-schema"]}
+}
