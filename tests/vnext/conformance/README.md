@@ -161,14 +161,20 @@ profiles:
   express: canonical semantics and credit, typed reference closure,
   terminal view authority, view-path resolution against the projected
   record, collection scope and ordering, whole-property pruning,
-  contribution-position uniqueness, the view/region identity equation, the
+  contribution-position uniqueness, one id per region, the view/region and
+  object/region identity equations, the
   table preservation policy, and reconciliation against
   `public_projection(local state)`. Profile-typed records embed like any
   public record: `catalogue.v1`'s `profile-record` branch is only a
   structural gate (the same bypass shape as `state-metadata.v1`'s branch 2),
-  and the semantic gate validates each one against its profile's own
-  schema, with record types registered only by valid, active
-  `profile-manifest.v1` manifests in `registries.profiles`.
+  and the semantic gate validates each one against the schema its active
+  manifest declares (`schema`: a bundled file reference such as
+  `profiles/fixture.v1.json`, or a registered `$id`), with record types
+  registered only by valid, active `profile-manifest.v1` manifests in
+  `registries.profiles`. Only a cold import, which carries no manifests,
+  falls back to the name-derived profile schema. A record or view that
+  fails its schema check is skipped by the semantic checks at embed time,
+  since that error already fails embedding.
   `person.affiliations` and `funding.funder` are classified
   closure-required although the specification's section 6 list omits
   them (pending spec review). `embed()` runs the specification's
@@ -187,7 +193,9 @@ projects to (`pre-embed-catalogue.json`, which doubles as the criterion-3
 expected output) and a cold-import package description
 (`cold-package.json`). Each fixture names the acceptance criteria it
 evidences, an `operation`, and the exact set of error codes it must
-produce, so a fixture cannot pass by failing for an unintended reason. `tests/test-catalogue.lua` drives them
+produce, so a fixture cannot pass by failing for an unintended reason. A
+fixture may also carry `schemas`, test-only schema documents registered for
+its own run and unregistered afterwards. `tests/test-catalogue.lua` drives them
 and checks that every executable criterion has evidence.
 `tests/test-schema-additivity.lua` pins the valid examples that existed
 before the revision (by canonical-JSON hash) and requires each to still

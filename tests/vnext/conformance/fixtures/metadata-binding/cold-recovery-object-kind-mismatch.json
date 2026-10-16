@@ -1,0 +1,20 @@
+{
+  "description": "Section 6: an object's type is its node's type, so it must match the kind of the envelope carrying its id (table to table, figure to figure). Table semantics bound to the figure's envelope fail cold recovery.",
+  "criteria": [8],
+  "operation": "cold-recover",
+  "package": {
+    "$base": "bases/cold-package.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/parts/~1docstyle~1catalogue.json/json/objects/fig-flow",
+        "value": {
+          "id": "fig-flow",
+          "type": "table",
+          "semantics": {"label": "Table 9", "caption": "g-caption-f5k2ma"}
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "errors": ["object-region-mismatch"], "where": ["fig-flow"]}
+}

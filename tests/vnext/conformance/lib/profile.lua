@@ -90,6 +90,22 @@ end
 -- rather than re-deriving the convention.
 M.schema_id = profile_schema_id
 
+-- The schema a profile manifest declares. Its `schema` field is "the
+-- profile's record schema (bundled file reference)" (WP1 spec, "Profile
+-- manifest"), e.g. "profiles/fixture.v1.json": a path inside the bundled
+-- schemas/ directory, whose registered identifier is
+-- "<schema-base>/<path>". A value that already carries a URI scheme is a
+-- schema identifier and is used as given. Returns the identifier to look
+-- up -- whether it is registered is the caller's check -- or nil when the
+-- value is not a nonempty string. lib/catalogue.lua resolves every
+-- profile it knows the manifest of through this, never through
+-- schema_id's name derivation above.
+function M.manifest_schema_id(ref)
+  if type(ref) ~= "string" or ref == "" then return nil end
+  if ref:match("^%a[%w%+%.%-]*:") then return ref end
+  return SCHEMA_BASE .. "/" .. ref
+end
+
 -- Accepts either a plain array of ids (integer-keyed, e.g.
 -- {"docstyle:fixture"}) or an already-built set (string key -> truthy).
 -- ipairs() alone would silently see zero entries in a set-shaped table

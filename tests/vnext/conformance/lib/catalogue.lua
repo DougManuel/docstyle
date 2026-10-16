@@ -194,6 +194,26 @@ local function preorder(content, fn, parent)
   end
 end
 
+-- One id, one region (WP1). The ids that occur more than once in `ids`,
+-- sorted. Run before building any id-keyed envelope or region map, where a
+-- repeated id would silently collapse two regions into one entry.
+local function duplicate_ids(ids)
+  local count, dups = {}, {}
+  for _, id in ipairs(ids) do count[id] = (count[id] or 0) + 1 end
+  for _, id in ipairs(sorted_keys(count)) do
+    if count[id] > 1 then dups[#dups + 1] = id end
+  end
+  return dups
+end
+
+local function report_duplicate_ids(F, stage, dups)
+  for _, id in ipairs(dups) do
+    F.add("error", "region-id-duplicate", stage, id,
+      "region id '" .. id .. "' is carried by more than one region; each region needs its own id")
+  end
+  return #dups > 0
+end
+
 --- Envelope map derived from a model's content tree: every node's id is its
 --- field-envelope id (WP1: envelope id = node id), with the envelope's kind,
 --- role, policy and parent. Used as the resolution scope for node-id
@@ -215,6 +235,7 @@ end
 --- independent of value truthiness (false, null, 0 and "" all exist). Array
 --- indexing and wildcards are unsupported. Returns ok, code.
 function M.resolve_path(record, path)
+  if type(path) ~= "string" then return false, "view-path-malformed" end
   if path == "" then return true end
   if path:sub(1, 1) == "." or path:sub(-1) == "." or path:find("..", 1, true) then
     return false, "view-path-malformed"
@@ -235,11 +256,13 @@ end
 -- Collections (spec section 6, "Collections select records ...")
 -- ---------------------------------------------------------------------
 
-local function select_members(records, document, coll)
+-- `skip`: ids of records that failed their schema check (ctx.invalid), which
+-- semantic checks never select; nil selects from every record.
+local function select_members(records, document, coll, skip)
   local members = {}
   for _, id in ipairs(sorted_keys(records)) do
     local r = records[id]
-    if r.recordType == coll.recordType and r.document == document then
+    if not (skip and skip[id]) and r.recordType == coll.recordType and r.document == document then
       members[#members + 1] = r
     end
   end
@@ -296,8 +319,11 @@ end
 
 -- registries.profiles holds the profile manifests active in the document
 -- (WP1 spec, "Registries"), keyed by profile id. Only an entry that is a
--- valid profile-manifest.v1 manifest keyed by its own id registers
--- anything; any other entry is an error, never a silent registration.
+-- valid profile-manifest.v1 manifest keyed by its own id, whose declared
+-- `schema` is registered, registers anything; any other entry is an error,
+-- never a silent registration. Activating a profile whose schema is
+-- unavailable fails even when no record uses it (WP1 spec, "Decision
+-- (namespace and registration)").
 local function active_manifests(F, stage, profiles)
   local active = {}
   for _, id in ipairs(sorted_keys(profiles)) do
@@ -310,16 +336,41 @@ local function active_manifests(F, stage, profiles)
       F.add("error", "container-key-mismatch", stage, "profiles/" .. id,
         "key does not match the manifest id '" .. tostring(manifest.id) .. "'")
     else
-      active[id] = manifest
+      local sid = profile.manifest_schema_id(manifest.schema)
+      if sid == nil or js.resolve(sid) == nil then
+        F.add("error", "profile-schema-unresolved", stage, "profiles/" .. id,
+          "declared schema '" .. manifest.schema .. "' (" .. tostring(sid) .. ") is not a registered schema")
+      else
+        active[id] = manifest
+      end
     end
   end
   return active
 end
 
+-- The schema a profile's data validates against. Whenever the manifest is
+-- known -- `manifests` is the active set at the local stage, and embed()
+-- hands the same set to its embedded recheck -- the manifest's declared
+-- `schema` is authoritative, and a profile with no active manifest has
+-- none. A cold import carries no manifests (`manifests` nil), so only
+-- lib/profile.lua's name-derived schema id is available there. At rest the
+-- raw, unvalidated registry entries arrive here, hence the type check.
+local function profile_schema(manifests, p)
+  local sid
+  if manifests == nil then
+    sid = profile.schema_id(p)
+  elseif type(manifests[p]) == "table" then
+    sid = profile.manifest_schema_id(manifests[p].schema)
+  end
+  return sid and js.resolve(sid) or nil
+end
+
 -- A profile-typed record: validated against its profile's own schema
--- (lib/profile.lua's derived schema id). `manifests` is the active set at
--- the local stage; nil at the embedded stage, where the catalogue carries
--- no manifests and only availability of the profile schema can be checked.
+-- (profile_schema above). `manifests` is the active set at the local stage
+-- and in embed()'s embedded recheck; nil in a cold import, where the
+-- catalogue carries no manifests and only availability of the profile
+-- schema can be checked.
+-- Returns true when the record validated (the semantic-check gate).
 local function check_profile_record(F, stage, r, manifests)
   local p = r.profile
   if manifests then
@@ -327,27 +378,28 @@ local function check_profile_record(F, stage, r, manifests)
     if manifest == nil then
       F.add("error", "profile-record-unavailable", stage, r.id,
         "profile '" .. p .. "' is not active in this document")
-      return
+      return false
     end
     local registers = false
     for _, t in ipairs(manifest.recordTypes or {}) do if t == r.recordType then registers = true end end
     if not registers then
       F.add("error", "record-type-unregistered", stage, r.id,
         "profile '" .. p .. "' does not register record type '" .. tostring(r.recordType) .. "'")
-      return
+      return false
     end
   end
-  local schema_id = profile.schema_id(p)
-  local schema = schema_id and js.resolve(schema_id)
+  local schema = profile_schema(manifests, p)
   if schema == nil then
     F.add("error", "profile-record-unavailable", stage, r.id, "profile '" .. p .. "' schema is not available")
-    return
+    return false
   end
   local okrec, errs = js.validate(schema, r)
   if not okrec then
     F.add("error", "profile-record-invalid", stage, r.id,
       "fails its profile '" .. p .. "' schema: " .. first_error(errs))
+    return false
   end
+  return true
 end
 
 -- ---------------------------------------------------------------------
@@ -361,6 +413,16 @@ end
 --   profiles   active profile manifests by id (local) or nil
 --   prunes     list of { container, id, property } (local stage only)
 --   canon      "error" | "warning" -- level for canonical-form failures
+--   invalid    ids of records and views whose schema (or profile) check
+--              failed with an error. The semantic checks skip them: that
+--              error already fails embedding, and their fields have no
+--              guaranteed types. They still resolve as reference targets;
+--              check_ref reads only recordType and privacy, which
+--              document-model.v1 and catalogue.v1 already guarantee.
+-- Every check below also tolerates a wrong-typed field instead of
+-- raising: at rest a schema failure is only a warning, so those checks
+-- read schema-invalid records, and a profile-typed record's shape is its
+-- profile's, not the core schema's.
 -- ---------------------------------------------------------------------
 
 -- Classifies a record reference. Returns "public" | "restricted" | nil,
@@ -403,12 +465,19 @@ local function check_catalogue_document(ctx, F, doc_id)
   check_ref(ctx, F, "catalogue.document", doc_id, "document", "closure-required", true)
 end
 
+-- Only string ids (or, for a `many` reference, an array of them) are
+-- references; any other value is the schema check's finding, not a target.
 local function check_record_refs(ctx, F, r)
   for _, ref in ipairs(M.REFERENCES[r.recordType] or {}) do
     local v = r[ref.field]
-    if v ~= nil then
-      local targets = ref.many and v or { v }
-      for _, target_id in ipairs(targets) do
+    local targets
+    if ref.many then
+      if type(v) == "table" and not has_string_key(v) then targets = v end
+    elseif type(v) == "string" then
+      targets = { v }
+    end
+    for _, target_id in ipairs(targets or {}) do
+      if type(target_id) == "string" then
         local where = r.id .. "." .. ref.field
         local cls = check_ref(ctx, F, where, target_id, ref.target, ref.class, is_public(r))
         if cls == "restricted" and ref.class == "prunable" and ctx.prunes and is_public(r) then
@@ -421,7 +490,8 @@ end
 
 local function check_view(ctx, F, v, registered)
   local where = v.id
-  if v.sourceRecord ~= nil then
+  local coll = v.sourceCollection
+  if type(v.sourceRecord) == "string" then
     local src = v.sourceRecord
     if src == v.id then
       F.add("error", "view-self-reference", ctx.stage, where, "view names itself as its source")
@@ -440,8 +510,7 @@ local function check_view(ctx, F, v, registered)
         end
       end
     end
-  elseif v.sourceCollection ~= nil then
-    local coll = v.sourceCollection
+  elseif type(coll) == "table" and type(coll.recordType) == "string" and type(coll.orderBy) == "string" then
     if not registered[coll.recordType] then
       F.add("error", "collection-type-unregistered", ctx.stage, where,
         "collection record type '" .. tostring(coll.recordType) .. "' is not registered")
@@ -454,7 +523,7 @@ local function check_view(ctx, F, v, registered)
     end
     -- Selection happens before privacy projection: a restricted member
     -- fails closure instead of silently disappearing.
-    local members = select_members(ctx.records, ctx.document, coll)
+    local members = select_members(ctx.records, ctx.document, coll, ctx.invalid)
     for _, m in ipairs(members) do
       if not is_public(m) and is_public(v) then
         F.add("error", "collection-member-restricted", ctx.stage, where,
@@ -520,7 +589,8 @@ local function check_positions(ctx, F)
   local seen = {}
   for _, id in ipairs(sorted_keys(ctx.records)) do
     local r = ctx.records[id]
-    if r.recordType == "contribution" and r.document ~= nil and r.position ~= nil then
+    if r.recordType == "contribution" and not (ctx.invalid and ctx.invalid[id])
+        and type(r.document) == "string" and type(r.position) == "number" then
       seen[r.document] = seen[r.document] or {}
       local prior = seen[r.document][r.position]
       if prior then
@@ -618,8 +688,7 @@ end
 
 local function check_profiles_ext(ctx, F, where, profiles_ext)
   for _, key in ipairs(sorted_keys(profiles_ext)) do
-    local schema_id = profile.schema_id(key)
-    local schema = schema_id and js.resolve(schema_id)
+    local schema = profile_schema(ctx.profiles, key)
     local active = ctx.profiles == nil or ctx.profiles[key] ~= nil
     if not (schema and active) then
       F.add(ctx.canon, "semantics-profile-unavailable", ctx.stage, where,
@@ -760,6 +829,14 @@ local function local_validate(model, opts, mode)
     return F
   end
 
+  if embed then
+    -- Every node id is its field-envelope id, so a repeated node id would
+    -- collapse two regions in the envelope map built below: fail first.
+    local ids = {}
+    preorder(model.content, function(n) ids[#ids + 1] = n.id end)
+    if report_duplicate_ids(F, stage, duplicate_ids(ids)) then return F end
+  end
+
   local reg = model.registries
   check_keys(F, stage, "metadata", reg.metadata)
   check_keys(F, stage, "assets", reg.assets)
@@ -767,18 +844,25 @@ local function local_validate(model, opts, mode)
   -- only valid, active manifests register record types.
   local manifests = embed and active_manifests(F, stage, reg.profiles) or nil
 
-  local records, views = {}, {}
+  -- `invalid` gates the semantic checks below (see the ctx notes above the
+  -- shared checks). It is filled at embed time only: at rest a record that
+  -- fails its schema is valid v1 data with a warning, and the at-rest
+  -- contracts (position uniqueness among them) still apply to it.
+  local records, views, invalid = {}, {}, {}
   for _, id in ipairs(sorted_keys(reg.metadata)) do
     local r = reg.metadata[id]
     if r.recordType == "metadata-view" then views[id] = r else records[id] = r end
     if r.profile ~= nil then
       -- A restricted profile record never embeds, so it cannot block
       -- embedding; a public one embeds only once validated by its profile.
-      if embed and is_public(r) then check_profile_record(F, stage, r, manifests) end
+      if embed and is_public(r) and not check_profile_record(F, stage, r, manifests) then
+        invalid[id] = true
+      end
     elseif not CORE_TYPES[r.recordType] then
       if embed then
         F.add("error", "record-type-unregistered", stage, id,
           "record type '" .. tostring(r.recordType) .. "' is not a registered core type")
+        invalid[id] = true
       end
     else
       -- document-model.v1's registry record definition is deliberately
@@ -790,6 +874,7 @@ local function local_validate(model, opts, mode)
       if not okrec then
         F.add(embed and "error" or "warning", "record-schema", stage, id,
           "fails metadata-core.v1 " .. r.recordType .. ": " .. why)
+        if embed then invalid[id] = true end
       end
       if r.recordType == "person" and (r.roles ~= nil or r.corresponding ~= nil) then
         F.add("warning", "person-authorship-deprecated", stage, id,
@@ -801,7 +886,7 @@ local function local_validate(model, opts, mode)
   local ctx = {
     stage = stage, records = records, views = views, assets = reg.assets or {},
     envelopes = embed and M.envelopes_of(model) or nil, profiles = manifests or reg.profiles or {},
-    prunes = embed and {} or nil, canon = embed and "error" or "warning",
+    prunes = embed and {} or nil, canon = embed and "error" or "warning", invalid = invalid,
   }
 
   if embed then
@@ -828,14 +913,18 @@ local function local_validate(model, opts, mode)
 
   for _, id in ipairs(sorted_keys(records)) do
     local r = records[id]
-    if r.recordType == "document" and is_public(r) then check_abstract(ctx, F, r) end
-    if embed then check_record_refs(ctx, F, r) end
+    if not invalid[id] then
+      if r.recordType == "document" and is_public(r) then check_abstract(ctx, F, r) end
+      if embed then check_record_refs(ctx, F, r) end
+    end
   end
   check_positions(ctx, F)
 
   if embed then
     local registered = registered_types(manifests)
-    for _, id in ipairs(sorted_keys(views)) do check_view(ctx, F, views[id], registered) end
+    for _, id in ipairs(sorted_keys(views)) do
+      if not invalid[id] then check_view(ctx, F, views[id], registered) end
+    end
     check_view_regions(ctx, F)
   end
 
@@ -905,6 +994,10 @@ end
 --- embed() passes them; a cold import cannot. opts.envelopes: the
 --- document's field-envelope map (id -> {kind, role, policy, parent}); node-id references and view/region identity are checked only
 --- when it is given (a warning records that they were not).
+--- opts.profiles: the document's active profile manifests by id, when
+--- known -- embed() passes them, so profile data is rechecked against each
+--- manifest's declared schema; a cold import carries none and falls back
+--- to the name-derived profile schema.
 function M.validate_embedded(cat, opts)
   opts = opts or {}
   local stage = "embedded"
@@ -921,9 +1014,12 @@ function M.validate_embedded(cat, opts)
   end
   for _, name in ipairs({ "records", "views", "objects", "assets" }) do check_keys(F, stage, name, cat[name]) end
 
+  -- catalogue.v1 has validated every core record and view; a profile-typed
+  -- record passed only the permissive profile-record branch, so the one
+  -- that then fails its profile check is gated like a schema-invalid one.
   local ctx = { stage = stage, records = cat.records, views = cat.views, assets = cat.assets,
-    document = cat.document, envelopes = opts.envelopes, profiles = nil, canon = "error",
-    local_ids = opts.local_ids }
+    document = cat.document, envelopes = opts.envelopes, profiles = opts.profiles, canon = "error",
+    local_ids = opts.local_ids, invalid = {} }
   if not opts.envelopes then
     F.add("warning", "envelopes-unavailable", stage, "",
       "no field envelopes supplied; node-id references and view/region identity not checked")
@@ -933,7 +1029,7 @@ function M.validate_embedded(cat, opts)
   for _, id in ipairs(sorted_keys(cat.records)) do
     local r = cat.records[id]
     if r.profile ~= nil then
-      check_profile_record(F, stage, r, nil)
+      if not check_profile_record(F, stage, r, opts.profiles) then ctx.invalid[id] = true end
       check_profile_values(ctx, F, id, r)
     else
       if r.recordType == "document" then check_abstract(ctx, F, r) end
@@ -946,6 +1042,17 @@ function M.validate_embedded(cat, opts)
   check_view_regions(ctx, F)
   for _, id in ipairs(sorted_keys(cat.objects)) do
     local o = cat.objects[id]
+    -- An object is a node's semantics keyed by node id (= envelope id), so
+    -- it binds the region carrying its id, of its own kind. One that binds
+    -- no region, or a region of another kind, would leave the real node
+    -- without its semantics.
+    local e = ctx.envelopes and ctx.envelopes[id]
+    if ctx.envelopes and e == nil then
+      F.add("error", "object-region-missing", stage, id, "no field envelope carries this object's id")
+    elseif e and e.kind ~= o.type then
+      F.add("error", "object-region-mismatch", stage, id,
+        "object type '" .. o.type .. "' does not match the kind '" .. tostring(e.kind) .. "' of its region")
+    end
     check_semantics(ctx, F, id, o.type, o.semantics)
   end
   for _, id in ipairs(sorted_keys(cat.assets)) do check_asset(ctx, F, cat.assets[id]) end
@@ -956,8 +1063,11 @@ end
 function M.embed(model, opts)
   local proj = M.public_projection(model, opts)
   if not proj.ok then return proj end
+  -- The active manifests step 1 validated against (its findings are
+  -- already in proj.findings), so step 3 uses the same declared schemas.
+  local manifests = active_manifests(new_findings(), "local", model.registries.profiles)
   local res = M.validate_embedded(proj.catalogue,
-    { envelopes = M.envelopes_of(model), local_ids = M.local_ids_of(model) })
+    { envelopes = M.envelopes_of(model), local_ids = M.local_ids_of(model), profiles = manifests })
   local findings = {}
   for _, f in ipairs(proj.findings) do findings[#findings + 1] = f end
   for _, f in ipairs(res.findings) do findings[#findings + 1] = f end
@@ -1029,15 +1139,23 @@ end
 function M.cold_recover(pkg)
   local F = new_findings()
   local stage = "carrier"
-  local envelopes, regions = {}, {}
+  local valid, ids = {}, {}
   for i, e in ipairs(pkg.envelopes or {}) do
     local okenv, why = schema_check(ENVELOPE, e)
     if not okenv then
       F.add("error", "envelope-schema", stage, "envelopes/" .. (i - 1), "fails field-envelope.v4: " .. why)
     else
-      envelopes[e.id] = { kind = e.kind, role = e.role, policy = e.policy, parent = e.parent }
-      regions[e.id] = { envelope = e }
+      valid[#valid + 1] = e
+      ids[#ids + 1] = e.id
     end
+  end
+  -- A repeated envelope id would make two regions one map entry below, so
+  -- recovery stops here, with or without a catalogue to bind.
+  if report_duplicate_ids(F, stage, duplicate_ids(ids)) then return { ok = false, findings = F.list } end
+  local envelopes, regions = {}, {}
+  for _, e in ipairs(valid) do
+    envelopes[e.id] = { kind = e.kind, role = e.role, policy = e.policy, parent = e.parent }
+    regions[e.id] = { envelope = e }
   end
 
   local rels = {}

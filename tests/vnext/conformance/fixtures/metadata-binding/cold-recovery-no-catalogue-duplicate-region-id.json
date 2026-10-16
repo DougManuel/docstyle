@@ -1,0 +1,25 @@
+{
+  "description": "Cold import without a catalogue: degrading to WP1 behaviour still needs one id per region, so duplicated envelope ids fail rather than degrade.",
+  "criteria": [8],
+  "operation": "cold-recover",
+  "package": {
+    "$base": "bases/cold-package.json",
+    "$patch": [
+      {"op": "remove", "path": "/parts/~1docstyle~1catalogue.json"},
+      {"op": "remove", "path": "/relationships/~1word~1document.xml"},
+      {
+        "op": "add",
+        "path": "/envelopes/-",
+        "value": {
+          "v": 4,
+          "id": "g-span-k3m7ap",
+          "kind": "span",
+          "policy": "generated-replace",
+          "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "role": "metadata-value"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "errors": ["region-id-duplicate"], "where": ["g-span-k3m7ap"]}
+}

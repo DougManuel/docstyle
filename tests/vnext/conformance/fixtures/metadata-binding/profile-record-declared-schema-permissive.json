@@ -1,0 +1,38 @@
+{
+  "description": "The converse: the manifest declares a permissive schema by its registered $id (registered for this fixture only), and a record lacking the label the name-derived profiles/fixture.v1.json requires still embeds -- local validation and the embedded recheck both use the declared schema.",
+  "criteria": [3],
+  "operation": "embed",
+  "schemas": [
+    {
+      "$id": "urn:docstyle-conformance:fixture-loose",
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion"]
+    }
+  ],
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {
+          "id": "docstyle:fixture",
+          "version": "1.0.0",
+          "schema": "urn:docstyle-conformance:fixture-loose",
+          "recordTypes": ["fixture-record"]
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "present": ["records/rec-fx1"]}
+}

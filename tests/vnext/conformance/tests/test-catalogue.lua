@@ -5,7 +5,8 @@
 -- mirrors the schema descriptions, carrier constants, criterion coverage).
 --
 -- Fixture shape: { description, criteria = {n, ...}, operation, <inputs>,
--- expect }. `operation` is one of
+-- expect, schemas? } (`schemas`: test-only schemas registered for that
+-- fixture's run alone; see with_schemas). `operation` is one of
 --   embed               catalogue.embed(model, {document})
 --   at-rest             catalogue.validate_at_rest(model)
 --   validate-embedded   catalogue.validate_embedded(catalogue, {envelopes})
@@ -270,12 +271,25 @@ end
 
 local cases = {}
 
+-- A fixture may register test-only schemas for its own run: `schemas` is an
+-- array of schema documents, each under an $id no registered schema uses.
+-- They are unregistered afterwards, so they never reach another case.
+local function with_schemas(list, fn)
+  for _, s in ipairs(list or {}) do
+    assert(js.resolve(s["$id"]) == nil, "fixture schema " .. tostring(s["$id"]) .. " would shadow a registered schema")
+  end
+  for _, s in ipairs(list or {}) do js.register(s["$id"], s) end
+  local okrun, err = pcall(fn)
+  for _, s in ipairs(list or {}) do js.register(s["$id"], nil) end
+  if not okrun then error(err, 0) end
+end
+
 for _, name in ipairs(names) do
   local f = fixtures[name]
   cases[#cases + 1] = { name = "fixture " .. name, fn = function()
       local drive = drivers[f.operation]
       assert(drive, "unknown fixture operation " .. tostring(f.operation))
-      drive(f)
+      with_schemas(f.schemas, function() drive(f) end)
     end }
 end
 
@@ -451,6 +465,177 @@ cases[#cases + 1] = { name = "pre-existing document-model example stays valid at
     assert(rest.ok, "full-coverage example fails at rest: " .. describe(rest.findings))
     local res = cat.embed(m)
     assert(not res.ok, "full-coverage example embedded despite missing canonical figure semantics")
+  end }
+
+-- ---------------------------------------------------------------------
+-- Wrong-typed fields: every record and view field a semantic check reads,
+-- set to each JSON type it may not take, comes back from embed() and
+-- validate_at_rest() as findings -- never as a thrown Lua error. At embed
+-- time the schema finding stands alone: a record that fails its schema is
+-- skipped by the semantic checks, since its schema error already fails
+-- embedding. Reference fields come from cat.REFERENCES, so a newly
+-- classified reference is covered without editing this table.
+-- ---------------------------------------------------------------------
+
+-- Wrong values by the shape the field must have. Containers are nonempty,
+-- so an object and an array are never ambiguous.
+local WRONG = {
+  string = { 7, true, { k = "v" }, { "x" } },
+  integer = { 1.5, "1", true, { k = "v" }, { 1 } },
+  ["string-array"] = { 7, "x", true, { k = "v" }, { 7 } },
+  object = { 7, "x", true, { "x" } },
+  abstract = { 7, true, { "x" }, { region = 7 }, { text = "x" } },
+}
+
+-- The local model plus a public funding record, so funding.funder is
+-- exercised too.
+local function wrong_type_base()
+  local m = jsonpatch.deep_copy(fixtures["pre-embed-local"].model)
+  m.registries.metadata["rec-funding-1"] = { id = "rec-funding-1", recordType = "funding",
+    schemaVersion = 1, funder = "rec-org-uottawa" }
+  return m
+end
+
+local function ids_where(model, pred)
+  local out = {}
+  for id, r in pairs(model.registries.metadata) do if pred(r) then out[#out + 1] = id end end
+  table.sort(out)
+  return out
+end
+
+local function wrong_type_targets(m)
+  local function of_type(t) return ids_where(m, function(r) return r.recordType == t end) end
+  local targets = {}
+  local types = {}
+  for t in pairs(cat.REFERENCES) do types[#types + 1] = t end
+  table.sort(types)
+  for _, t in ipairs(types) do
+    for _, ref in ipairs(cat.REFERENCES[t]) do
+      targets[#targets + 1] = { label = t .. "." .. ref.field, ids = of_type(t), field = ref.field,
+        shape = ref.many and "string-array" or "string" }
+    end
+  end
+  local record_views = ids_where(m, function(r) return r.sourceRecord ~= nil end)
+  local collection_views = ids_where(m, function(r) return r.sourceCollection ~= nil end)
+  local every_record = ids_where(m, function() return true end)
+  for _, t in ipairs({
+    { label = "contribution.position", ids = of_type("contribution"), field = "position", shape = "integer" },
+    { label = "document.abstract", ids = of_type("document"), field = "abstract", shape = "abstract" },
+    { label = "metadata-view.sourceRecord", ids = record_views, field = "sourceRecord", shape = "string" },
+    { label = "metadata-view.path", ids = record_views, field = "path", shape = "string" },
+    { label = "metadata-view.sourceCollection", ids = collection_views, field = "sourceCollection", shape = "object" },
+    { label = "metadata-view.sourceCollection.recordType", ids = collection_views,
+      field = "sourceCollection.recordType", shape = "string" },
+    { label = "metadata-view.sourceCollection.orderBy", ids = collection_views,
+      field = "sourceCollection.orderBy", shape = "string" },
+    { label = "record.id", ids = every_record, field = "id", shape = "string" },
+    { label = "record.recordType", ids = every_record, field = "recordType", shape = "string" },
+    { label = "record.privacy", ids = every_record, field = "privacy", shape = "string" },
+    { label = "record.profile", ids = every_record, field = "profile", shape = "string" },
+  }) do targets[#targets + 1] = t end
+  return targets
+end
+
+local function set_field(record, field, value)
+  local segs = {}
+  for seg in field:gmatch("[^.]+") do segs[#segs + 1] = seg end
+  local node = record
+  for i = 1, #segs - 1 do node = node[segs[i]] end
+  node[segs[#segs]] = jsonpatch.deep_copy(value)
+end
+
+-- The schema layer's finding for the substituted records: record-schema at
+-- one of their ids, or model-schema for a field document-model.v1 itself
+-- constrains (id, recordType, privacy, profile).
+local function schema_finding(res, ids)
+  for _, f in ipairs(res.findings or {}) do
+    if f.code == "model-schema" then return f end
+    if f.code == "record-schema" then
+      for _, id in ipairs(ids) do if f.where == id then return f end end
+    end
+  end
+  return nil
+end
+
+cases[#cases + 1] = { name = "wrong-typed fields: the unmodified base embeds cleanly", fn = function()
+    local res = cat.embed(wrong_type_base())
+    assert(res.ok, describe(res.findings))
+    for _, t in ipairs(wrong_type_targets(wrong_type_base())) do
+      assert(#t.ids > 0, "no record in the base exercises " .. t.label)
+    end
+  end }
+
+for _, t in ipairs(wrong_type_targets(wrong_type_base())) do
+  cases[#cases + 1] = { name = "wrong-typed " .. t.label .. " returns findings, never throws", fn = function()
+      local problems = {}
+      local function problem(msg) problems[#problems + 1] = msg end
+      for _, value in ipairs(WRONG[t.shape]) do
+        -- "one": a single record carries the wrong value. "every": every
+        -- record the target covers does, and the two contributions share a
+        -- position, so position uniqueness reads the wrong values as well.
+        for _, every in ipairs({ false, true }) do
+          local m = wrong_type_base()
+          local changed = every and t.ids or { t.ids[1] }
+          for _, id in ipairs(changed) do set_field(m.registries.metadata[id], t.field, value) end
+          if every and t.field ~= "position" then
+            m.registries.metadata["contrib-2"].position = m.registries.metadata["contrib-1"].position
+          end
+          local label = t.label .. " = " .. json.encode(value) .. (every and " on every record" or "")
+
+          local okcall, res = pcall(cat.embed, m)
+          if not okcall then
+            problem(label .. ": embed() threw: " .. tostring(res))
+          elseif type(res) ~= "table" or type(res.findings) ~= "table" then
+            problem(label .. ": embed() returned no findings")
+          else
+            if res.ok ~= false or res.catalogue ~= nil then problem(label .. ": embedded") end
+            local f = schema_finding(res, changed)
+            if not (f and f.level == "error") then
+              problem(label .. ": embed() has no schema error: " .. describe(res.findings))
+            end
+            if not every and #code_set(res.findings, "error") ~= 1 then
+              problem(label .. ": semantic checks ran on the schema-invalid record: " .. describe(res.findings))
+            end
+          end
+
+          okcall, res = pcall(cat.validate_at_rest, m)
+          if not okcall then
+            problem(label .. ": validate_at_rest() threw: " .. tostring(res))
+          elseif type(res) ~= "table" or type(res.findings) ~= "table" then
+            problem(label .. ": validate_at_rest() returned no findings")
+          else
+            local f = schema_finding(res, changed)
+            if not f then
+              problem(label .. ": validate_at_rest() has no schema finding: " .. describe(res.findings))
+            elseif not every and f.code == "record-schema" and #code_set(res.findings, "error") > 0 then
+              problem(label .. ": unexpected error at rest: " .. describe(res.findings))
+            end
+          end
+        end
+      end
+      assert(#problems == 0, #problems .. " problem(s): " .. table.concat(problems, " | "))
+    end }
+end
+
+cases[#cases + 1] = { name = "cold import: profile-typed records with wrong-typed core-named fields return findings, never throw", fn = function()
+    -- The catalogue's profile-record branch admits any shape, so the
+    -- cold-import validator meets these values without a core schema
+    -- check in front of them. Two such records share a position, so
+    -- position uniqueness reads them too.
+    local envelopes = cat.envelopes_of(fixtures["pre-embed-local"].model)
+    for _, value in ipairs(WRONG.string) do
+      local c = jsonpatch.expand(read_fixture_file("bases/pre-embed-catalogue.json"), read_fixture_file)
+      for _, id in ipairs({ "rec-px-1", "rec-px-2" }) do
+        c.records[id] = { id = id, recordType = "contribution", schemaVersion = 1, profile = "docstyle:absent",
+          document = jsonpatch.deep_copy(value), person = jsonpatch.deep_copy(value),
+          affiliations = jsonpatch.deep_copy(value), position = 1 }
+      end
+      local okcall, res = pcall(cat.validate_embedded, c, { envelopes = envelopes })
+      assert(okcall, json.encode(value) .. ": validate_embedded() threw: " .. tostring(res))
+      assert(res.ok == false, json.encode(value) .. ": validated")
+      assert(deep_equal(code_set(res.findings, "error"), { "profile-record-unavailable" }),
+        json.encode(value) .. ": " .. describe(res.findings))
+    end
   end }
 
 return cases
