@@ -160,10 +160,14 @@ local function require_entry(self, part_name)
   return zip_name, entry
 end
 
+-- OPC part names compare without regard to ASCII case, so relationship
+-- metadata is recognized whatever the case of `_rels` and `.rels`; lookup
+-- (Package:_relationship_zip), the mutation guards and inventory all agree.
 local function is_relationship_part(zip_name)
-  return zip_name == "_rels/.rels" or
-    zip_name:match("^_rels/[^/]+%.rels$") ~= nil or
-    zip_name:match("/_rels/[^/]+%.rels$") ~= nil
+  local folded = ascii_lower(zip_name)
+  return folded == "_rels/.rels" or
+    folded:match("^_rels/[^/]+%.rels$") ~= nil or
+    folded:match("/_rels/[^/]+%.rels$") ~= nil
 end
 
 -- Effective package state: originals, replacements and additions as one

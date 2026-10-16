@@ -167,6 +167,23 @@ return {
     end,
   },
   {
+    name = "a rejected append to a self-closing parent leaves later appends working",
+    gate = "safety",
+    stage = "xml",
+    fn = function()
+      -- #52 re-review: the expansion state must change only after the
+      -- candidate replacement has been encoded and validated.
+      local doc = xml.parse("<root/>")
+      xml.append_element(doc.root, "a", {})
+      local ok, err = diagnostic.capture(function()
+        xml.append_element(doc.root, "b", { { name = "x", value = "bad\1char" } })
+      end)
+      assert(not ok and err.code == "xml.invalid-character", tostring(err and err.code))
+      xml.append_element(doc.root, "c", {})
+      assert(xml.serialize(doc) == "<root><a/><c/></root>", xml.serialize(doc))
+    end,
+  },
+  {
     name = "a self-closing parent in a UTF-16 document is expanded in UTF-16",
     gate = "preservation",
     stage = "xml",

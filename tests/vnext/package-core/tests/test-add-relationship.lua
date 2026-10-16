@@ -584,4 +584,55 @@ return {
         "application/vnd.example+xml", "content type follows the resolved name")
     end,
   },
+  {
+    name = "relationship metadata is recognized whatever its filename case",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      -- #52 re-review: lookup already treats word/_RELS/document.xml.RELS
+      -- as document.xml's relationships part, so every guard must too.
+      fixture.with_temp_dir("add-rel-upper-case", function(dir)
+        local entries = {
+          { "[Content_Types].xml", CONTENT_TYPES },
+          { "_rels/.rels", ROOT_RELATIONSHIPS },
+          { "word/document.xml", DOCUMENT },
+          { "docProps/core.xml", CORE_PROPERTIES },
+          { "word/_RELS/document.xml.RELS", [[<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.example.org/custom" Target="../docProps/core.xml"/></Relationships>]] },
+        }
+        local zip_entries = {}
+        for index, e in ipairs(entries) do
+          zip_entries[index] = pandoc.zip.Entry(e[1], e[2], 946684800)
+        end
+        local source = dir .. "/upper.docx"
+        fixture.write_bytes(source, pandoc.zip.Archive(zip_entries):bytestring())
+        local pkg = core.open(source, LIMITS)
+        local ok, err = diagnostic.capture(function()
+          pkg:replace_part("/word/_RELS/document.xml.RELS", "<notrelationships/>")
+        end)
+        assert(not ok and err.code == "opc.metadata-replacement",
+          "replacing upper-case relationship metadata must be refused")
+        local ok2, err2 = diagnostic.capture(function()
+          pkg:add_part("/word/_RELS/other.xml.RELS", "<x/>", "application/xml")
+        end)
+        assert(not ok2 and err2.code == "opc.metadata-replacement",
+          "adding upper-case relationship metadata must be refused")
+        local inventory = pkg:inventory()
+        local as_metadata = false
+        for _, name in ipairs(inventory.metadata) do
+          if name == "/word/_RELS/document.xml.RELS" then as_metadata = true end
+        end
+        for _, name in ipairs(inventory.parts) do
+          assert(name ~= "/word/_RELS/document.xml.RELS", "listed as a part")
+        end
+        assert(as_metadata, "listed as metadata")
+        local rid = pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "../docProps/core.xml")
+        assert(rid == "rId2", rid)
+        local out = dir .. "/out.docx"
+        pkg:write_atomic(out)
+        assert(#core.open(out, LIMITS):relationships("/word/document.xml") == 2)
+      end)
+    end,
+  },
 }

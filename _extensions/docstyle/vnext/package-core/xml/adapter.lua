@@ -241,9 +241,15 @@ function M.append_element(node, local_name, attributes)
   local end_tag = "</" .. node.name.qname .. ">"
   local expansion = node.expansion
   if expansion then
-    expansion.children[#expansion.children + 1] = child_markup
-    expansion.edit.replacement = overlay.encode_insertion(
-      ">" .. table.concat(expansion.children) .. end_tag, document.encoding)
+    -- Encode (and so validate) the candidate first; a rejected insertion
+    -- must leave the pending expansion exactly as it was.
+    local children = {}
+    for index, markup in ipairs(expansion.children) do children[index] = markup end
+    children[#children + 1] = child_markup
+    local replacement = overlay.encode_insertion(
+      ">" .. table.concat(children) .. end_tag, document.encoding)
+    expansion.children = children
+    expansion.edit.replacement = replacement
     return
   end
   local close = overlay.encode_insertion("/>", document.encoding)
@@ -274,7 +280,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1528,
+  docstyle_owned_lines = 1534,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",
