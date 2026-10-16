@@ -449,21 +449,118 @@ return {
     end,
   },
   {
-    name = "a self-closing Relationships root with ordinary attributes still fails closed",
+    name = "a self-closing Relationships root keeps every other byte when expanded",
+    gate = "preservation",
+    stage = "package",
+    fn = function()
+      -- #52 review: comments, processing instructions, root attributes and
+      -- the UTF-16 encoding all survive an added relationship.
+      fixture.with_temp_dir("add-rel-self-closing-bytes", function(dir)
+        local utf8_rels = '<?xml version="1.0" encoding="UTF-16"?>' ..
+          '<!-- keep me --><?keep this?>' ..
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:x="urn:example" x:keep="1"/>'
+        local source = write_minimal_package(dir, "self-closing-bytes.docx",
+          "\xFF\xFE" .. pandoc.text.toencoding(utf8_rels, "UTF-16LE"))
+        local pkg = core.open(source, LIMITS)
+        local rid = pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "../docProps/core.xml")
+        local out = dir .. "/out.docx"
+        pkg:write_atomic(out)
+        local bytes = core.open(out, LIMITS):part("/word/_rels/document.xml.rels")
+        local text = pandoc.text.fromencoding(bytes:sub(3), "UTF-16LE")
+        assert(bytes:sub(1, 2) == "\xFF\xFE", "UTF-16 byte-order mark kept")
+        assert(text:find("<!-- keep me --><?keep this?>", 1, true), "comment and PI kept")
+        assert(text:find('x:keep="1">', 1, true), "root attribute kept")
+        assert(text:find('Id="' .. rid .. '"', 1, true), "relationship added")
+      end)
+    end,
+  },
+  {
+    name = "relationship ids never overflow, even after the largest integer",
     gate = "safety",
     stage = "package",
     fn = function()
-      fixture.with_temp_dir("add-rel-self-closing-attr", function(dir)
-        local source = write_minimal_package(dir, "self-closing-attr.docx",
+      fixture.with_temp_dir("add-rel-overflow", function(dir)
+        local source = write_minimal_package(dir, "big-rid.docx",
           [[<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:x="urn:example" x:keep="1"/>]])
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId9223372036854775807" Type="http://schemas.example.org/custom" Target="../docProps/core.xml"/><Relationship Id="rId0099" Type="http://schemas.example.org/custom" Target="../docProps/core.xml"/></Relationships>]])
         local pkg = core.open(source, LIMITS)
-        local ok, err = diagnostic.capture(function()
-          pkg:add_relationship("/word/document.xml",
-            "http://schemas.example.org/custom", "../docProps/core.xml")
-        end)
-        assert(not ok, "rebuilding would drop the root attribute")
-        assert(err.code == "xml.edit-target", tostring(err.code))
+        local first = pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "../docProps/core.xml")
+        local second = pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "../docProps/core.xml")
+        assert(first == "rId9223372036854775808", first)
+        assert(second == "rId9223372036854775809", second)
+        local out = dir .. "/out.docx"
+        pkg:write_atomic(out)
+        assert(#core.open(out, LIMITS):relationships("/word/document.xml") == 4)
+      end)
+    end,
+  },
+  {
+    name = "an existing relationships part with an equivalent name is reused",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      -- #52 review: the source part is stored as a%c3%a9.xml and its rels
+      -- part as a%C3%A9.xml.rels; they are the same OPC name.
+      fixture.with_temp_dir("add-rel-equivalent", function(dir)
+        local entries = {
+          { "[Content_Types].xml", [[<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>]] },
+          { "_rels/.rels", ROOT_RELATIONSHIPS },
+          { "word/document.xml", DOCUMENT },
+          { "docProps/core.xml", CORE_PROPERTIES },
+          { "word/a%c3%a9.xml", "<x/>" },
+          { "word/_rels/a%C3%A9.xml.rels", [[<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.example.org/custom" Target="document.xml"/></Relationships>]] },
+        }
+        local zip_entries = {}
+        for index, e in ipairs(entries) do
+          zip_entries[index] = pandoc.zip.Entry(e[1], e[2], 946684800)
+        end
+        local source = dir .. "/equivalent.docx"
+        fixture.write_bytes(source, pandoc.zip.Archive(zip_entries):bytestring())
+        local pkg = core.open(source, LIMITS)
+        assert(#pkg:relationships("/word/a%c3%a9.xml") == 1,
+          "the existing relationships part is found")
+        local rid = pkg:add_relationship("/word/a%c3%a9.xml",
+          "http://schemas.example.org/custom", "document.xml")
+        assert(rid == "rId2", rid)
+        local out = dir .. "/out.docx"
+        pkg:write_atomic(out)
+        local reopened = core.open(out, LIMITS)
+        local rels = 0
+        for _, entry in ipairs(reopened.entries) do
+          if entry.name:lower():find("_rels/a%c3%a9.xml.rels", 1, true) then rels = rels + 1 end
+        end
+        assert(rels == 1, "one relationships part, not two")
+        assert(#reopened:relationships("/word/a%c3%a9.xml") == 2)
+      end)
+    end,
+  },
+  {
+    name = "publication refuses a relationships part the session made invalid",
+    gate = "safety",
+    stage = "package",
+    fn = function()
+      -- Defence in depth: whatever produced it, a modified relationships
+      -- part with duplicate ids must not be published.
+      fixture.with_temp_dir("add-rel-verify", function(dir)
+        local source = write_minimal_package(dir, "verify.docx",
+          [[<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>]])
+        local pkg = core.open(source, LIMITS)
+        pkg:add_relationship("/word/document.xml",
+          "http://schemas.example.org/custom", "../docProps/core.xml")
+        local rels = "word/_rels/document.xml.rels"
+        pkg._replacements[rels] = pkg._replacements[rels]:gsub(
+          "</Relationships>", '<Relationship Id="rId1" Type="http://x/t" Target="../docProps/core.xml"/></Relationships>')
+        local out = dir .. "/out.docx"
+        local ok, err = diagnostic.capture(function() pkg:write_atomic(out) end)
+        assert(not ok, "duplicate ids must not publish")
+        assert(err.code == "opc.duplicate-relationship-id", tostring(err.code))
+        assert(not fixture.exists(out), "nothing is published")
       end)
     end,
   },

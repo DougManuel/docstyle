@@ -146,21 +146,41 @@ return {
     end,
   },
   {
-    name = "append_element on a self-closing parent is rejected",
-    gate = "safety",
+    name = "append_element expands a self-closing parent in place",
+    gate = "preservation",
     stage = "xml",
     fn = function()
-      -- A self-closing "<Empty/>" has no separate end tag: the paired end
-      -- event is the empty=true marker reusing the start tag's own range,
-      -- so overlay.bind never attaches end_tag_range to this node. There is
-      -- nowhere for append_element to insert before.
-      local doc = xml.parse('<?xml version="1.0"?><root><Empty/></root>')
+      -- #52 review: only the closing "/>" of the start tag is replaced, so
+      -- every other byte of the document survives unchanged.
+      local source = '<?xml version="1.0"?><!-- c --><root><?pi x?>' ..
+        '<Empty a="1" /></root>'
+      local doc = xml.parse(source)
       local empty = xml.find_all(doc, "", "Empty")[1]
-      local ok, err = diagnostic.capture(function()
-        xml.append_element(empty, "extra", {})
-      end)
-      assert(not ok, "self-closing parent must be rejected")
-      assert(err.code == "xml.edit-target", tostring(err))
+      xml.append_element(empty, "extra", { { name = "n", value = "1" } })
+      xml.append_element(empty, "more", {})
+      local out = xml.serialize(doc)
+      assert(out == '<?xml version="1.0"?><!-- c --><root><?pi x?>' ..
+        '<Empty a="1" ><extra n="1"/><more/></Empty></root>', out)
+      local reparsed = xml.parse(out)
+      assert(#xml.find_all(reparsed, "", "extra") == 1)
+      assert(#xml.find_all(reparsed, "", "more") == 1)
+    end,
+  },
+  {
+    name = "a self-closing parent in a UTF-16 document is expanded in UTF-16",
+    gate = "preservation",
+    stage = "xml",
+    fn = function()
+      local utf8_source = '<?xml version="1.0" encoding="UTF-16"?>' ..
+        '<r:root xmlns:r="urn:r"/>'
+      local source = "\xFF\xFE" .. pandoc.text.toencoding(utf8_source, "UTF-16LE")
+      local doc = xml.parse(source)
+      xml.append_element(doc.root, "child", {})
+      local out = xml.serialize(doc)
+      local expected = "\xFF\xFE" .. pandoc.text.toencoding(
+        '<?xml version="1.0" encoding="UTF-16"?>' ..
+        '<r:root xmlns:r="urn:r"><r:child/></r:root>', "UTF-16LE")
+      assert(out == expected, "UTF-16 bytes must be preserved and extended")
     end,
   },
   {

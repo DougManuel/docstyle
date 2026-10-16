@@ -158,10 +158,6 @@ function M.append_element(node, local_name, attributes)
       name = tostring(local_name),
     })
   end
-  if not node.end_tag_range then
-    raise("xml.edit-target",
-      "append_element requires an element with a separate end tag", {})
-  end
   -- Reuse the validated parent's namespace prefix, so the child lands in
   -- the parent's namespace whether the manifest root is prefixed
   -- (<ct:Types>) or default-namespaced (<Types xmlns="…">).
@@ -226,15 +222,46 @@ function M.append_element(node, local_name, attributes)
       attribute.name, overlay.escape_attribute(attribute.value, '"'))
   end
   pieces[#pieces + 1] = "/>"
-  -- Encode the complete insertion into the document's recorded encoding
-  -- before registration -- exactly how attribute_replacement and
-  -- text_replacement thread node.document.encoding. A raw UTF-8 splice
-  -- corrupts UTF-16 parts.
-  local replacement = overlay.encode_insertion(
-    table.concat(pieces), document.encoding)
-  local offset = node.end_tag_range.start
-  register_edit(document, { insertion = true, at = offset },
-    { start = offset, finish = offset }, replacement)
+  local child_markup = table.concat(pieces)
+  -- Encode every insertion into the document's recorded encoding before
+  -- registration -- exactly how attribute_replacement and text_replacement
+  -- thread node.document.encoding. A raw UTF-8 splice corrupts UTF-16 parts.
+  if node.end_tag_range then
+    local replacement = overlay.encode_insertion(
+      child_markup, document.encoding)
+    local offset = node.end_tag_range.start
+    register_edit(document, { insertion = true, at = offset },
+      { start = offset, finish = offset }, replacement)
+    return
+  end
+  -- A self-closing parent: replace only the closing "/>" of its start tag
+  -- with ">", the inserted children and an end tag, so every other byte of
+  -- the document survives. Later insertions into the same parent extend
+  -- that one edit rather than registering an overlapping one.
+  local end_tag = "</" .. node.name.qname .. ">"
+  local expansion = node.expansion
+  if expansion then
+    expansion.children[#expansion.children + 1] = child_markup
+    expansion.edit.replacement = overlay.encode_insertion(
+      ">" .. table.concat(expansion.children) .. end_tag, document.encoding)
+    return
+  end
+  local close = overlay.encode_insertion("/>", document.encoding)
+  local finish = node.range.finish
+  local start = finish - #close
+  if start < node.range.start or
+      document.source:sub(start + 1, finish) ~= close then
+    raise("xml.edit-target",
+      "self-closing element does not end with \"/>\"", {})
+  end
+  register_edit(document, { expansion = node },
+    { start = start, finish = finish },
+    overlay.encode_insertion(">" .. child_markup .. end_tag,
+      document.encoding))
+  node.expansion = {
+    edit = document.edits[#document.edits],
+    children = { child_markup },
+  }
 end
 
 function M.serialize(document)
@@ -247,7 +274,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1501,
+  docstyle_owned_lines = 1528,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",

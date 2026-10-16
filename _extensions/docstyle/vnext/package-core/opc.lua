@@ -495,6 +495,32 @@ local function relationship_zip_name(source_part)
   return directory .. "_rels/" .. filename .. ".rels"
 end
 
+-- The stored name of source_part's relationships part: the exact spelling
+-- when present, otherwise an existing part whose name is OPC-equivalent
+-- (ASCII case and percent-hex case), otherwise the spelling for a new part.
+-- Preflight rejects case-colliding entries and add_relationship always
+-- comes through here, so at most one equivalent part exists.
+function Package:_relationship_zip(source_part)
+  local relationship_zip = relationship_zip_name(source_part)
+  if self._additions[relationship_zip] ~= nil or
+      self._entries_by_name[relationship_zip] ~= nil then
+    return relationship_zip
+  end
+  local folded = ascii_lower(normalize_percent_hex(relationship_zip))
+  for _, entry in ipairs(self.entries) do
+    if not entry.ignored and
+        ascii_lower(normalize_percent_hex(entry.name)) == folded then
+      return entry.name
+    end
+  end
+  for added in pairs(self._additions) do
+    if ascii_lower(normalize_percent_hex(added)) == folded then
+      return added
+    end
+  end
+  return relationship_zip
+end
+
 local function normalize_target_segment(segment, context)
   local parts = {}
   local cursor = 1
@@ -618,7 +644,7 @@ end
 
 function Package:relationships(source_part)
   if source_part ~= "/" then self:_require_effective(source_part) end
-  local relationship_zip = relationship_zip_name(source_part)
+  local relationship_zip = self:_relationship_zip(source_part)
   if self._relationship_cache[relationship_zip] then
     return self._relationship_cache[relationship_zip]
   end
@@ -687,13 +713,39 @@ function Package:relationships(source_part)
   return records
 end
 
-local function next_relationship_id(records)
-  local max = 0
-  for _, record in ipairs(records) do
-    local n = tonumber(record.id:match("^rId(%d+)$"))
-    if n and n > max then max = n end
+-- Relationship ids are minted as decimal strings, never through Lua
+-- numbers: an existing id such as rId9223372036854775807 would overflow an
+-- integer and hand two additions the same id.
+local function decimal_increment(digits)
+  local prefix, nines = digits:match("^(.-)(9*)$")
+  if prefix == "" then return "1" .. ("0"):rep(#nines) end
+  return prefix:sub(1, -2) .. string.char(prefix:byte(-1) + 1) ..
+    ("0"):rep(#nines)
+end
+
+local function decimal_greater(a, b)
+  if #a ~= #b then return #a > #b end
+  for index = 1, #a do
+    local x, y = a:byte(index), b:byte(index)
+    if x ~= y then return x > y end
   end
-  return "rId" .. (max + 1)
+  return false
+end
+
+local function next_relationship_id(records)
+  local max, used = "0", {}
+  for _, record in ipairs(records) do
+    used[record.id] = true
+    local digits = record.id:match("^rId(%d+)$")
+    if digits then
+      digits = digits:gsub("^0+", "")
+      if digits == "" then digits = "0" end
+      if decimal_greater(digits, max) then max = digits end
+    end
+  end
+  local candidate = decimal_increment(max)
+  while used["rId" .. candidate] do candidate = decimal_increment(candidate) end
+  return "rId" .. candidate
 end
 
 -- The only sanctioned rels mutation: replace_part on any rels part still
@@ -725,11 +777,11 @@ function Package:add_relationship(source_part, rel_type, target, mode)
     -- Validates and resolves against the effective view; raises
     -- opc.relationship-target-missing when nothing matches.
     resolve_literal_target(self, source_part, target, {
-      relationship_part = relationship_zip_name(source_part),
+      relationship_part = self:_relationship_zip(source_part),
       relationship_id = rid,
     })
   end
-  local relationship_zip = relationship_zip_name(source_part)
+  local relationship_zip = self:_relationship_zip(source_part)
   local attributes = {
     { name = "Id", value = rid },
     { name = "Type", value = rel_type },
@@ -745,20 +797,13 @@ function Package:add_relationship(source_part, rel_type, target, mode)
       self._entries_by_name[relationship_zip] ~= nil then
     current = self:_effective_bytes(relationship_zip)
   end
-  local document
+  local updated
   if current then
-    document = xml_adapter.parse(current)
+    -- append_element expands a self-closing root in place, so every other
+    -- byte of the existing part survives.
+    local document = xml_adapter.parse(current)
     assert_root(document, RELATIONSHIPS_NS, "Relationships",
       "opc.relationships-root", "relationships part")
-    -- A self-closing root holds no relationships. Without ordinary
-    -- attributes it carries nothing a rebuild would lose, so it takes the
-    -- fresh-part path below; with attributes, append_element fails closed.
-    if not document.root.end_tag_range and #document.root.attributes == 0 then
-      document = nil
-    end
-  end
-  local updated
-  if document then
     xml_adapter.append_element(document.root, "Relationship", attributes)
     updated = xml_adapter.serialize(document)
   else
@@ -790,6 +835,7 @@ function Package:add_relationship(source_part, rel_type, target, mode)
     self._replacements[relationship_zip] = updated
   end
   self._relationship_cache[relationship_zip] = nil
+  self._relationship_sources[relationship_zip] = source_part
   return rid
 end
 
@@ -940,6 +986,7 @@ function M.open_path(path, limits)
     _replacements = {},
     _additions = {},
     _relationship_cache = {},
+    _relationship_sources = {},
   }, Package)
   initialize_package(package)
   return package

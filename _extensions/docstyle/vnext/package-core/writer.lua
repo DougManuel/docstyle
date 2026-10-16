@@ -193,6 +193,17 @@ local function publish(pkg, output_path, options)
           })
       end
     end
+    -- Every relationships part this session wrote must read back cleanly:
+    -- unique ids, valid target modes and resolvable internal targets.
+    -- Untouched parts are not reinterpreted here.
+    local written = {}
+    for relationship_zip, source in pairs(pkg._relationship_sources or {}) do
+      written[#written + 1] = { zip = relationship_zip, source = source }
+    end
+    table.sort(written, function(a, b) return a.zip < b.zip end)
+    for _, item in ipairs(written) do
+      verified:relationships(item.source)
+    end
     maybe_fail(options, "after_verification")
     maybe_fail(options, "before_rename")
     local renamed, rename_error = os.rename(
