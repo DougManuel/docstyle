@@ -125,5 +125,13 @@
         "record": "rec-org-uottawa"
       }
     }
+  },
+  "profiles": {
+    "docstyle:fixture": {
+      "id": "docstyle:fixture",
+      "version": "1.0.0",
+      "schema": "profiles/fixture.v1.json",
+      "recordTypes": ["fixture-record"]
+    }
   }
 }

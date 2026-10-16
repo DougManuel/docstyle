@@ -207,6 +207,11 @@ only that output), and reading or writing the DOCX container itself (the
 `cold-recover` fixtures start from an already-read package description --
 parts, relationships and field envelopes).
 
+`embed-then-cold-recover` fixtures embed a model and then cold-recover a
+package carrying exactly the embedded catalogue: output that embedding
+accepts must recover. The catalogue carries each active profile's declared
+schema binding (`profiles`) for this purpose.
+
 ## Declared bounds
 
 Seven bounds accumulated over the course of building this harness. They

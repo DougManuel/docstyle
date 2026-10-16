@@ -963,6 +963,16 @@ local function project(model, ctx, generator)
     end
   end)
   for id, a in pairs(ctx.assets) do cat.assets[id] = deep_copy(a) end
+  -- The declared profile-to-schema bindings travel with the catalogue, so a
+  -- cold import validates profile data against the schemas embedding used
+  -- rather than against schemas derived from profile names.
+  if next(ctx.profiles or {}) ~= nil then
+    cat.profiles = {}
+    for id, m in pairs(ctx.profiles) do
+      cat.profiles[id] = { id = m.id, version = m.version, schema = m.schema,
+        recordTypes = deep_copy(m.recordTypes or {}) }
+    end
+  end
   -- Remove the ENTIRE property of each prunable reference step 1 classified
   -- as known restricted -- never just the nested `record` key.
   for _, p in ipairs(ctx.prunes) do
@@ -1013,12 +1023,30 @@ function M.validate_embedded(cat, opts)
     return { ok = false, stage = stage, findings = F.list }
   end
   for _, name in ipairs({ "records", "views", "objects", "assets" }) do check_keys(F, stage, name, cat[name]) end
+  -- Profile bindings: embed() passes the active manifests; a cold import
+  -- uses the bindings the catalogue carries. A catalogue without them falls
+  -- back to the name-derived schema, which may differ from the declared one.
+  local profiles = opts.profiles
+  if profiles == nil then
+    if cat.profiles ~= nil then
+      check_keys(F, stage, "profiles", cat.profiles)
+      profiles = cat.profiles
+    else
+      for _, id in ipairs(sorted_keys(cat.records)) do
+        if cat.records[id].profile ~= nil then
+          F.add("warning", "profile-binding-absent", stage, "profiles",
+            "the catalogue carries no profile bindings; profile data is checked against name-derived schemas")
+          break
+        end
+      end
+    end
+  end
 
   -- catalogue.v1 has validated every core record and view; a profile-typed
   -- record passed only the permissive profile-record branch, so the one
   -- that then fails its profile check is gated like a schema-invalid one.
   local ctx = { stage = stage, records = cat.records, views = cat.views, assets = cat.assets,
-    document = cat.document, envelopes = opts.envelopes, profiles = opts.profiles, canon = "error",
+    document = cat.document, envelopes = opts.envelopes, profiles = profiles, canon = "error",
     local_ids = opts.local_ids, invalid = {} }
   if not opts.envelopes then
     F.add("warning", "envelopes-unavailable", stage, "",
@@ -1029,7 +1057,7 @@ function M.validate_embedded(cat, opts)
   for _, id in ipairs(sorted_keys(cat.records)) do
     local r = cat.records[id]
     if r.profile ~= nil then
-      if not check_profile_record(F, stage, r, opts.profiles) then ctx.invalid[id] = true end
+      if not check_profile_record(F, stage, r, profiles) then ctx.invalid[id] = true end
       check_profile_values(ctx, F, id, r)
     else
       if r.recordType == "document" then check_abstract(ctx, F, r) end

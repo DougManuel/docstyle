@@ -12,6 +12,8 @@
 --   validate-embedded   catalogue.validate_embedded(catalogue, {envelopes})
 --   reconcile           catalogue.reconcile(catalogue, model)
 --   cold-recover        catalogue.cold_recover(package)
+--   embed-then-cold-recover  embed(model), then cold_recover of a package
+--                       carrying exactly that catalogue (the DOCX round trip)
 --   path                catalogue.resolve_path(record, path) per case
 --   normalize-contract  the WP3 normalizer's stated output (not executed
 --                       here -- see the fixture description) must embed
@@ -196,6 +198,34 @@ drivers["reconcile"] = function(f)
     assert(raw ~= embedded, "raw local " .. id .. " unexpectedly matches the embedded record")
     assert(res.entries["records/" .. id].outcome == "agree", "projected " .. id .. " must agree")
   end
+end
+
+local function sorted_keys(t)
+  local keys = {}
+  for k in pairs(t) do keys[#keys + 1] = k end
+  table.sort(keys)
+  return keys
+end
+
+-- The round trip a DOCX makes (#57 re-review): embed the model, carry the
+-- embedded catalogue as the package would, then cold-recover it with
+-- nothing else. Output that embedding accepts must recover.
+drivers["embed-then-cold-recover"] = function(f)
+  local emb = cat.embed(f.model)
+  assert(emb.ok, "embedding must succeed first: " .. describe(emb.findings))
+  local env, envelopes = cat.envelopes_of(f.model), {}
+  for _, id in ipairs(sorted_keys(env)) do
+    local e = env[id]
+    envelopes[#envelopes + 1] = { v = 4, id = id, kind = e.kind, policy = e.policy,
+      role = e.role, parent = e.parent, hash = "sha256:" .. ("0"):rep(64) }
+  end
+  local res = cat.cold_recover({
+    envelopes = envelopes,
+    relationships = { [cat.CARRIER.source] = {
+      { type = cat.CARRIER.relationshipType, target = "../docstyle/catalogue.json" } } },
+    parts = { [cat.CARRIER.part] = { contentType = cat.CARRIER.contentType, json = emb.catalogue } },
+  })
+  assert_codes(res, f.expect)
 end
 
 drivers["cold-recover"] = function(f)

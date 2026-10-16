@@ -29,6 +29,21 @@
       "description": "Public, portable asset records, keyed by id.",
       "type": "object",
       "additionalProperties": { "$ref": "https://dougmanuel.github.io/docstyle/schemas/document-model.v1.json#/$defs/canonical-asset" }
+    },
+    "profiles": {
+      "description": "Optional. The public projection of each active profile manifest, keyed by profile id: its declared schema and registered record types, so a cold import validates profile data against the schema embedding used.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["id", "version", "schema", "recordTypes"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$" },
+          "version": { "type": "string" },
+          "schema": { "type": "string", "minLength": 1 },
+          "recordTypes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
     }
   },
   "$defs": {
