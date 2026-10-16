@@ -27,7 +27,7 @@ return {
     stage = "xml",
     fn = function()
       -- The size of the largest document.xml seen in the local survey
-      -- that the one-MiB limit rejected (a CV).
+      -- that the one-MiB limit rejected.
       local doc = xml.parse(text_part(1702258))
       assert(doc, "a 1.7 MB part must parse under the default limit")
     end,

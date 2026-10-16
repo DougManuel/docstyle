@@ -1,9 +1,9 @@
 {
   "corpora": [
     {
-      "description": "one researcher's local git repositories (~/github): protocols, manuscripts, reports, CVs, supplementary material",
+      "description": "a working collection of research documents (protocols, manuscripts and reports) held in local git repositories",
       "documents_rejected_by_limit": 0,
-      "name": "local-repositories",
+      "name": "collection-a",
       "result": {
         "core_open": {
           "opened": 216,
@@ -23,9 +23,9 @@
       }
     },
     {
-      "description": "the same researcher's Google Drive .docx files already stored on disk (1,499 of 1,633 local copies, in path order; the remaining 134 and 14,000 cloud-only files were not surveyed -- reads stalled in that region of the sync folder, and a full survey would download 5.4 GB)",
+      "description": "a second, cloud-synced collection of research documents; only copies already on disk were surveyed (1,499 of 1,633 in path order); the rest were not read",
       "documents_rejected_by_limit": 0,
-      "name": "cloud-drive-local-copies",
+      "name": "collection-b",
       "result": {
         "core_open": {
           "opened": 1213,
