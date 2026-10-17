@@ -1139,7 +1139,33 @@ function M.reconcile(cat, model, opts)
       compare(name .. "/" .. id, (cat[name] or {})[id], proj.catalogue[name][id])
     end
   end
-  return { ok = ok, findings = proj.findings, entries = entries }
+  -- Profile bindings decide how profile data is interpreted, so a changed
+  -- binding is a metadata disagreement like any other. A catalogue with no
+  -- profiles container at all predates bindings: each projected binding is
+  -- reported, with a warning, and does not block.
+  local findings = {}
+  for _, f in ipairs(proj.findings) do findings[#findings + 1] = f end
+  local projected = proj.catalogue.profiles or {}
+  if cat.profiles == nil then
+    local F = new_findings()
+    for _, id in ipairs(sorted_keys(projected)) do
+      entries["profiles/" .. id] = { outcome = "catalogue-predates-bindings", blocking = false,
+        embedded = nil, projected = M.entry_hash(projected[id]) }
+    end
+    if next(projected) ~= nil then
+      F.add("warning", "profile-binding-absent", "reconcile", "profiles",
+        "the catalogue predates profile bindings; its profile data was interpreted with name-derived schemas")
+      for _, f in ipairs(F.list) do findings[#findings + 1] = f end
+    end
+  else
+    local seen = {}
+    for id in pairs(cat.profiles) do seen[id] = true end
+    for id in pairs(projected) do seen[id] = true end
+    for _, id in ipairs(sorted_keys(seen)) do
+      compare("profiles/" .. id, cat.profiles[id], projected[id])
+    end
+  end
+  return { ok = ok, findings = findings, entries = entries }
 end
 
 -- ---------------------------------------------------------------------
@@ -1221,8 +1247,11 @@ function M.cold_recover(pkg)
     r.object = cat.objects[id]
     r.view = cat.views[id]
   end
+  -- The profile bindings and the whole validated catalogue travel with the
+  -- result, so reconstruction keeps the declared schemas recovery used.
   return { ok = true, degraded = false, findings = F.list, regions = regions,
-    objects = cat.objects, assets = cat.assets, views = cat.views, records = cat.records }
+    document = cat.document, objects = cat.objects, assets = cat.assets, views = cat.views,
+    records = cat.records, profiles = cat.profiles, catalogue = cat }
 end
 
 return M

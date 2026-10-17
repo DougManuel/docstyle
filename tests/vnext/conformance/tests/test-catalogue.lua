@@ -207,24 +207,30 @@ local function sorted_keys(t)
   return keys
 end
 
+-- The package a DOCX would carry for `model` with `catalogue` embedded: one
+-- field envelope per model node and the catalogue part with its relationship.
+local function cold_package_of(model, catalogue)
+  local env, envelopes = cat.envelopes_of(model), {}
+  for _, id in ipairs(sorted_keys(env)) do
+    local e = env[id]
+    envelopes[#envelopes + 1] = { v = 4, id = id, kind = e.kind, policy = e.policy,
+      role = e.role, parent = e.parent, hash = "sha256:" .. ("0"):rep(64) }
+  end
+  return {
+    envelopes = envelopes,
+    relationships = { [cat.CARRIER.source] = {
+      { type = cat.CARRIER.relationshipType, target = "../docstyle/catalogue.json" } } },
+    parts = { [cat.CARRIER.part] = { contentType = cat.CARRIER.contentType, json = catalogue } },
+  }
+end
+
 -- The round trip a DOCX makes (#57 re-review): embed the model, carry the
 -- embedded catalogue as the package would, then cold-recover it with
 -- nothing else. Output that embedding accepts must recover.
 drivers["embed-then-cold-recover"] = function(f)
   local emb = cat.embed(f.model)
   assert(emb.ok, "embedding must succeed first: " .. describe(emb.findings))
-  local env, envelopes = cat.envelopes_of(f.model), {}
-  for _, id in ipairs(sorted_keys(env)) do
-    local e = env[id]
-    envelopes[#envelopes + 1] = { v = 4, id = id, kind = e.kind, policy = e.policy,
-      role = e.role, parent = e.parent, hash = "sha256:" .. ("0"):rep(64) }
-  end
-  local res = cat.cold_recover({
-    envelopes = envelopes,
-    relationships = { [cat.CARRIER.source] = {
-      { type = cat.CARRIER.relationshipType, target = "../docstyle/catalogue.json" } } },
-    parts = { [cat.CARRIER.part] = { contentType = cat.CARRIER.contentType, json = emb.catalogue } },
-  })
+  local res = cat.cold_recover(cold_package_of(f.model, emb.catalogue))
   assert_codes(res, f.expect)
 end
 
@@ -667,5 +673,73 @@ cases[#cases + 1] = { name = "cold import: profile-typed records with wrong-type
         json.encode(value) .. ": " .. describe(res.findings))
     end
   end }
+
+-- #57 second re-review: profile bindings take part in reconciliation and
+-- survive cold recovery into reconstruction.
+local function copy(v)
+  if type(v) ~= "table" then return v end
+  local o = {}
+  for k, x in pairs(v) do o[k] = copy(x) end
+  return setmetatable(o, getmetatable(v))
+end
+local BINDING = "profiles/docstyle:fixture"
+
+cases[#cases + 1] = { name = "reconciliation compares profile bindings", fn = function()
+  local f = fixtures["round-trip-declared-profile-schema"]
+  with_schemas(f.schemas, function()
+    local emb = cat.embed(f.model)
+    assert(emb.ok, describe(emb.findings))
+    local same = cat.reconcile(emb.catalogue, f.model)
+    assert(same.ok, describe(same.findings))
+    assert(same.entries[BINDING] and same.entries[BINDING].outcome == "agree", "the binding is compared")
+    for _, change in ipairs({ { "schema", "profiles/fixture.v1.json" }, { "version", "9.9.9" } }) do
+      local c = copy(emb.catalogue)
+      c.profiles["docstyle:fixture"][change[1]] = change[2]
+      local r = cat.reconcile(c, f.model)
+      assert(not r.ok, "a changed binding " .. change[1] .. " must not reconcile")
+      assert(r.entries[BINDING].outcome == "conflict" and r.entries[BINDING].blocking,
+        "a changed binding " .. change[1] .. " is a blocking conflict")
+    end
+  end)
+end }
+
+cases[#cases + 1] = { name = "a catalogue that predates profile bindings reconciles with a warning", fn = function()
+  local f = fixtures["round-trip-declared-profile-schema"]
+  with_schemas(f.schemas, function()
+    local emb = cat.embed(f.model)
+    local c = copy(emb.catalogue)
+    c.profiles = nil
+    local r = cat.reconcile(c, f.model)
+    assert(r.ok, "a catalogue without bindings is not a conflict: " .. describe(r.findings))
+    assert(r.entries[BINDING] and r.entries[BINDING].outcome == "catalogue-predates-bindings"
+      and not r.entries[BINDING].blocking, "the absent binding is reported, not blocking")
+    local warned = false
+    for _, code in ipairs(code_set(r.findings, "warning")) do
+      if code == "profile-binding-absent" then warned = true end
+    end
+    assert(warned, "profile-binding-absent is warned")
+  end)
+end }
+
+cases[#cases + 1] = { name = "cold recovery returns the bindings, and reconstruction from the result reconciles", fn = function()
+  local f = fixtures["round-trip-declared-profile-schema"]
+  with_schemas(f.schemas, function()
+    local emb = cat.embed(f.model)
+    local pkg = cold_package_of(f.model, emb.catalogue)
+    local res = cat.cold_recover(pkg)
+    assert(res.ok, describe(res.findings))
+    assert(deep_equal(res.profiles, emb.catalogue.profiles), "the bindings are returned")
+    -- Rebuild the catalogue from the recovery result alone.
+    local rebuilt = { schemaVersion = 1, generator = "reconstruction", document = res.document,
+      records = res.records, views = res.views, objects = res.objects, assets = res.assets,
+      profiles = res.profiles }
+    local env = {}
+    for _, e in ipairs(pkg.envelopes) do env[e.id] = { kind = e.kind, role = e.role, policy = e.policy, parent = e.parent } end
+    local v = cat.validate_embedded(rebuilt, { envelopes = env })
+    assert(v.ok, "the reconstruction validates with the declared schema: " .. describe(v.findings))
+    local r = cat.reconcile(rebuilt, f.model)
+    assert(r.ok and r.entries[BINDING].outcome == "agree", "the reconstruction reconciles: " .. describe(r.findings))
+  end)
+end }
 
 return cases
