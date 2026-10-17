@@ -218,6 +218,23 @@ test_that("update_extension copies files from package", {
   expect_true(length(result$added) > 0)
 })
 
+test_that("update_extension's fresh-install path (use_docstyle()) never ships vnext/", {
+  # A brand-new project has no existing extension, so update_extension()
+  # delegates to use_docstyle() -- the same init-copy path use_docstyle()
+  # itself uses. vnext/ (the WP2 package core) must never land in either
+  # case; see EXTENSION_LEGACY_EXCLUDED.
+  proj <- create_test_project(with_extension = FALSE)
+  on.exit(unlink(proj, recursive = TRUE))
+  dir.create(file.path(proj, "_extensions"), recursive = TRUE)
+
+  update_extension(proj, backup = FALSE, verbose = FALSE)
+
+  ext_dir <- file.path(proj, "_extensions", "docstyle")
+  # Not vacuous: a known legacy file must actually have been installed.
+  expect_true(file.exists(file.path(ext_dir, "_extension.yml")))
+  expect_false(dir.exists(file.path(ext_dir, "vnext")))
+})
+
 test_that("update_extension creates backup", {
   proj <- create_test_project(with_extension = TRUE)
   on.exit(unlink(proj, recursive = TRUE))
@@ -752,7 +769,10 @@ test_that("EXTENSION_SOURCE_FILES matches inst/_extensions/docstyle/ contents", 
 
   actual_files <- list.files(ext_dir, recursive = FALSE)
   generated <- c("reference.docx", "reference.docx.hash")
-  source_files <- setdiff(actual_files, generated)
+  # vnext/ (the WP2 package core) is intentionally isolated from the legacy
+  # extension contract -- see EXTENSION_LEGACY_EXCLUDED -- so it is excluded
+  # here the same way the sync/completeness machinery excludes it.
+  source_files <- setdiff(actual_files, c(generated, docstyle:::EXTENSION_LEGACY_EXCLUDED))
 
   # Every non-generated file in the extension should be in the constant
   missing_from_constant <- setdiff(source_files, docstyle:::EXTENSION_SOURCE_FILES)
@@ -761,4 +781,33 @@ test_that("EXTENSION_SOURCE_FILES matches inst/_extensions/docstyle/ contents", 
   # Every file in the constant should exist in the extension
   missing_from_ext <- setdiff(docstyle:::EXTENSION_SOURCE_FILES, source_files)
   expect_length(missing_from_ext, 0)
+})
+
+test_that("vnext/ is excluded from the legacy extension inventory (isolation principle)", {
+  # Pin the exclusion itself: if a future commit removed "vnext" from
+  # EXTENSION_LEGACY_EXCLUDED, or added it to EXTENSION_SOURCE_FILES (which
+  # would make update_extension() ship the whole WP2 package core downstream
+  # to POPCORN/PDP -- premature per the WP2 package-core design spec), this
+  # test catches it.
+  expect_true("vnext" %in% docstyle:::EXTENSION_LEGACY_EXCLUDED)
+  expect_false("vnext" %in% docstyle:::EXTENSION_SOURCE_FILES)
+
+  # Functional coverage: a stray vnext/ entry in either the package source or
+  # a downstream project's extension copy must not surface as missing,
+  # extra, or otherwise part of the legacy sync/completeness machinery.
+  src <- tempfile("ext_source_")
+  dst <- tempfile("ext_dest_")
+  dir.create(src, recursive = TRUE)
+  dir.create(dst, recursive = TRUE)
+  on.exit({ unlink(src, recursive = TRUE); unlink(dst, recursive = TRUE) })
+  dir.create(file.path(src, "vnext", "package-core"), recursive = TRUE)
+  dir.create(file.path(dst, "vnext", "package-core"), recursive = TRUE)
+  writeLines("x", file.path(src, "vnext", "package-core", "init.lua"))
+  writeLines("x", file.path(dst, "vnext", "package-core", "init.lua"))
+
+  result <- docstyle:::compare_extension_files(src, dst, character())
+  expect_false("vnext" %in% result$extra)
+
+  ext_files <- docstyle:::list_legacy_extension_entries(dst, recursive = FALSE)
+  expect_false("vnext" %in% ext_files)
 })

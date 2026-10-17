@@ -99,5 +99,34 @@ if okschemas then
   end
 end
 
+-- 4. Aggregate the WP2 package-core suite. Combined semantics: both suites
+-- must pass; a child failure is reported and fails this run.
+local core_runner = pandoc.path.join({
+  root, "tests", "vnext", "package-core", "run.lua",
+})
+local core_ok, core_output = pcall(function()
+  return pandoc.pipe("quarto", { "run", core_runner }, "")
+end)
+if core_ok then
+  -- The suite total is a whole line of exactly "PASS n | FAIL n | SKIP n";
+  -- per-gate lines carry a "gate: " prefix and never match the anchors. A
+  -- missing total is a hard failure, not a shrugged-off success -- a child
+  -- that exited zero without printing its total is broken evidence.
+  local summary
+  for line in (tostring(core_output) .. "\n"):gmatch("([^\n]*)\n") do
+    if line:match("^PASS %d+ | FAIL %d+ | SKIP %d+$") then
+      summary = line
+    end
+  end
+  if summary then
+    print("package-core: " .. summary)
+  else
+    fail_hard("runner/package-core",
+      "package-core total summary line not found in child output")
+  end
+else
+  fail_hard("runner/package-core", tostring(core_output))
+end
+
 print(("PASS %d | FAIL %d"):format(pass, fail))
 if fail > 0 then error("conformance failures: " .. fail) end
