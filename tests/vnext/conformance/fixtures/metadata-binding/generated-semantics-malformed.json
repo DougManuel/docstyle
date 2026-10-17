@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 10: newly generated malformed semantics (a typo'd key in a closed definition) fails canonical validation -- no permissive fallback.",
+  "criteria": [10],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "add", "path": "/content/3/semantics/sumary", "value": "typo"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["semantics-noncanonical"]}
+}

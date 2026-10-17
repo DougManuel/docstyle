@@ -1,0 +1,24 @@
+{
+  "description": "A restricted view with no rendered region is local-only state: it is permitted and never copied into the catalogue.",
+  "criteria": [3, 5],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-local-only",
+        "value": {
+          "id": "view-local-only",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "privacy": "restricted",
+          "sourceRecord": "rec-contact-1",
+          "path": "email",
+          "presentation": "span"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "absent": ["views/view-local-only"]}
+}

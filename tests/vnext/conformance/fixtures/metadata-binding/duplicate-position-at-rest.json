@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 7: duplicate positions also fail at-rest semantic validation (uniqueness is a contract, not a normalization).",
+  "criteria": [7],
+  "operation": "at-rest",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/contrib-2/position", "value": 1}]
+  },
+  "expect": {"ok": false, "errors": ["contribution-position-duplicate"]}
+}

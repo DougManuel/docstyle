@@ -1,0 +1,10 @@
+{
+  "description": "Section 3: with email-public consent the normalizer writes the contact public; the contact and the contribution's contact property both ship.",
+  "criteria": [3],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/rec-contact-1/privacy", "value": "public"}]
+  },
+  "expect": {"ok": true, "errors": [], "present": ["records/rec-contact-1", "records/contrib-1/contact"]}
+}

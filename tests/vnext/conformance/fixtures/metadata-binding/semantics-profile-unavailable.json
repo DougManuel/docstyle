@@ -1,0 +1,16 @@
+{
+  "description": "Section 4: a profile extension under an inactive/unavailable profile key fails canonical validation.",
+  "criteria": [10],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/3/semantics/profiles",
+        "value": {"docstyle:absent": {"id": "x", "recordType": "absent", "schemaVersion": 1}}
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["semantics-profile-unavailable"]}
+}

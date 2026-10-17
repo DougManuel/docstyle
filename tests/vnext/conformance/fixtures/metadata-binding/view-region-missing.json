@@ -1,0 +1,23 @@
+{
+  "description": "Section 2: a view record whose id is not a rendered region's envelope id binds nothing.",
+  "criteria": [5],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-orphan",
+        "value": {
+          "id": "view-orphan",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceRecord": "rec-document",
+          "path": "title",
+          "presentation": "span"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["view-region-missing"]}
+}

@@ -1,0 +1,13 @@
+{
+  "description": "Cold import: a figure credit record reference absent from records fails.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {"op": "replace", "path": "/objects/fig-flow/semantics/credit", "value": {"record": "rec-missing"}}
+    ]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["reference-target-absent"]}
+}

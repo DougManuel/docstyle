@@ -1,0 +1,22 @@
+{
+  "description": "QMD bindings worked example (WP3 normalizer target, not executed here): standard Quarto author/affiliations yield identity-only person, organization, a contact written explicitly restricted, and an ordered contribution; embedding prunes the contact property.",
+  "criteria": [3],
+  "operation": "normalize-contract",
+  "yaml": "author:\n  - name: Jane Smith\n    orcid: 0000-0002-1825-0097\n    email: jane.smith@example.org\n    corresponding: true\n    roles: [conceptualization, methodology]\n    affiliations:\n      - ref: uottawa\naffiliations:\n  - id: uottawa\n    name: University of Ottawa\n",
+  "normalized": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "remove", "path": "/registries/metadata/rec-person-2"},
+      {"op": "remove", "path": "/registries/metadata/rec-org-internal"},
+      {"op": "remove", "path": "/registries/metadata/contrib-2"}
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "records": {
+      "rec-contact-1": {"privacy": "restricted"},
+      "contrib-1": {"position": 1, "contact": "rec-contact-1"}
+    },
+    "absent": ["records/contrib-1/contact", "records/rec-contact-1"]
+  }
+}

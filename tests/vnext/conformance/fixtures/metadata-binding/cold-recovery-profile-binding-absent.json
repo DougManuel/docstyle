@@ -1,0 +1,30 @@
+{
+  "description": "A catalogue written before profile bindings existed carries profile records but no profiles container: cold recovery still succeeds, falling back to the name-derived schema, and warns that the declared binding is unknown.",
+  "criteria": [
+    8
+  ],
+  "operation": "cold-recover",
+  "package": {
+    "$base": "bases/cold-package.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/parts/~1docstyle~1catalogue.json/json/records/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture",
+          "label": "Fixture label"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "profile-binding-absent"
+    ]
+  }
+}

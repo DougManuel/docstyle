@@ -1,0 +1,17 @@
+{
+  "description": "Section 6: a record-form provenance whose target is restricted is removed as a whole property from the embedded object.",
+  "criteria": [11, 12],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/content/3/semantics/provenance", "value": {"record": "rec-org-internal"}}
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "absent": ["objects/tbl-outcomes/semantics/provenance"],
+    "present": ["objects/tbl-outcomes/semantics/label"]
+  }
+}

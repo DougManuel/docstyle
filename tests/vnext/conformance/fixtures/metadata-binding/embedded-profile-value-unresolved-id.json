@@ -1,0 +1,25 @@
+{
+  "description": "Step 3 defence in depth (embed runs, where the local model is known): a profile-record string equal to an id present in the local model but missing from the catalogue fails. Unreachable after step 1 for restricted ids; exercised here directly.",
+  "criteria": [4, 11],
+  "operation": "validate-embedded",
+  "envelopesFrom": "pre-embed-local",
+  "localIdsFrom": "pre-embed-local",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/records/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture",
+          "label": "x",
+          "region": "rec-contact-1"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["profile-value-unresolved-id"]}
+}

@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 2 / section 1: the string form passes at-rest validation with a normalization warning.",
+  "criteria": [2],
+  "operation": "at-rest",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/rec-document/abstract",
+        "value": "Background: the abstract text lives only in the content tree."
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "warnings": ["abstract-noncanonical"]}
+}

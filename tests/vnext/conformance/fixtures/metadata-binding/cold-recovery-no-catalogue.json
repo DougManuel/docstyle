@@ -1,0 +1,13 @@
+{
+  "description": "Section 6: a document with envelopes but no catalogue degrades to WP1 behaviour -- identity and policy known, rich metadata unknown -- with a warning, not a failure.",
+  "criteria": [8],
+  "operation": "cold-recover",
+  "package": {
+    "$base": "bases/cold-package.json",
+    "$patch": [
+      {"op": "remove", "path": "/parts/~1docstyle~1catalogue.json"},
+      {"op": "remove", "path": "/relationships/~1word~1document.xml"}
+    ]
+  },
+  "expect": {"ok": true, "degraded": true, "warnings": ["catalogue-absent"]}
+}

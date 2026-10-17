@@ -1,0 +1,10 @@
+{
+  "description": "Section 6: an embedded catalogue whose contribution names a person absent from records fails semantic closure on cold import.",
+  "criteria": [4, 11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [{"op": "replace", "path": "/records/contrib-2/person", "value": "rec-person-9"}]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["reference-target-absent"]}
+}

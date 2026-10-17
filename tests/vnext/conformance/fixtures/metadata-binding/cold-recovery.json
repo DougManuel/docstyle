@@ -1,0 +1,32 @@
+{
+  "description": "Criterion 8 (contract half): starting from the DOCX's own contents alone -- the catalogue part located through its document-part relationship, plus the field envelopes -- recover table and figure semantics and asset identity through objects and assets, and bind envelopes to views by id. No QMD, no local state. Reading the ZIP/OPC container itself is WP2/WP4.",
+  "criteria": [8],
+  "operation": "cold-recover",
+  "package": {"$base": "bases/cold-package.json", "$patch": []},
+  "expect": {
+    "ok": true,
+    "objects": {
+      "tbl-outcomes": {
+        "label": "Table 1",
+        "caption": "g-caption-x2r9qa",
+        "summary": "Outcomes by arm",
+        "notes": ["g-paragraph-n4t8qa"]
+      },
+      "fig-flow": {
+        "label": "Figure 1",
+        "caption": "g-caption-f5k2ma",
+        "alt": "Participant flow diagram",
+        "asset": "asset-flow",
+        "credit": "Adapted from PRISMA 2020"
+      }
+    },
+    "assets": {
+      "asset-flow": {
+        "path": "media/flow.png",
+        "mediaType": "image/png",
+        "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    "views": {"g-span-k3m7ap": {"sourceRecord": "rec-document", "path": "version"}}
+  }
+}

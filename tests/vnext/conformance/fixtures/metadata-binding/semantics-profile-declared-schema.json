@@ -1,0 +1,45 @@
+{
+  "description": "Section 4: profile extension values are validated by the profile's manifest -- its declared schema (profiles/fixture-strict.v1.json, registered for this fixture only, requires category), not the name-derived profiles/fixture.v1.json, which this value satisfies.",
+  "criteria": [10],
+  "operation": "embed",
+  "schemas": [
+    {
+      "$id": "https://dougmanuel.github.io/docstyle/schemas/profiles/fixture-strict.v1.json",
+      "type": "object",
+      "required": ["id", "recordType", "schemaVersion", "label", "category"],
+      "properties": {
+        "recordType": {"const": "fixture-record"},
+        "label": {"type": "string"},
+        "category": {"enum": ["alpha", "beta"]}
+      }
+    }
+  ],
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/3/semantics/profiles",
+        "value": {
+          "docstyle:fixture": {
+            "id": "fx-tbl-outcomes",
+            "recordType": "fixture-record",
+            "schemaVersion": 1,
+            "label": "Outcome table extension"
+          }
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {
+          "id": "docstyle:fixture",
+          "version": "1.0.0",
+          "schema": "profiles/fixture-strict.v1.json",
+          "recordTypes": ["fixture-record"]
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["semantics-profile-invalid"]}
+}

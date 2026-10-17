@@ -1,0 +1,11 @@
+{
+  "description": "Cold import: catalogue.document naming no record fails.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [{"op": "replace", "path": "/document", "value": "rec-missing"}]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["catalogue-document-unresolved"]}
+}

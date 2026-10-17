@@ -1,0 +1,13 @@
+{
+  "description": "Cold import: a credit record reference naming a view fails.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {"op": "replace", "path": "/objects/fig-flow/semantics/credit", "value": {"record": "g-span-k3m7ap"}}
+    ]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["reference-target-type"]}
+}

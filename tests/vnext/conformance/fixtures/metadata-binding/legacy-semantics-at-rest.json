@@ -1,0 +1,17 @@
+{
+  "description": "Criterion 10: legacy arbitrary table semantics and asset credit pass v1 schema validation and produce normalization warnings.",
+  "criteria": [10],
+  "operation": "at-rest",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/content/3/semantics", "value": "legacy-value"},
+      {
+        "op": "add",
+        "path": "/registries/assets/asset-flow/credit",
+        "value": {"photographer": "J. Smith", "year": 2019}
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "warnings": ["credit-noncanonical", "semantics-noncanonical"]}
+}

@@ -1,0 +1,12 @@
+{
+  "description": "Section 6 carrier: a catalogue part with the wrong content type is not trusted as the catalogue.",
+  "criteria": [8],
+  "operation": "cold-recover",
+  "package": {
+    "$base": "bases/cold-package.json",
+    "$patch": [
+      {"op": "replace", "path": "/parts/~1docstyle~1catalogue.json/contentType", "value": "application/json"}
+    ]
+  },
+  "expect": {"ok": false, "errors": ["carrier-content-type"]}
+}

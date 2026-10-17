@@ -1,0 +1,8 @@
+{ "id": "contrib-1", "recordType": "contribution", "schemaVersion": 1,
+  "privacy": "public",
+  "document": "rec-document", "person": "rec-person-1", "position": 1,
+  "roles": ["conceptualization", "methodology"],
+  "corresponding": true,
+  "contact": "rec-contact-1",
+  "equalContributionGroup": "first-authors",
+  "affiliations": ["rec-org-1"] }

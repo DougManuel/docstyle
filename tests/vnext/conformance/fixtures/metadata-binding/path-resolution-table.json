@@ -1,0 +1,18 @@
+{
+  "description": "Criterion 11: the dotted-path resolver on its own -- existence independent of truthiness (null, false, 0, empty string), empty path = whole record, and the unsupported/malformed/unresolved rejections.",
+  "criteria": [11],
+  "operation": "path",
+  "cases": [
+    {"record": {"id": "r", "a": {"b": null}}, "path": "a.b", "ok": true},
+    {"record": {"id": "r", "a": {"b": false}}, "path": "a.b", "ok": true},
+    {"record": {"id": "r", "a": {"b": 0}}, "path": "a.b", "ok": true},
+    {"record": {"id": "r", "a": {"b": ""}}, "path": "a.b", "ok": true},
+    {"record": {"id": "r", "a": {}}, "path": "", "ok": true},
+    {"record": {"id": "r", "a": {"b": 1}}, "path": "a.c", "ok": false, "code": "view-path-unresolved"},
+    {"record": {"id": "r", "a": "text"}, "path": "a.length", "ok": false, "code": "view-path-unresolved"},
+    {"record": {"id": "r", "a": [1, 2]}, "path": "a.1", "ok": false, "code": "view-path-unsupported"},
+    {"record": {"id": "r"}, "path": ".a", "ok": false, "code": "view-path-malformed"},
+    {"record": {"id": "r"}, "path": "a.", "ok": false, "code": "view-path-malformed"}
+  ],
+  "expect": {"ok": true}
+}

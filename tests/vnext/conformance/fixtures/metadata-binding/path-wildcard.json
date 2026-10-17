@@ -1,0 +1,12 @@
+{
+  "description": "Criterion 11: wildcard queries in a view path are unsupported.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/registries/metadata/view-version-history/path", "value": "versionHistory.*"}
+    ]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["view-path-unsupported"]}
+}

@@ -1,0 +1,17 @@
+{
+  "description": "Criterion 12: the same credit in canonical form is pruned (whole property) and the asset embeds without it.",
+  "criteria": [12],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/assets/asset-flow/credit", "value": {"record": "rec-org-internal"}}
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "present": ["assets/asset-flow"],
+    "absent": ["assets/asset-flow/credit", "records/rec-org-internal"]
+  }
+}

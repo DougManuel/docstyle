@@ -1,0 +1,3 @@
+{ "id": "rec-document", "recordType": "document", "schemaVersion": 1,
+  "type": "protocol", "title": "Example protocol",
+  "abstract": "Background: an at-rest authoring-input abstract. Valid, but not canonical; the semantic validator warns and the catalogue embedder refuses it." }

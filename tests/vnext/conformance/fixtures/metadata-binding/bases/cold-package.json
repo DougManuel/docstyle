@@ -1,0 +1,156 @@
+{
+  "parts": {
+    "/word/document.xml": {
+      "contentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+    },
+    "/docstyle/catalogue.json": {
+      "contentType": "application/vnd.docstyle.catalogue+json",
+      "json": {"$base": "bases/pre-embed-catalogue.json", "$patch": []}
+    }
+  },
+  "relationships": {
+    "/word/document.xml": [
+      {
+        "id": "rIdDocstyleCatalogue",
+        "type": "https://dougmanuel.github.io/docstyle/relationships/catalogue",
+        "target": "../docstyle/catalogue.json"
+      }
+    ]
+  },
+  "envelopes": [
+    {
+      "v": 4,
+      "id": "abstract",
+      "kind": "section",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "role": "abstract"
+    },
+    {
+      "v": 4,
+      "id": "g-paragraph-a2b3c4",
+      "kind": "paragraph",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "abstract"
+    },
+    {
+      "v": 4,
+      "id": "view-author-plate",
+      "kind": "section",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "role": "metadata-value"
+    },
+    {
+      "v": 4,
+      "id": "g-paragraph-v2w3x4",
+      "kind": "paragraph",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "v": 4,
+      "id": "g-span-k3m7ap",
+      "kind": "span",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "role": "metadata-value",
+      "parent": "g-paragraph-v2w3x4"
+    },
+    {
+      "v": 4,
+      "id": "tbl-outcomes",
+      "kind": "table",
+      "policy": "structural",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "v": 4,
+      "id": "g-caption-x2r9qa",
+      "kind": "caption",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "tbl-outcomes"
+    },
+    {
+      "v": 4,
+      "id": "g-table-row-r2s3t4",
+      "kind": "table-row",
+      "policy": "structural",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "tbl-outcomes"
+    },
+    {
+      "v": 4,
+      "id": "g-table-cell-c2d3e4",
+      "kind": "table-cell",
+      "policy": "structural",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "g-table-row-r2s3t4"
+    },
+    {
+      "v": 4,
+      "id": "g-paragraph-p2q3r4",
+      "kind": "paragraph",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "g-table-cell-c2d3e4"
+    },
+    {
+      "v": 4,
+      "id": "g-paragraph-n4t8qa",
+      "kind": "paragraph",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "tbl-outcomes"
+    },
+    {
+      "v": 4,
+      "id": "fig-flow",
+      "kind": "figure",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "v": 4,
+      "id": "g-caption-f5k2ma",
+      "kind": "caption",
+      "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "fig-flow"
+    },
+    {
+      "v": 4,
+      "id": "view-version-history",
+      "kind": "table",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "role": "metadata-value"
+    },
+    {
+      "v": 4,
+      "id": "g-table-row-h2i3j4",
+      "kind": "table-row",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "view-version-history"
+    },
+    {
+      "v": 4,
+      "id": "g-table-cell-h3i4j5",
+      "kind": "table-cell",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "g-table-row-h2i3j4"
+    },
+    {
+      "v": 4,
+      "id": "g-paragraph-h4i5j6",
+      "kind": "paragraph",
+      "policy": "generated-replace",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "parent": "g-table-cell-h3i4j5"
+    }
+  ]
+}

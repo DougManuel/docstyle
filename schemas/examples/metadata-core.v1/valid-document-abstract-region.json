@@ -1,0 +1,3 @@
+{ "id": "rec-document", "recordType": "document", "schemaVersion": 1,
+  "type": "protocol", "title": "Example protocol", "version": "2.1",
+  "abstract": { "region": "abstract" } }

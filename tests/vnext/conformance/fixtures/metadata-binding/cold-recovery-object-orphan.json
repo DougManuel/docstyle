@@ -1,0 +1,26 @@
+{
+  "description": "Section 6: objects are keyed by node id, so each object binds the region whose field envelope carries that id. A table object renamed to an id no envelope carries binds nothing and leaves the real table without its semantics; cold recovery fails.",
+  "criteria": [8],
+  "operation": "cold-recover",
+  "package": {
+    "$base": "bases/cold-package.json",
+    "$patch": [
+      {"op": "remove", "path": "/parts/~1docstyle~1catalogue.json/json/objects/tbl-outcomes"},
+      {
+        "op": "add",
+        "path": "/parts/~1docstyle~1catalogue.json/json/objects/tbl-orphan",
+        "value": {
+          "id": "tbl-orphan",
+          "type": "table",
+          "semantics": {
+            "label": "Table 1",
+            "caption": "g-caption-x2r9qa",
+            "summary": "Outcomes by arm",
+            "notes": ["g-paragraph-n4t8qa"]
+          }
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "errors": ["object-region-missing"], "where": ["tbl-orphan"]}
+}

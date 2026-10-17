@@ -1,0 +1,17 @@
+{
+  "description": "Cold import: an object's profile extension that fails its profile schema fails (semantic layer; JSON Schema cannot see it).",
+  "criteria": [10],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/objects/tbl-outcomes/semantics/profiles",
+        "value": {"docstyle:fixture": {"id": "x", "recordType": "fixture-record", "schemaVersion": 1}}
+      }
+    ]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["semantics-profile-invalid"]}
+}

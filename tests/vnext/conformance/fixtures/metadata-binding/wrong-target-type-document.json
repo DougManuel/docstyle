@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 11: contribution.document must reference a document record.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/contrib-2/document", "value": "rec-person-1"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-type"]}
+}

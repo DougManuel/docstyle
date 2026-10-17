@@ -1,0 +1,12 @@
+{
+  "description": "Criterion 11: record-reference credit resolves to records, never views.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/assets/asset-flow/credit", "value": {"record": "g-span-k3m7ap"}}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-type"]}
+}

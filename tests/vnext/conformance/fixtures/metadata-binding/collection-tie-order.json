@@ -1,0 +1,69 @@
+{
+  "description": "Criterion 11 (positive): ties on the sort key break deterministically by record id (UTF-8 byte order).",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-groups",
+          "type": "section",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {"op": "add", "path": "/registries/metadata/contrib-1/equalContributionGroup", "value": "first"},
+      {"op": "add", "path": "/registries/metadata/contrib-2/equalContributionGroup", "value": "first"},
+      {
+        "op": "add",
+        "path": "/registries/metadata/contrib-b",
+        "value": {
+          "id": "contrib-b",
+          "recordType": "contribution",
+          "schemaVersion": 1,
+          "document": "rec-document",
+          "person": "rec-person-2",
+          "position": 3,
+          "equalContributionGroup": "senior"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/contrib-a",
+        "value": {
+          "id": "contrib-a",
+          "recordType": "contribution",
+          "schemaVersion": 1,
+          "document": "rec-document",
+          "person": "rec-person-1",
+          "position": 4,
+          "equalContributionGroup": "senior"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-groups",
+        "value": {
+          "id": "view-groups",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceCollection": {"recordType": "contribution", "orderBy": "equalContributionGroup"},
+          "presentation": "block"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "errors": [],
+    "order": {
+      "view-groups": ["contrib-1", "contrib-2", "contrib-a", "contrib-b"],
+      "view-author-plate": ["contrib-1", "contrib-2", "contrib-b", "contrib-a"]
+    }
+  }
+}

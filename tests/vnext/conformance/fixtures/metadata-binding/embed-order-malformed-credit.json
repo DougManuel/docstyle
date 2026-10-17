@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 12: a malformed record-form asset credit whose target is restricted fails in local validation; the value is not pruned away.",
+  "criteria": [12],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/assets/asset-flow/credit",
+        "value": {"record": "rec-org-internal", "note": "extra key"}
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["credit-noncanonical"]}
+}

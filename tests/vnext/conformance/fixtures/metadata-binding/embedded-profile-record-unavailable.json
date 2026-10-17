@@ -1,0 +1,22 @@
+{
+  "description": "Cold import: a profile record naming an unavailable profile fails closed.",
+  "criteria": [3],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/records/rec-fx9",
+        "value": {
+          "id": "rec-fx9",
+          "recordType": "absent-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:absent"
+        }
+      }
+    ]
+  },
+  "envelopesFrom": "pre-embed-local",
+  "expect": {"ok": false, "stage": "embedded", "errors": ["profile-record-unavailable"]}
+}

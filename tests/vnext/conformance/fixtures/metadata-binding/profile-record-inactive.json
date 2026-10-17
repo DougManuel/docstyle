@@ -1,0 +1,23 @@
+{
+  "description": "A public profile record whose profile is not active in registries.profiles fails closed (it would otherwise be embedded unvalidated).",
+  "criteria": [3],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture",
+          "label": "Fixture extension record",
+          "category": "alpha"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["profile-record-unavailable"]}
+}

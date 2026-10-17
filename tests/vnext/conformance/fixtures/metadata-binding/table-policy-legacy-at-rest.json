@@ -1,0 +1,13 @@
+{
+  "description": "Criterion 6 (audit correction): the same legacy whole-table policy is only a normalization warning at rest.",
+  "criteria": [6],
+  "operation": "at-rest",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/content/3/classification", "value": "authored"},
+      {"op": "replace", "path": "/content/3/policy", "value": "authored-preserve"}
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "warnings": ["table-policy-legacy"]}
+}

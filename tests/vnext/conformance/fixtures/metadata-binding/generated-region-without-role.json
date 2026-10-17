@@ -1,0 +1,32 @@
+{
+  "description": "Section 2 (conservative reading): an outermost generated-replace region must be bound by a view even without the metadata-value role -- WP4 must not invent unbound generated regions. Its generated descendants are covered by the outermost region.",
+  "criteria": [5],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "g-section-t4u5v6",
+          "type": "section",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "children": [
+            {
+              "id": "g-paragraph-t5u6v7",
+              "type": "paragraph",
+              "classification": "generated",
+              "policy": "generated-replace",
+              "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+              "text": "Generated with no binding"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["unbound-generated-region"]}
+}

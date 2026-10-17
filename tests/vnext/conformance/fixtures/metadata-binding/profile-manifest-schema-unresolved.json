@@ -1,0 +1,21 @@
+{
+  "description": "WP1 profile mechanism: activating a profile whose declared schema is not registered is a validation failure in its own right, even with no record of that profile; the manifest registers nothing.",
+  "criteria": [3],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {
+          "id": "docstyle:fixture",
+          "version": "1.0.0",
+          "schema": "profiles/absent.v1.json",
+          "recordTypes": ["fixture-record"]
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["profile-schema-unresolved"], "where": ["profiles/docstyle:fixture"]}
+}

@@ -1,0 +1,26 @@
+{
+  "description": "Container keys must equal the contained record's own id.",
+  "criteria": [11],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {"op": "remove", "path": "/records/rec-person-2"},
+      {
+        "op": "add",
+        "path": "/records/rec-person-x",
+        "value": {
+          "id": "rec-person-2",
+          "recordType": "person",
+          "schemaVersion": 1,
+          "name": {"given": "Amal", "family": "Haddad"}
+        }
+      }
+    ]
+  },
+  "expect": {
+    "ok": false,
+    "stage": "embedded",
+    "errors": ["container-key-mismatch", "reference-target-absent"]
+  }
+}

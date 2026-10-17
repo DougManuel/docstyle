@@ -1,0 +1,12 @@
+{
+  "description": "A restricted view bound to a rendered region fails in local validation: the region ships in the DOCX, so its binding cannot be withheld.",
+  "criteria": [5],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/metadata/view-version-history/privacy", "value": "restricted"}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["view-restricted"]}
+}

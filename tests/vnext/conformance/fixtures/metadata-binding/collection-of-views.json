@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 11: a collection over metadata-view records is a view-to-view reference.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/recordType",
+        "value": "metadata-view"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-type-not-document-scoped"]}
+}

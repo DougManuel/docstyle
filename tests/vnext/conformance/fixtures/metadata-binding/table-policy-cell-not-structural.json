@@ -1,0 +1,13 @@
+{
+  "description": "Criterion 6 (negative): a table-cell carrying authored-preserve instead of structural.",
+  "criteria": [6],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/content/3/children/1/children/0/classification", "value": "authored"},
+      {"op": "replace", "path": "/content/3/children/1/children/0/policy", "value": "authored-preserve"}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["table-policy-structure"]}
+}

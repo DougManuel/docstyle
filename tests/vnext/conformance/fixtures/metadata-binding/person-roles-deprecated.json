@@ -1,0 +1,13 @@
+{
+  "description": "Section 3: person.roles and person.corresponding remain valid and embed, with deprecation warnings.",
+  "criteria": [1],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/metadata/rec-person-1/roles", "value": ["methodology"]},
+      {"op": "add", "path": "/registries/metadata/rec-person-1/corresponding", "value": true}
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "warnings": ["person-authorship-deprecated"]}
+}

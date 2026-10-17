@@ -1,0 +1,13 @@
+{
+  "description": "Criterion 11: a view that names itself as its source record is invalid.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/registries/metadata/g-span-k3m7ap/sourceRecord", "value": "g-span-k3m7ap"},
+      {"op": "replace", "path": "/registries/metadata/g-span-k3m7ap/path", "value": ""}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["view-self-reference"]}
+}

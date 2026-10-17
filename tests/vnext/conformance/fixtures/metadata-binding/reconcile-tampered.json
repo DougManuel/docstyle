@@ -1,0 +1,27 @@
+{
+  "description": "Section 6: out-of-band edits to the catalogue (changed version, removed view, injected record) are metadata contradictions -- blocking conflicts.",
+  "criteria": [3],
+  "operation": "reconcile",
+  "model": {"$base": "bases/local-model.json", "$patch": []},
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {"op": "replace", "path": "/records/rec-document/version", "value": "2.2"},
+      {
+        "op": "add",
+        "path": "/records/rec-org-extra",
+        "value": {"id": "rec-org-extra", "recordType": "organization", "schemaVersion": 1, "name": "Injected"}
+      },
+      {"op": "remove", "path": "/views/g-span-k3m7ap"}
+    ]
+  },
+  "expect": {
+    "ok": false,
+    "outcomes": {
+      "records/rec-document": "conflict",
+      "views/g-span-k3m7ap": "conflict",
+      "records/rec-org-extra": "conflict",
+      "records/contrib-1": "agree"
+    }
+  }
+}

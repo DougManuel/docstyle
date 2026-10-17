@@ -1,0 +1,10 @@
+{
+  "description": "Section 4: presentation data (image width) in figure semantics fails canonical validation.",
+  "criteria": [10],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "add", "path": "/content/4/semantics/width", "value": "50%"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["semantics-noncanonical"]}
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 11: an absent prunable target (contact) fails -- only a known restricted target permits pruning.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/registries/metadata/contrib-1/contact", "value": "rec-contact-9"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-absent"]}
+}

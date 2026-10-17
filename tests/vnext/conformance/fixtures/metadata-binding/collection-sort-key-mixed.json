@@ -1,0 +1,19 @@
+{
+  "description": "Criterion 11: orderBy values must be uniformly numbers or uniformly strings.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "add", "path": "/registries/metadata/contrib-1/equalContributionGroup", "value": "first-authors"},
+      {"op": "add", "path": "/registries/metadata/contrib-1/rank", "value": "one"},
+      {"op": "add", "path": "/registries/metadata/contrib-2/rank", "value": 2},
+      {
+        "op": "replace",
+        "path": "/registries/metadata/view-author-plate/sourceCollection/orderBy",
+        "value": "rank"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["collection-sort-key-mixed"]}
+}

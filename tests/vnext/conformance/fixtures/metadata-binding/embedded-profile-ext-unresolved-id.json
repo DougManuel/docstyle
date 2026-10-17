@@ -1,0 +1,26 @@
+{
+  "description": "Step 3 defence in depth over semantics.profiles values.",
+  "criteria": [4, 11],
+  "operation": "validate-embedded",
+  "envelopesFrom": "pre-embed-local",
+  "localIdsFrom": "pre-embed-local",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/objects/tbl-outcomes/semantics/profiles",
+        "value": {
+          "docstyle:fixture": {
+            "id": "fx-t",
+            "recordType": "fixture-record",
+            "schemaVersion": 1,
+            "label": "x",
+            "notes": ["rec-org-internal"]
+          }
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["profile-value-unresolved-id"]}
+}

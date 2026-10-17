@@ -1,0 +1,23 @@
+{
+  "description": "Decision under review: reference integrity (absent targets, types) is checked on restricted local records too, although they never embed.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-person-x",
+        "value": {
+          "id": "rec-person-x",
+          "recordType": "person",
+          "schemaVersion": 1,
+          "privacy": "restricted",
+          "name": {"family": "Internal"},
+          "affiliations": ["rec-org-9"]
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["reference-target-absent"]}
+}

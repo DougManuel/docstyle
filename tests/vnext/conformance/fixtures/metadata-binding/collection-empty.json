@@ -1,0 +1,48 @@
+{
+  "description": "Criterion 11 (positive): a collection with no members for this document is permitted (empty author plate).",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "view-funders",
+          "type": "section",
+          "classification": "generated",
+          "policy": "generated-replace",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "role": "metadata-value"
+        }
+      },
+      {"op": "replace", "path": "/registries/metadata/contrib-1/document", "value": "rec-document-other"},
+      {"op": "replace", "path": "/registries/metadata/contrib-2/document", "value": "rec-document-other"},
+      {
+        "op": "add",
+        "path": "/registries/metadata/view-funders",
+        "value": {
+          "id": "view-funders",
+          "recordType": "metadata-view",
+          "schemaVersion": 1,
+          "sourceCollection": {"recordType": "contribution", "orderBy": "position"},
+          "presentation": "block"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-document-other",
+        "value": {
+          "id": "rec-document-other",
+          "recordType": "document",
+          "schemaVersion": 1,
+          "type": "other",
+          "title": "A different document"
+        }
+      }
+    ]
+  },
+  "document": "rec-document",
+  "expect": {"ok": true, "errors": [], "order": {"view-author-plate": [], "view-funders": []}}
+}

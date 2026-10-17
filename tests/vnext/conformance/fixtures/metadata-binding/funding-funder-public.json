@@ -1,0 +1,22 @@
+{
+  "description": "funding.funder naming a public organization embeds.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fund-1",
+        "value": {
+          "id": "rec-fund-1",
+          "recordType": "funding",
+          "schemaVersion": 1,
+          "funder": "rec-org-uottawa",
+          "grant": "GR-1"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": true, "errors": [], "present": ["records/rec-fund-1/funder"]}
+}

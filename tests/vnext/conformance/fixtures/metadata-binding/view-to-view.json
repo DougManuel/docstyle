@@ -1,0 +1,16 @@
+{
+  "description": "Criterion 11: a view whose source is another view is invalid.",
+  "criteria": [11],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "replace",
+        "path": "/registries/metadata/g-span-k3m7ap/sourceRecord",
+        "value": "view-version-history"
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["view-source-is-view"]}
+}

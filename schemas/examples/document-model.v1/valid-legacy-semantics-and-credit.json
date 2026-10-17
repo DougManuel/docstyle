@@ -1,0 +1,12 @@
+{ "schemaVersion": 1,
+  "content": [
+    { "id": "tbl-legacy", "type": "table", "classification": "structural", "policy": "structural",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "semantics": "legacy-value" },
+    { "id": "fig-legacy", "type": "figure", "classification": "authored", "policy": "authored-preserve",
+      "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "semantics": { "altText": "pre-canonical key", "width": "50%" } }
+  ],
+  "registries": {
+    "metadata": {}, "profiles": {}, "relationships": {},
+    "assets": {
+      "asset-legacy": { "id": "asset-legacy", "path": "media/legacy.png", "mediaType": "image/png",
+        "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "credit": { "photographer": "J. Smith", "year": 2019 } } } } }

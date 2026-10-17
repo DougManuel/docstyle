@@ -1,0 +1,32 @@
+{
+  "description": "Section 4: a profile extension value that fails its profile schema (missing required label) fails.",
+  "criteria": [10],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/3/semantics/profiles",
+        "value": {
+          "docstyle:fixture": {"id": "fx-tbl-outcomes", "recordType": "fixture-record", "schemaVersion": 1}
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {
+          "id": "docstyle:fixture",
+          "version": "1.0.0",
+          "schema": "profiles/fixture.v1.json",
+          "recordTypes": ["fixture-record"],
+          "classes": ["fixture-region"],
+          "regionRoles": ["fixture-role"],
+          "predicates": ["fixture-supports"],
+          "migratesFrom": []
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["semantics-profile-invalid"]}
+}

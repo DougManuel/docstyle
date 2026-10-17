@@ -1,0 +1,12 @@
+{
+  "description": "Criterion 2 (contract half): the WP3 normalizer target for a YAML abstract string. The compile step (yaml -> normalized) is WP3 and not executed here; this layer checks that the stated normalized output has the region-form record, an #abstract section with envelope section/abstract/authored-preserve holding the text, and embeds -- while the un-normalized string form is refused (abstract-string-refused).",
+  "criteria": [2],
+  "operation": "normalize-contract",
+  "yaml": "abstract: \"Background: the abstract text lives only in the content tree.\"\n",
+  "normalized": {"$base": "bases/local-model.json", "$patch": []},
+  "expect": {
+    "ok": true,
+    "abstractText": "Background: the abstract text lives only in the content tree.",
+    "envelope": {"id": "abstract", "kind": "section", "role": "abstract", "policy": "authored-preserve"}
+  }
+}

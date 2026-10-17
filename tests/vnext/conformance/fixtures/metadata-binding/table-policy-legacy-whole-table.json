@@ -1,0 +1,13 @@
+{
+  "description": "Criterion 6 (audit correction): the legacy whole-table authored-preserve envelope is not the vNext contract -- it fails embedding until normalized to structural.",
+  "criteria": [6],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {"op": "replace", "path": "/content/3/classification", "value": "authored"},
+      {"op": "replace", "path": "/content/3/policy", "value": "authored-preserve"}
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["table-policy-legacy"]}
+}

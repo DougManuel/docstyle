@@ -1,0 +1,50 @@
+{
+  "description": "Round trip for the declared-schema binding (#57 re-review): the manifest declares a permissive schema, a record lacking the label the name-derived schema requires embeds, and the embedded catalogue must cold-recover with the same declared schema rather than the name-derived one.",
+  "criteria": [
+    3,
+    8
+  ],
+  "operation": "embed-then-cold-recover",
+  "schemas": [
+    {
+      "$id": "urn:docstyle-conformance:fixture-loose",
+      "type": "object",
+      "required": [
+        "id",
+        "recordType",
+        "schemaVersion"
+      ]
+    }
+  ],
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/registries/metadata/rec-fx1",
+        "value": {
+          "id": "rec-fx1",
+          "recordType": "fixture-record",
+          "schemaVersion": 1,
+          "profile": "docstyle:fixture"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/registries/profiles/docstyle:fixture",
+        "value": {
+          "id": "docstyle:fixture",
+          "version": "1.0.0",
+          "schema": "urn:docstyle-conformance:fixture-loose",
+          "recordTypes": [
+            "fixture-record"
+          ]
+        }
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "errors": []
+  }
+}

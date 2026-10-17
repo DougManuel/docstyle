@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 7: duplicate contribution positions in an embedded catalogue fail the semantic validator.",
+  "criteria": [7],
+  "operation": "validate-embedded",
+  "catalogue": {
+    "$base": "bases/pre-embed-catalogue.json",
+    "$patch": [{"op": "replace", "path": "/records/contrib-2/position", "value": 1}]
+  },
+  "expect": {"ok": false, "stage": "embedded", "errors": ["contribution-position-duplicate"]}
+}

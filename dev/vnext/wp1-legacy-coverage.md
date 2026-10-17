@@ -254,6 +254,30 @@ audit's definitions.
 
 Row count: 96. 29 mapped, 63 assigned, 4 dropped.
 
+## Correction notes
+
+The inventory rows above are the audit as completed; later contract changes
+amend them here rather than rewriting history.
+
+1. **Table-policy row (metadata-binding specification, section 5).** The
+   row `Field-code payload type table -> field-envelope.v4 kind table,
+   policy authored-preserve` described the whole-table envelope. That
+   envelope is now `kind: "table"`, `policy: "structural"`, with authored
+   descendants: `table-row` and `table-cell` nodes are `structural`, and
+   the caption and cell content nodes are `authored-preserve`, each
+   recoverable through its own node identity and hash. A generated table
+   (a version-history table or any other metadata view rendered as a
+   table) is instead `generated-replace` throughout, and the two policies
+   never mix within one table. The row's classification (mapped) is
+   unchanged. `key-map.json` and `migrate.lua` still emit
+   `authored-preserve` for a migrated legacy table payload; that output is
+   a provisional mapping (see declared bound 5), and the metadata-binding
+   semantic validator (`tests/vnext/conformance/lib/catalogue.lua`)
+   reports it as a `table-policy-legacy` normalization warning at rest and
+   an error at embed time, until the WP3/WP5 normalizer rewrites it to the
+   structural contract. Evidence: the `table-policy*` fixtures under
+   `tests/vnext/conformance/fixtures/metadata-binding/`.
+
 ## Declared bounds
 
 1. **NFC assumption (Task 2).** WP1 canonicalization assumes input text is

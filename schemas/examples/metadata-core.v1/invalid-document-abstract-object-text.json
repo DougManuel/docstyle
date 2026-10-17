@@ -1,0 +1,3 @@
+{ "id": "rec-document", "recordType": "document", "schemaVersion": 1,
+  "type": "protocol", "title": "Example protocol",
+  "abstract": { "text": "Background: abstract text placed in an object instead of a region reference." } }

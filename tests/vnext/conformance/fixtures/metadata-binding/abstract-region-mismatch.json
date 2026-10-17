@@ -1,0 +1,10 @@
+{
+  "description": "Criterion 2: the region must be the section/abstract/authored-preserve envelope.",
+  "criteria": [2],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [{"op": "replace", "path": "/content/0/role", "value": "introduction"}]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["abstract-region-mismatch"]}
+}

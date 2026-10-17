@@ -1,0 +1,33 @@
+{
+  "description": "WP1 one-id-per-region rule (section 2): a second rendered occurrence reusing the first occurrence's generated id would collapse two regions into one entry of the id-keyed envelope map and silently share one view record. Embedding fails, naming the id.",
+  "criteria": [5],
+  "operation": "embed",
+  "model": {
+    "$base": "bases/local-model.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/content/-",
+        "value": {
+          "id": "g-paragraph-y2z3a4",
+          "type": "paragraph",
+          "classification": "authored",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "children": [
+            {
+              "id": "g-span-k3m7ap",
+              "type": "span",
+              "classification": "generated",
+              "policy": "generated-replace",
+              "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+              "role": "metadata-value",
+              "text": "2.1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "stage": "local", "errors": ["region-id-duplicate"], "where": ["g-span-k3m7ap"]}
+}

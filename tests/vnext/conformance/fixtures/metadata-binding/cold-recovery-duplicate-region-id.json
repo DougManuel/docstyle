@@ -1,0 +1,35 @@
+{
+  "description": "Cold import: two generated envelopes sharing one id would become one recovered region. Recovery fails, naming the id, before any id-keyed map is built.",
+  "criteria": [8],
+  "operation": "cold-recover",
+  "package": {
+    "$base": "bases/cold-package.json",
+    "$patch": [
+      {
+        "op": "add",
+        "path": "/envelopes/-",
+        "value": {
+          "v": 4,
+          "id": "g-paragraph-y2z3a4",
+          "kind": "paragraph",
+          "policy": "authored-preserve",
+          "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/envelopes/-",
+        "value": {
+          "v": 4,
+          "id": "g-span-k3m7ap",
+          "kind": "span",
+          "policy": "generated-replace",
+          "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "role": "metadata-value",
+          "parent": "g-paragraph-y2z3a4"
+        }
+      }
+    ]
+  },
+  "expect": {"ok": false, "errors": ["region-id-duplicate"], "where": ["g-span-k3m7ap"]}
+}
