@@ -258,8 +258,23 @@ local function next_utf8(text, position)
   return codepoint, next_at
 end
 
+-- Names made only of ASCII name characters match one pattern instead of
+-- being decoded character by character. A name with any other character
+-- takes the codepoint path, which decides the same cases the same way.
+local ASCII_NAME = "^[A-Za-z_:][A-Za-z0-9_:%.%-]*"
+local ASCII_NCNAME = "^[A-Za-z_][A-Za-z0-9_%.%-]*$"
+
 local function read_name(text, position)
   if position > #text then return nil, position end
+  local _, ascii_finish = text:find(ASCII_NAME, position)
+  if ascii_finish then
+    -- A following non-ASCII byte may continue the name, so only an ASCII
+    -- byte (or the end of the text) ends it here.
+    local following = text:byte(ascii_finish + 1)
+    if not following or following < 0x80 then
+      return text:sub(position, ascii_finish), ascii_finish + 1
+    end
+  end
   local codepoint, next_at = next_utf8(text, position)
   if not is_name_start(codepoint) then return nil, position end
   local finish = next_at
@@ -272,6 +287,7 @@ local function read_name(text, position)
 end
 
 local function validate_ncname(name, context)
+  if name:find(ASCII_NCNAME) then return end
   local position = 1
   local codepoint, next_at = next_utf8(name, position)
   if not codepoint or not is_ncname_start(codepoint) then
@@ -514,6 +530,46 @@ local function emit(state, event)
   state.events[#state.events + 1] = event
 end
 
+-- The LuaXML backend parses its own copy of the part for the structural
+-- cross-check. The copy is the decoded text with some spans replaced, built
+-- in document order as the parser meets them, so no span needs sorting.
+local function replace_for_backend(state, start_at, finish_at, replacement)
+  local pieces = state.backend_pieces
+  pieces[#pieces + 1] = state.decoded.text:sub(state.backend_cursor,
+    start_at - 1)
+  pieces[#pieces + 1] = replacement
+  state.backend_cursor = finish_at
+end
+
+-- The backend's cost grows with the square of a name's length (#55), so its
+-- copy names every prefix, local name and processing-instruction target by
+-- a short alias in order of first appearance. The reserved xml and xmlns
+-- prefixes stay as written. backend_names maps each alias back, and the
+-- overlay compares the backend's names only after mapping them back.
+local function backend_component(state, component)
+  if component == "xml" or component == "xmlns" then return component end
+  local alias = state.aliases[component]
+  if not alias then
+    state.alias_count = state.alias_count + 1
+    alias = "n" .. state.alias_count
+    state.aliases[component] = alias
+  end
+  return alias
+end
+
+local function alias_for_backend(state, name, start_at)
+  local colon = name:find(":", 1, true)
+  local alias
+  if colon then
+    alias = backend_component(state, name:sub(1, colon - 1)) .. ":" ..
+      backend_component(state, name:sub(colon + 1))
+  else
+    alias = backend_component(state, name)
+  end
+  state.backend_names[alias] = name
+  replace_for_backend(state, start_at, start_at + #name, alias)
+end
+
 local function parse_start(state)
   local text = state.decoded.text
   local token_start = state.position
@@ -522,6 +578,7 @@ local function parse_start(state)
     raise("xml.invalid-name", "start tag has an invalid name")
   end
   split_qname(qname)
+  alias_for_backend(state, qname, token_start + 1)
   local raw_attributes, declarations = {}, {}
   local lexical_names = {}
   local ordinary_count = 0
@@ -556,6 +613,7 @@ local function parse_start(state)
       })
     end
     lexical_names[attribute_qname] = true
+    alias_for_backend(state, attribute_qname, cursor)
     cursor = skip_space(text, next_at)
     if text:sub(cursor, cursor) ~= "=" then
       raise("xml.malformed-token", "attribute requires equals")
@@ -580,10 +638,8 @@ local function parse_start(state)
       value = value,
       quote = quote,
       value_range = source_range(state.decoded, value_start, value_finish),
-      decoded_value_start = value_start,
-      decoded_value_finish = value_finish,
     }
-    state.attribute_spans[#state.attribute_spans + 1] = row
+    replace_for_backend(state, value_start, value_finish, "")
     cursor = value_finish + 1
 
     local namespace_prefix
@@ -687,6 +743,7 @@ local function parse_end(state)
   local qname, cursor = read_name(text, token_start + 2)
   if not qname then raise("xml.invalid-name", "end tag has an invalid name") end
   split_qname(qname)
+  alias_for_backend(state, qname, token_start + 2)
   cursor = skip_space(text, cursor)
   if text:sub(cursor, cursor) ~= ">" then
     raise("xml.malformed-token", "unclosed end tag", { element = qname })
@@ -758,16 +815,14 @@ local function parse_pi(state)
     end
     raise("xml.reserved-pi-target", "processing-instruction target xml is reserved")
   end
+  alias_for_backend(state, target, start_at + 2)
   local value = ""
   if cursor < close then
     if not is_space(text:sub(cursor, cursor)) then
       raise("xml.malformed-pi", "processing-instruction data needs whitespace")
     end
     local data_start = skip_space(text, cursor)
-    state.pi_separator_spans[#state.pi_separator_spans + 1] = {
-      decoded_start = cursor,
-      decoded_finish = data_start,
-    }
+    replace_for_backend(state, cursor, data_start, " ")
     value = text:sub(data_start, close - 1)
   end
   emit(state, {
@@ -807,38 +862,14 @@ end
 
 -- The text the LuaXML backend parses for its structural cross-check. The
 -- cross-check compares event kinds, qualified names and lexical tokens,
--- never attribute values, and every attribute value, range and edit comes
--- from this strict layer. So attribute values reach the backend empty: the
--- backend's attribute patterns backtrack quadratically inside one long
--- value (#50), and an empty value gives it nothing to backtrack over.
+-- never attribute values, and every name, attribute value, range and edit
+-- comes from this strict layer. So attribute values reach the backend empty
+-- (its attribute patterns backtrack quadratically inside one long value,
+-- #50) and names reach it as short aliases (its name handling is
+-- superlinear in name length, #55); the backend still checks the structure.
 local function semantic_xml(state)
-  local pieces = {}
-  local cursor = 1
-  local spans = {}
-  for _, attribute in ipairs(state.attribute_spans) do
-    spans[#spans + 1] = {
-      decoded_start = attribute.decoded_value_start,
-      decoded_finish = attribute.decoded_value_finish,
-      attribute_value = true,
-    }
-  end
-  for _, separator in ipairs(state.pi_separator_spans) do
-    spans[#spans + 1] = separator
-  end
-  table.sort(spans, function(left, right)
-    return left.decoded_start < right.decoded_start
-  end)
-  for _, span in ipairs(spans) do
-    pieces[#pieces + 1] = state.decoded.text:sub(
-      cursor, span.decoded_start - 1)
-    if span.attribute_value then
-      pieces[#pieces + 1] = ""
-    else
-      pieces[#pieces + 1] = " "
-    end
-    cursor = span.decoded_finish
-  end
-  pieces[#pieces + 1] = state.decoded.text:sub(cursor)
+  local pieces = state.backend_pieces
+  pieces[#pieces + 1] = state.decoded.text:sub(state.backend_cursor)
   return table.concat(pieces)
 end
 
@@ -866,8 +897,11 @@ function M.inspect(bytes, options)
     root = nil,
     next_id = 0,
     token_count = 0,
-    attribute_spans = {},
-    pi_separator_spans = {},
+    backend_pieces = {},
+    backend_cursor = 1,
+    aliases = {},
+    alias_count = 0,
+    backend_names = {},
   }
   while state.position <= #decoded.text do
     local prefix4 = decoded.text:sub(state.position, state.position + 3)
@@ -905,6 +939,7 @@ function M.inspect(bytes, options)
     root = state.root,
     token_count = state.token_count,
     semantic_xml = semantic_xml(state),
+    backend_names = state.backend_names,
   }
 end
 

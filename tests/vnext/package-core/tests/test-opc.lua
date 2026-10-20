@@ -539,6 +539,11 @@ return {
         { "../../escape.xml", "opc.relationship-target-escape" },
         { "media/case.xml", "opc.relationship-target-missing",
           "word/media/Case.xml" },
+        -- #56: an absolute target resolves from the package root, so it
+        -- cannot climb above it, name the root itself or skip a segment.
+        { "/../escape.xml", "opc.relationship-target-escape" },
+        { "/", "opc.invalid-relationship-target" },
+        { "/word//empty.xml", "opc.invalid-relationship-target" },
       }
       for index, row in ipairs(rows) do
         local rels = document_relationships({ {
@@ -559,6 +564,61 @@ return {
           end)
         end)
       end
+    end,
+  },
+  {
+    name = "absolute internal relationship targets resolve and publish",
+    gate = "functional",
+    stage = "package",
+    fn = function()
+      -- #56: two surveyed documents point the office-document relationship
+      -- at an absolute part name. OPC allows it and Word opens them.
+      -- A colon in the first segment is part of the path, not a scheme,
+      -- once the target is absolute (RFC 3986 path-absolute; found in
+      -- review).
+      local root_rels = DEFAULT_ROOT_RELATIONSHIPS:gsub(
+        'Target="word/document.xml"', 'Target="/word/document.xml"'):gsub(
+        "</Relationships>", '<Relationship Id="rId9" Type="urn:docstyle:test" ' ..
+          'Target="/root:name.xml"/></Relationships>')
+      local bytes = package_bytes({
+        root_relationships = root_rels,
+        extra_entries = {
+          { name = "word/_rels/document.xml.rels",
+            data = document_relationships({
+              { id = "rId1", target = "/word/media/absolute.xml" },
+              { id = "rId2", target = "/root:name.xml" },
+            }) },
+          { name = "word/media/absolute.xml", data = "absolute" },
+          { name = "root:name.xml", data = "colon" },
+        },
+      })
+      with_archive(bytes, function(path)
+        local function check(pkg)
+          local root_target
+          for _, record in ipairs(pkg:relationships("/")) do
+            if record.id == "rId1" then root_target = record.resolved_part end
+          end
+          assert(root_target == "/word/document.xml", tostring(root_target))
+          local root_colon
+          for _, record in ipairs(pkg:relationships("/")) do
+            if record.id == "rId9" then root_colon = record.resolved_part end
+          end
+          assert(root_colon == "/root:name.xml", tostring(root_colon))
+          local part_colon = pkg:relationships("/word/document.xml")[2]
+          assert(part_colon.resolved_part == "/root:name.xml",
+            tostring(part_colon.resolved_part))
+          local part_target = pkg:relationships("/word/document.xml")[1]
+          assert(part_target.resolved_part == "/word/media/absolute.xml",
+            tostring(part_target.resolved_part))
+          assert(part_target.target == "/word/media/absolute.xml",
+            "the literal target is kept as written")
+        end
+        local pkg = opc.open_path(path, limits())
+        check(pkg)
+        local out = path .. ".out.docx"
+        pkg:write_atomic(out)
+        check(opc.open_path(out, limits()))
+      end)
     end,
   },
   {
