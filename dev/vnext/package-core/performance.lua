@@ -323,15 +323,15 @@ local function measure_reference()
           "~71 seconds; see the WP2 plan ledger) and superlinear in " ..
           "name length (#55). Since #50 and #55 it parses a copy with " ..
           "empty attribute values and short name aliases, so neither " ..
-          "cost is reachable, and the strict layer matches plain-ASCII " ..
-          "names with one pattern: a crafted 8 MiB part of 256-byte " ..
-          "element names takes about 4 seconds. The strict layer still " ..
-          "decodes every character and builds a record per token, so " ..
-          "parts denser in markup than this benchmark's fixture are " ..
-          "slower: an 8 MiB part of short runs takes about 10 seconds, " ..
-          "above the five-second advisory target (both figures in " ..
-          "long-name-results.json). The largest real part surveyed is " ..
-          "2.7 MB.",
+          "cost is reachable. The strict layer matches plain-ASCII " ..
+          "names with one pattern and decodes valid UTF-8 without " ..
+          "per-character records, so a crafted 8 MiB part of 256-byte " ..
+          "element names takes under a second. It still builds a " ..
+          "record per token, so parts much denser in markup than this " ..
+          "benchmark's fixture are slower: an 8 MiB part of short runs " ..
+          "takes about 8 seconds, above the five-second advisory " ..
+          "target (both figures in long-name-results.json). The " ..
+          "largest real part surveyed is 2.7 MB.",
       },
     },
   }

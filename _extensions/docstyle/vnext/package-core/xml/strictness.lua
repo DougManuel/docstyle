@@ -167,7 +167,36 @@ local function materialize(records, source_start)
   return table.concat(pieces), boundaries
 end
 
-local function decode_document(bytes)
+-- Valid UTF-8 with no carriage return and no character XML forbids decodes
+-- to itself: the text is the input and each decoded offset is the source
+-- offset, so the per-character records and the per-byte offset map below are
+-- not needed. Anything else returns nil and takes the full path, which
+-- reports the same diagnostics as before. utf8.len (strict) refuses what
+-- decode_utf8 refuses: overlong forms, surrogates and values above
+-- U+10FFFF; the patterns refuse the remaining characters XML forbids.
+local function decode_plain_utf8(bytes, first_byte)
+  if bytes:find("\r", first_byte, true) or
+      not utf8.len(bytes, first_byte) or
+      bytes:find("[\0-\8\11\12\14-\31]", first_byte) or
+      bytes:find("\239\191[\190\191]", first_byte) then
+    return nil
+  end
+  local source_start = first_byte - 1
+  local text = bytes:sub(first_byte)
+  local length = #text
+  return {
+    text = text,
+    boundaries = setmetatable({}, { __index = function(_, offset)
+      if math.type(offset) == "integer" and offset >= 0 and
+          offset <= length then
+        return source_start + offset
+      end
+    end }),
+    encoding = "utf-8",
+  }
+end
+
+local function decode_document(bytes, full_path)
   local encoding, first_byte, bom
   if bytes:sub(1, 3) == "\239\187\191" then
     encoding, first_byte, bom = "utf-8", 4, true
@@ -181,6 +210,13 @@ local function decode_document(bytes)
     encoding, first_byte, bom = "utf-16le", 1, false
   else
     encoding, first_byte, bom = "utf-8", 1, false
+  end
+  if encoding == "utf-8" and not full_path then
+    local decoded = decode_plain_utf8(bytes, first_byte)
+    if decoded then
+      decoded.bom = bom
+      return decoded
+    end
   end
   local records
   if encoding == "utf-8" then
@@ -871,6 +907,12 @@ local function semantic_xml(state)
   local pieces = state.backend_pieces
   pieces[#pieces + 1] = state.decoded.text:sub(state.backend_cursor)
   return table.concat(pieces)
+end
+
+-- Test-only: decode through the fast path when it applies, or always
+-- through the full path, so tests can compare the two.
+function M._decode_document(bytes, full_path)
+  return decode_document(bytes, full_path)
 end
 
 function M.inspect(bytes, options)
