@@ -296,35 +296,42 @@ return {
     end,
   },
   {
-    name = "long ASCII names cost little more than text of the same size",
+    name = "long ASCII names cost no more than long attribute values",
     gate = "safety",
     stage = "xml",
     fn = function()
-      -- Before the ASCII fast path, a part of 256-byte names took about
-      -- twice as long as the same size of text, because every name
-      -- character was decoded twice. A ratio travels between machines
-      -- better than a time limit. Recorded ratios: 2.07 with neither fast
-      -- path, 1.38 with only the validator's, 1.75 with only the reader's,
-      -- 1.03 to 1.08 with both.
-      local size = 1024 * 1024
-      local plain = "<r>" .. string.rep("x", size - 7) .. "</r>"
-      local pieces, length = { "<r>" }, 3
-      local element = "<" .. string.rep("n", 256) .. "/>"
-      while length + #element + 4 <= size do
-        pieces[#pieces + 1] = element
-        length = length + #element
+      -- Two parts of the same size and element count: 256-byte names, or
+      -- short names with 250-byte attribute values. Without the ASCII fast
+      -- path every name character was decoded twice. The ratio isolates the
+      -- name cost and travels between machines better than a time limit.
+      -- Recorded ratios: 0.85 to 0.89 with both fast paths, 2.6 without the
+      -- reader's, 4.9 without the validator's.
+      local function part(element)
+        local pieces, length = { "<r>" }, 3
+        while length + #element + 4 <= 1024 * 1024 do
+          pieces[#pieces + 1] = element
+          length = length + #element
+        end
+        pieces[#pieces + 1] = "</r>"
+        return table.concat(pieces)
       end
-      pieces[#pieces + 1] = "</r>"
-      local names = table.concat(pieces)
-      local function cpu(part)
-        collectgarbage("collect")
-        local started = pandoc.system.cputime()
-        xml.parse(part)
-        return (pandoc.system.cputime() - started) / 1e12
+      local names = part("<" .. string.rep("n", 256) .. "/>")
+      local values = part('<n v="' .. string.rep("v", 250) .. '"/>')
+      -- Best of three for each part: a minimum is far less affected by
+      -- scheduler and collector noise on a shared runner than one sample.
+      local function cpu(bytes)
+        local best = math.huge
+        for _ = 1, 3 do
+          collectgarbage("collect")
+          local started = pandoc.system.cputime()
+          xml.parse(bytes)
+          best = math.min(best, (pandoc.system.cputime() - started) / 1e12)
+        end
+        return best
       end
-      local ratio = cpu(names) / cpu(plain)
-      assert(ratio < 1.25,
-        ("names took %.2f times as long as text"):format(ratio))
+      local ratio = cpu(names) / cpu(values)
+      assert(ratio < 1.5,
+        ("names took %.2f times as long as values"):format(ratio))
     end,
   },
   {
