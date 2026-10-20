@@ -9,11 +9,28 @@ local function raise(code, message, context)
   diagnostic.raise(code, message, context)
 end
 
-function M.luaxml_events(luaxml, xml)
+-- The backend parses a copy whose names are short aliases (#55); names maps
+-- each alias back to the real name. With a map, every name the backend
+-- reports must be in it: anything else, including a real name the backend
+-- should never have seen, is a mismatch. It is raised after parsing, since
+-- an error inside the handlers would surface as a backend rejection. A
+-- caller that passes no map gets names as the backend reports them.
+function M.luaxml_events(luaxml, xml, names)
+  local unmapped
+  local function real_name(name)
+    if not names then return name end
+    local real = names[name]
+    if real == nil then
+      unmapped = unmapped or name
+      return name
+    end
+    return real
+  end
   local events, stack = {}, {}
   local handler = {}
 
   function handler:starttag(qname)
+    qname = real_name(qname)
     events[#events + 1] = {
       kind = "start",
       qname = qname,
@@ -24,7 +41,7 @@ function M.luaxml_events(luaxml, xml)
   function handler:endtag(qname)
     events[#events + 1] = {
       kind = "end",
-      qname = qname,
+      qname = real_name(qname),
     }
     stack[#stack] = nil
   end
@@ -56,7 +73,7 @@ function M.luaxml_events(luaxml, xml)
     value = value:gsub("^%s+", "")
     events[#events + 1] = {
       kind = "pi",
-      target = target,
+      target = real_name(target),
       value = value,
     }
   end
@@ -75,6 +92,12 @@ function M.luaxml_events(luaxml, xml)
     raise("xml.backend-rejected",
       "LuaXML rejected strictly validated XML", {
         detail = tostring(err),
+      })
+  end
+  if unmapped then
+    raise("xml.backend-mismatch",
+      "LuaXML reported a name outside the alias map", {
+        backend_qname = unmapped,
       })
   end
   if #stack ~= 0 then

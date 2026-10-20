@@ -79,7 +79,7 @@ function M.parse(xml_bytes, options)
   end
   local strict_document = strictness.inspect(xml_bytes, options)
   local backend_events = overlay.luaxml_events(
-    luaxml, strict_document.semantic_xml)
+    luaxml, strict_document.semantic_xml, strict_document.backend_names)
   return overlay.bind(
     xml_bytes, strict_document, backend_events, "dev@c919471")
 end
@@ -280,7 +280,7 @@ M.result = {
   version = "dev@c919471",
   dependency_count = 1,
   vendored_lines = 570,
-  docstyle_owned_lines = 1534,
+  docstyle_owned_lines = 1592,
   unsupported_constructs = {
     "DTD and custom entity expansion",
     "XInclude processing",

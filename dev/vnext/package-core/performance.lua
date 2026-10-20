@@ -73,12 +73,11 @@ local FILLER_CLOSE = '</w:t></w:r></w:p>'
 local SUFFIX = '</w:body></w:document>'
 
 -- Generates a WordprocessingML-shaped part scaled by element/attribute
--- count (many ordinary-size elements and attributes), never by a single
--- large attribute value. See the known_limitations entry below: the
--- vendored LuaXML backend is O(n^2) on one large attribute value, so a
--- benchmark fixture built that way would measure a pre-existing backend
--- pathology unrelated to ordinary WordprocessingML shape or to the
--- input-byte limit this benchmark exists to characterize.
+-- count (many ordinary-size elements and attributes), never by one large
+-- attribute value or one long name. This benchmark characterizes ordinary
+-- WordprocessingML shape and the input-byte limit; the long-value and
+-- long-name cases (#50, #55) have their own tests, the long-name probe
+-- (long-name-probe.lua) and the known_limitations entry below.
 local function generate_scaling_fixture(size_mib)
   assert(size_mib == 1 or size_mib == 5 or size_mib == 8 or size_mib == 10,
     "scaling size must be one, five, eight or 10 MiB")
@@ -318,15 +317,21 @@ local function measure_reference()
     },
     known_limitations = {
       {
-        id = "luaxml-quadratic-single-attribute-value",
-        note = "The vendored LuaXML backend parses a single large " ..
-          "attribute value in quadratic time (recorded during Task 5: " ..
-          "an 80,000-byte attribute value took ~71 seconds, scaling as " ..
-          "size^2; independent review probes at 5k-40k confirmed the " ..
-          "quadratic shape -- see the WP2 plan ledger). The XML-part " ..
-          "input-byte limit bounds bytes, not CPU: an adversarial " ..
-          "sub-limit part with one large attribute value remains a " ..
-          "CPU-exhaustion risk. Tracked follow-up planned.",
+        id = "strict-layer-dense-markup-cost",
+        note = "The vendored LuaXML backend is quadratic in the length " ..
+          "of one attribute value (Task 5: an 80,000-byte value took " ..
+          "~71 seconds; see the WP2 plan ledger) and superlinear in " ..
+          "name length (#55). Since #50 and #55 it parses a copy with " ..
+          "empty attribute values and short name aliases, so neither " ..
+          "cost is reachable, and the strict layer matches plain-ASCII " ..
+          "names with one pattern: a crafted 8 MiB part of 256-byte " ..
+          "element names takes about 4 seconds. The strict layer still " ..
+          "decodes every character and builds a record per token, so " ..
+          "parts denser in markup than this benchmark's fixture are " ..
+          "slower: an 8 MiB part of short runs takes about 10 seconds, " ..
+          "above the five-second advisory target (both figures in " ..
+          "long-name-results.json). The largest real part surveyed is " ..
+          "2.7 MB.",
       },
     },
   }

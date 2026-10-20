@@ -581,18 +581,26 @@ local function resolve_literal_target(self, source_part, target, context)
     end
     return source_part, fragment, ""
   end
+  -- An absolute target ("/word/document2.xml") names a part from the package
+  -- root (#56). "//" (a network path) stays refused below.
+  local absolute = path:sub(1, 1) == "/" and path:sub(1, 2) ~= "//"
+  if absolute then path = path:sub(2) end
   local first_segment = path:match("^([^/]*)")
-  if path:sub(1, 1) == "/" or
+  -- A scheme, or a colon in the first segment, marks a relative reference
+  -- as something other than a path. In an absolute path a colon is an
+  -- ordinary path character (RFC 3986 path-absolute), so these two checks
+  -- apply only to relative targets.
+  if (not absolute and path:sub(1, 1) == "/") or
       path:find("?", 1, true) or path:find("\\", 1, true) or
-      path:match("^[A-Za-z][A-Za-z0-9+%.%-]*:") or
+      (not absolute and path:match("^[A-Za-z][A-Za-z0-9+%.%-]*:")) or
       path:sub(1, 2) == "//" or utf8.len(path) == nil or
-      (first_segment ~= "." and first_segment ~= ".." and
+      (not absolute and first_segment ~= "." and first_segment ~= ".." and
         first_segment:find(":", 1, true)) then
     raise("opc.invalid-relationship-target",
       "internal relationship target is outside the spike subset", context)
   end
   local base = {}
-  if source_part ~= "/" then
+  if source_part ~= "/" and not absolute then
     local source_zip = zip_name_for_part(source_part)
     for segment in source_zip:gmatch("[^/]+") do base[#base + 1] = segment end
     base[#base] = nil
