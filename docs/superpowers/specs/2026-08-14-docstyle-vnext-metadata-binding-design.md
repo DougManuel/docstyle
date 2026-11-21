@@ -9,7 +9,9 @@ and catalogue records.
 
 Status: accepted in #49 (merged October 16, 2026). Amendment 1 (October
 16, 2026) settles the five contract clarifications recorded at acceptance
-and was accepted on October 20, 2026; see the amendment record at the end.
+and was accepted on October 20, 2026. Amendment 2 (November 21, 2026)
+makes an email written in the front matter public unless the author opts
+out. See the amendment record at the end.
 
 ## Context
 
@@ -283,30 +285,35 @@ Required: `id`, `recordType`, `schemaVersion`, `document`, `person`,
 equally), `affiliations` (organization record ids, ordered). This closes
 the equal-contributor gap the legacy audit deferred.
 
-**Email is restricted PII and never lives on the public contribution
-record.** The WP1 audit classifies author email as restricted-privacy;
+**Email lives on its own record, never on the public contribution
+record** (amendment 2 changes who decides its privacy, below). The WP1
+audit classifies author email as restricted-privacy;
 record-level privacy cannot publish authorship while concealing one field.
 Email therefore lives on a separate `contact` record —
 `{id, recordType: "contact", schemaVersion, privacy, email}`. Because WP1
 defines a *missing* `privacy` field as public for metadata records, and a
 JSON Schema `default` annotation applies no value, relying on a default
-would silently publish emails. So the contract is explicit at three
-levels:
+would publish an email the author had opted to keep back. So the contract
+is explicit at three levels:
 
 1. **Schema:** `contact.privacy` is **required**. A contact record without
    it is invalid (a missing-privacy invalid fixture is part of the
    conformance evidence).
-2. **Normalizer:** every YAML-derived contact record is written with
-   `privacy: "restricted"` unless the author has consented (below). The
-   normalizer never emits a contact without the field.
+2. **Normalizer:** every contact record is written with an explicit
+   `privacy` (amendment 2): `"public"` for an address the author wrote in
+   the front matter, and `"restricted"` when the author opted out (below)
+   or the address comes only from stored state. The normalizer never emits
+   a contact without the field.
 3. **Renderer (WP4):** a restricted email is never displayed, regardless
    of author-plate styling configuration — the render config can only
    choose whether to show a *public* contact, never override privacy.
 
 A contribution references the contact through the optional `contact`
-field. **Consent is author-facing and explicit:** the author sub-field
-`email-public: true` (see QMD bindings) makes the normalizer write the
-contact record with `privacy: "public"`; nothing else does. The catalogue
+field. **The author decides in the front matter (amendment 2):** an email
+written on an author entry is public, and the author sub-field
+`email-public: false` (see QMD bindings) makes the normalizer write that
+author's contact records with `privacy: "restricted"`. Any written value
+other than `true` restricts. The catalogue
 embedder prunes the `contact` property whenever the target record is
 restricted (see the closure rules), so the public authorship record ships
 without the email and the display degrades gracefully.
@@ -357,8 +364,9 @@ warning. Canonical publication is strict, in two steps.
    property the `contact` definition names other than `id`, `recordType`,
    `schemaVersion` and `privacy`; in version 1 that is `email`. When a
    person record carries one, the normalizer moves it into a contact
-   record, written `privacy: "restricted"` unless the author consented with
-   `email-public: true`, and links that contact from each of the person's
+   record, written `privacy: "restricted"` whatever `email-public` says
+   (amendment 2: only an address written in the current front matter is
+   published), and links that contact from each of the person's
    contributions in the document that links none. When a contribution
    already links a different contact, the normalizer keeps the existing
    link and reports the conflict instead of choosing. A contact-bearing
@@ -710,8 +718,8 @@ compiler implements exactly these mappings; nothing else reads author YAML.
 | Author writes (QMD/YAML) | Normalizes to | Rendered as |
 |---|---|---|
 | `abstract: "Background..."` or a `::: {#abstract}` div | `#abstract` section node (role `abstract`, authored-preserve); document record `{"abstract": {"region": "abstract"}}` | Authored section, envelope id `abstract` |
-| `author:` + `affiliations:` (standard Quarto) | one `person` record per author (identity only), `organization` records, one ordered `contribution` record per author; `email` becomes a `contact` record with explicit `privacy: "restricted"` | Author plate: metadata view over `sourceCollection` contribution/position |
-| author sub-field `email-public: true` | the author's `contact` record is written `privacy: "public"` — the explicit consent action; absent, email stays restricted and is never displayed | Public contact rendered per author-plate config |
+| `author:` + `affiliations:` (standard Quarto) | one `person` record per author (identity only), `organization` records, one ordered `contribution` record per author; `email` becomes a `contact` record with explicit `privacy: "public"` (amendment 2) | Author plate: metadata view over `sourceCollection` contribution/position |
+| author sub-field `email-public: false` (amendment 2) | the author's `contact` records are written `privacy: "restricted"`: the address is never displayed or shipped. Absent or `true`, a written email is public; any other written value restricts | Public contact rendered per author-plate config |
 | `date: 2026-08-14`, `version: "2.1"` | document record `dates.*`, `version` | Generated spans bound by metadata views (`sourceRecord` + path) |
 | `version-history:` YAML list | document record `versionHistory[]` | Generated section or table, view path `versionHistory` |
 | `{{< meta version >}}` inline | no source-record change — registers one metadata view per occurrence over the named document-record path | Generated span, `role: "metadata-value"` |
@@ -739,7 +747,7 @@ affiliations:
     name: University of Ottawa
 ```
 
-The normalizer produces `person` `{id: "rec-person-1", name: {given: "Jane", family: "Smith"}, orcid: …}`, `organization` `{id: "rec-org-uottawa", name: "University of Ottawa"}`, `contact` `{id: "rec-contact-1", privacy: "restricted", email: "jane.smith@example.org"}` (the normalizer always writes `privacy` explicitly, `restricted` unless consented), and `contribution` `{id: "contrib-1", document: "rec-document", person: "rec-person-1", position: 1, roles: […], corresponding: true, contact: "rec-contact-1", affiliations: ["rec-org-uottawa"]}`. Author order in YAML is `position` order; nothing else encodes it. The embedder prunes the `contact` property while the contact record stays restricted. Adding `email-public: true` to that author's YAML entry is the consent action: the normalizer then writes the contact record with `privacy: "public"` and the email ships in the catalogue and may be displayed.
+The normalizer produces `person` `{id: "rec-person-1", name: {given: "Jane", family: "Smith"}, orcid: …}`, `organization` `{id: "rec-org-uottawa", name: "University of Ottawa"}`, `contact` `{id: "rec-contact-1", privacy: "public", email: "jane.smith@example.org"}` (the normalizer always writes `privacy` explicitly; amendment 2 makes a written address `public` unless the author opts out), and `contribution` `{id: "contrib-1", document: "rec-document", person: "rec-person-1", position: 1, roles: […], corresponding: true, contact: "rec-contact-1", affiliations: ["rec-org-uottawa"]}`. Author order in YAML is `position` order; nothing else encodes it. The email ships in the catalogue and may be displayed. Adding `email-public: false` to that author's YAML entry keeps it back: the normalizer then writes the contact record with `privacy: "restricted"`, and the embedder prunes the `contact` property while the contact record stays restricted.
 
 Version display — the author writes `version: "2.1"` and, in prose,
 `Protocol version {{< meta version >}}.` The normalizer stores
@@ -755,7 +763,7 @@ the record and every view of it.
 | File | Change | Kind |
 |---|---|---|
 | `metadata-core.v1.json` | `document.abstract` becomes `oneOf [string, {region}]` | additive (widening) |
-| `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection; one record per rendered occurrence), `$defs/contribution` (with `contact` reference; `position` unique per document via the semantic validator), `$defs/contact` (**`privacy` required** — the normalizer writes `restricted` explicitly unless `email-public` consent); all join the record dispatch | additive |
+| `metadata-core.v1.json` | new `$defs/metadata-view` (`oneOf` sourceRecord+path / sourceCollection; one record per rendered occurrence), `$defs/contribution` (with `contact` reference; `position` unique per document via the semantic validator), `$defs/contact` (**`privacy` required** — the normalizer always writes it explicitly; amendment 2 rewords the definition's description only); all join the record dispatch | additive |
 | `metadata-core.v1.json` | `person.roles`, `person.corresponding` marked deprecated in descriptions | additive |
 | `document-model.v1.json` | add canonical `$defs/table-semantics`, `$defs/figure-semantics` (closed, with namespaced profiles); leave `node.semantics` unconstrained at rest; semantic validator and catalogue schema apply the definitions before embedding | additive definitions |
 | `document-model.v1.json` | document canonical asset `credit` as string or record reference; leave existing arbitrary values schema-valid at rest and validate canonical credit before embedding | additive definitions |
@@ -919,6 +927,34 @@ prunable; only DOCX renders write the catalogue-hash entry; canonical JSON
 gains a rule for non-integer numbers; and `person.name.literal` preserves
 name particles, with Quarto's `license` accepted as an alias of
 `licence`.
+
+**Amendment 2 (November 21, 2026).** Changes who decides whether an
+author's email is published. Two owner decisions, recorded in private
+issue #203:
+
+| Decision | Settled in |
+|---|---|
+| An email the author writes in the front matter is a public contact; `email-public: false` keeps that author's addresses restricted, and any written value other than `true` restricts (November 21, 2026) | Section 3: the normalizer rule and the paragraph on who decides; QMD bindings: the `author` and `email-public` rows and the authorship worked example |
+| An email known only from stored state is always a restricted contact, whatever `email-public` says (November 20, 2026) | Section 3, "Additional properties on public records", step 1 |
+
+The first replaces the opt-in rule this specification was accepted with
+("Consent is author-facing and explicit"). It follows a review of
+comparable authoring tools: Quarto 1.9.26 shows every author's written
+email in its HTML, Typst, and JATS output and documents no setting to hide
+one, and the legacy author plate shows the corresponding author's by
+default. The
+three-level contract is unchanged in form: `contact.privacy` stays
+required, the normalizer always writes it, and the renderer never displays
+a restricted contact.
+
+No schema validates differently. In `metadata-core.v1.json` only the
+description of `$defs/contact` is reworded. Stored state needs no
+migration: contacts are rebuilt from the front matter on every compile, so
+an address written there becomes public on the next compile unless the
+author opts out, and a catalogue embedded before that compile does not
+carry it. The WP3 compiler specification records the same rule, the
+reading of `email-public` and its diagnostics in its amendment 3 (A3.8 and
+A3.11).
 
 ## References
 
