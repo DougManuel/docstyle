@@ -128,6 +128,16 @@
         }
       }
     },
+    "person-name": {
+      "description": "Canonical form of person.name (metadata-binding amendment 1; WP3 section 11): given, family and literal, the name exactly as the author wrote it, each a string. A definition the normalizer writes to, not a constraint at rest: person.name is validated as before.",
+      "type": "object",
+      "required": ["family"],
+      "properties": {
+        "given": { "type": "string" },
+        "family": { "type": "string" },
+        "literal": { "type": "string" }
+      }
+    },
     "organization": {
       "type": "object",
       "required": ["id", "recordType", "schemaVersion", "name"],
@@ -182,7 +192,7 @@
       }
     },
     "contact": {
-      "description": "Additive v1 revision (metadata-binding spec, section 3): restricted PII kept off the public contribution record. privacy is required -- a missing privacy field would otherwise read as public and publish the email. The normalizer writes restricted unless the author sets email-public: true.",
+      "description": "Additive v1 revision (metadata-binding spec, section 3): an author's email, kept off the public contribution record so that it can be restricted on its own. privacy is required -- a missing privacy field would otherwise read as public whatever the author chose. The normalizer writes public for an address written in the front matter, and restricted when the author sets email-public: false or the address comes only from stored state (amendment 2).",
       "type": "object",
       "required": ["id", "recordType", "schemaVersion", "privacy", "email"],
       "properties": {
